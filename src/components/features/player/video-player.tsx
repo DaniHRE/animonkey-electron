@@ -7,7 +7,7 @@ import type { EpisodeSources } from '@/types/player';
 import { useSubtitleSize } from '@/hooks/use-subtitle-size';
 import { createMediaProxyUrl } from '@/lib/media-proxy';
 import { filterSubtitles, getSubtitleLabel } from '@/lib/subtitle';
-import { SUBTITLE_LABEL, SUBTITLE_SCALE } from '@/types/subtitle';
+import { SUBTITLE_LABEL, SUBTITLE_SIZES } from '@/types/subtitle';
 import type { SubtitleSize } from '@/types/subtitle';
 import plyrIconsUrl from '@/assets/plyr.svg?url';
 import './video-player.css';
@@ -52,6 +52,145 @@ function formatTime(seconds: number): string {
     .join(':');
 }
 
+function scaleAssSubtitleContent(content: string, scale: number): string {
+  let inStylesSection = false;
+  let fontSizeColumn = 2;
+  return content
+    .split('\n')
+    .map((line) => {
+      const section = line.match(/^\s*\[([^\]]+)\]/)?.[1];
+      if (section) {
+        inStylesSection = /^(?:v4 styles|v4\+ styles)$/i.test(section);
+        return line;
+      }
+      if (inStylesSection && /^\s*Format\s*:/i.test(line)) {
+        const columns = line.slice(line.indexOf(':') + 1).split(',');
+        const declaredColumn = columns.findIndex((column) =>
+          /^\s*Fontsize\s*$/i.test(column),
+        );
+        if (declaredColumn >= 0) fontSizeColumn = declaredColumn;
+        return line;
+      }
+      if (inStylesSection && /^\s*Style\s*:/i.test(line)) {
+        const colon = line.indexOf(':');
+        const fields = line.slice(colon + 1).split(',');
+        const size = Number(fields[fontSizeColumn]);
+        if (Number.isFinite(size) && size > 0) {
+          fields[fontSizeColumn] = String(Number((size * scale).toFixed(2)));
+          return `${line.slice(0, colon + 1)}${fields.join(',')}`;
+        }
+        return line;
+      }
+      if (/^\s*Dialogue\s*:/i.test(line)) {
+        return line.replace(
+          /\\fs([+-]?)(\d+(?:\.\d+)?)/gi,
+          (_match, sign: string, value: string) => {
+            const size = Number(value);
+            return size > 0
+              ? `\\fs${sign}${Number((size * scale).toFixed(2))}`
+              : `\\fs${sign}${value}`;
+          },
+        );
+      }
+      return line;
+    })
+    .join('\n');
+}
+
+interface SubtitleSizeMenu {
+  cleanup: () => void;
+  update: (size: SubtitleSize) => void;
+}
+
+function injectSubtitleSizeMenu(
+  menuContainer: HTMLElement,
+  currentSize: SubtitleSize,
+  onSelect: (size: SubtitleSize) => void,
+): SubtitleSizeMenu | null {
+  const mainPanel = menuContainer.children[0] as HTMLElement | undefined;
+  const mainMenu = mainPanel?.querySelector<HTMLElement>('[role="menu"]');
+  if (!mainPanel || !mainMenu) return null;
+
+  const submenu = document.createElement('div');
+  submenu.hidden = true;
+  const submenuId = `${menuContainer.id || 'plyr-settings'}-subtitle-size`;
+  const forward = document.createElement('button');
+  forward.type = 'button';
+  forward.className = 'plyr__control plyr__control--forward';
+  forward.setAttribute('role', 'menuitem');
+  forward.setAttribute('aria-haspopup', 'true');
+  forward.setAttribute('aria-controls', submenuId);
+  forward.dataset.plyrSubtitleSize = '';
+  const title = document.createElement('span');
+  title.textContent = 'Tamanho da legenda';
+  const value = document.createElement('span');
+  value.className = 'plyr__menu__value';
+  forward.append(title, value);
+  mainMenu.append(forward);
+
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'plyr__control plyr__control--back';
+  back.setAttribute('role', 'menuitem');
+  back.setAttribute('aria-controls', menuContainer.id);
+  const backTitle = document.createElement('span');
+  backTitle.textContent = 'Tamanho da legenda';
+  back.append(backTitle);
+  const options = document.createElement('div');
+  options.setAttribute('role', 'menu');
+  const radios = new Map<SubtitleSize, HTMLButtonElement>();
+
+  for (const size of SUBTITLE_SIZES) {
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'plyr__control';
+    option.setAttribute('role', 'menuitemradio');
+    const label = document.createElement('span');
+    label.textContent = SUBTITLE_LABEL[size];
+    option.append(label);
+    option.addEventListener('click', () => {
+      onSelect(size);
+      update(size);
+    });
+    options.append(option);
+    radios.set(size, option);
+  }
+  submenu.id = submenuId;
+  submenu.append(back, options);
+  menuContainer.append(submenu);
+
+  const show = (panel: HTMLElement) => {
+    for (const child of Array.from(menuContainer.children)) {
+      (child as HTMLElement).hidden = child !== panel;
+    }
+    menuContainer.style.setProperty(
+      '--plyr-dropdown-height',
+      `${options.scrollHeight}px`,
+    );
+  };
+  forward.addEventListener('click', () => show(submenu));
+  back.addEventListener('click', () => show(mainPanel));
+
+  const update = (size: SubtitleSize) => {
+    value.textContent = SUBTITLE_LABEL[size];
+    for (const [optionSize, button] of radios) {
+      button.setAttribute(
+        'aria-checked',
+        optionSize === size ? 'true' : 'false',
+      );
+    }
+  };
+  update(currentSize);
+
+  return {
+    cleanup: () => {
+      forward.remove();
+      submenu.remove();
+    },
+    update,
+  };
+}
+
 export function VideoPlayer({
   sources,
   title,
@@ -70,6 +209,11 @@ export function VideoPlayer({
   const playerInstance = useRef<Hls | null>(null);
   const dashInstance = useRef<import('dashjs').MediaPlayerClass | null>(null);
   const assRenderer = useRef<import('jassub').default | null>(null);
+  const assSubtitleContent = useRef<{
+    url: string;
+    content: string;
+    ready: boolean;
+  } | null>(null);
   const assVersion = useRef(0);
   const resumed = useRef(false);
   const failureReported = useRef(false);
@@ -102,6 +246,13 @@ export function VideoPlayer({
   );
   const [mediaLoading, setMediaLoading] = useState(false);
   const { size, scale, setSize } = useSubtitleSize();
+  const sizeRef = useRef(size);
+  const scaleRef = useRef(scale);
+  const sizeMenuRef = useRef<SubtitleSizeMenu | null>(null);
+  useEffect(() => {
+    sizeRef.current = size;
+    scaleRef.current = scale;
+  }, [scale, size]);
 
   const subtitles = useMemo(
     () => filterSubtitles(sources?.subtitles ?? []),
@@ -110,10 +261,6 @@ export function VideoPlayer({
   const defaultSubtitle =
     subtitles.find((track) => track.lang?.toLowerCase().startsWith('pt')) ??
     subtitles.find((track) => track.lang?.toLowerCase().startsWith('en'));
-  const webVttSubtitles = useMemo(
-    () => subtitles.filter((track) => !track.format),
-    [subtitles],
-  );
   const selectedTrack =
     trackSelection.key === sourceKey
       ? trackSelection.url
@@ -146,19 +293,26 @@ export function VideoPlayer({
   useEffect(() => {
     let active = true;
     const objectUrls: string[] = [];
-    if (!sources || webVttSubtitles.length === 0) {
+    if (!sources || subtitles.length === 0) {
       return () => {
         active = false;
       };
     }
     void Promise.all(
-      webVttSubtitles.map(async (track) => {
+      subtitles.map(async (track) => {
         try {
-          const response = await fetch(createMediaProxyUrl(track.url, sources));
-          if (!response.ok) return null;
-          const blob = new Blob([await response.arrayBuffer()], {
-            type: 'text/vtt',
-          });
+          let blob: Blob;
+          if (track.format === 'ass' || track.format === 'ssa') {
+            blob = new Blob(['WEBVTT\n\n'], { type: 'text/vtt' });
+          } else {
+            const response = await fetch(
+              createMediaProxyUrl(track.url, sources),
+            );
+            if (!response.ok) return null;
+            blob = new Blob([await response.arrayBuffer()], {
+              type: 'text/vtt',
+            });
+          }
           const url = URL.createObjectURL(blob);
           objectUrls.push(url);
           return [track.url, url] as const;
@@ -181,10 +335,10 @@ export function VideoPlayer({
       active = false;
       objectUrls.forEach(URL.revokeObjectURL);
     };
-  }, [sourceKey, sources, webVttSubtitles]);
+  }, [sourceKey, sources, subtitles]);
   const captionTracks = useMemo(
     () =>
-      webVttSubtitles.flatMap((track) => {
+      subtitles.flatMap((track) => {
         const src =
           captionBlobUrls.key === sourceKey
             ? captionBlobUrls.urls[track.url]
@@ -193,15 +347,17 @@ export function VideoPlayer({
           ? [
               {
                 kind: 'captions' as const,
-                label: getSubtitleLabel(track.lang ?? ''),
+                label: `${getSubtitleLabel(track.lang ?? '')}${track.format ? ` · ${track.format.toUpperCase()}` : ''}`,
                 srcLang: track.lang?.toLowerCase() ?? 'und',
                 src,
                 default: track.url === defaultSubtitle?.url,
+                format: track.format,
+                url: track.url,
               },
             ]
           : [];
       }),
-    [captionBlobUrls, defaultSubtitle?.url, sourceKey, webVttSubtitles],
+    [captionBlobUrls, defaultSubtitle?.url, sourceKey, subtitles],
   );
   const intro = sources?.intro;
   const outro = sources?.outro;
@@ -294,7 +450,7 @@ export function VideoPlayer({
       controls: playerControls,
       iconUrl: plyrIconsUrl,
       settings: [
-        webVttSubtitles.length ? 'captions' : '',
+        captionTracks.length ? 'captions' : '',
         'quality',
         'speed',
       ].filter(Boolean),
@@ -304,7 +460,7 @@ export function VideoPlayer({
         ? { enabled: true, src: thumbnailUrl }
         : { enabled: false },
     }),
-    [thumbnailUrl, webVttSubtitles.length],
+    [captionTracks.length, thumbnailUrl],
   );
   useEffect(() => {
     const mount = playerMountRef.current;
@@ -335,6 +491,47 @@ export function VideoPlayer({
       return () => mount.replaceChildren();
     }
   }, [canMountPlayer, plyrOptions, playerSource, sourceKey]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || !canMountPlayer || captionTracks.length === 0) return;
+    let active = true;
+    let attempts = 0;
+    const interval = window.setInterval(() => {
+      if (!active) return;
+      const menu = root.querySelector<HTMLElement>('.plyr__menu__container');
+      if (!menu) {
+        if (attempts++ > 40) window.clearInterval(interval);
+        return;
+      }
+      window.clearInterval(interval);
+      if (menu.querySelector('[data-plyr-subtitle-size]')) return;
+      sizeMenuRef.current?.cleanup();
+      sizeMenuRef.current = injectSubtitleSizeMenu(
+        menu,
+        sizeRef.current,
+        setSize,
+      );
+    }, 100);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      sizeMenuRef.current?.cleanup();
+      sizeMenuRef.current = null;
+    };
+  }, [canMountPlayer, captionTracks.length, setSize, sourceKey]);
+
+  useEffect(() => {
+    sizeMenuRef.current?.update(size);
+    const instance = assRenderer.current;
+    const subtitle = assSubtitleContent.current;
+    if (!instance || !subtitle?.ready || subtitle.url !== selectedTrack) return;
+    void (async () => {
+      await instance.renderer.setTrack(
+        scaleAssSubtitleContent(subtitle.content, scale),
+      );
+    })().catch(() => undefined);
+  }, [scale, selectedTrack, size]);
 
   const reportPlaybackFailure = useCallback(() => {
     if (failureReported.current) return;
@@ -559,6 +756,7 @@ export function VideoPlayer({
       assVersion.current += 1;
       const old = assRenderer.current;
       assRenderer.current = null;
+      assSubtitleContent.current = null;
       if (old) void old.destroy();
       video.classList.remove('plyr-video--ass-active');
       video
@@ -571,6 +769,7 @@ export function VideoPlayer({
       assVersion.current += 1;
       const old = assRenderer.current;
       assRenderer.current = null;
+      assSubtitleContent.current = null;
       if (old) void old.destroy();
       video.classList.remove('plyr-video--ass-active');
       video
@@ -583,6 +782,7 @@ export function VideoPlayer({
     void (async () => {
       const old = assRenderer.current;
       assRenderer.current = null;
+      assSubtitleContent.current = null;
       if (old) await old.destroy();
       if (!active || version !== assVersion.current) return;
       try {
@@ -593,15 +793,35 @@ export function VideoPlayer({
         target
           .closest('.plyr__video-wrapper')
           ?.classList.add('plyr-video-wrapper--ass-active');
+        const response = await fetch(
+          createMediaProxyUrl(subtitle.url, sources),
+        );
+        if (!response.ok) throw new Error('Subtitle source unavailable');
+        const content = await response.text();
+        if (!active || version !== assVersion.current) return;
+        assSubtitleContent.current = {
+          url: subtitle.url,
+          content,
+          ready: false,
+        };
         const instance = new JASSUB({
           video: target,
-          subUrl: createMediaProxyUrl(subtitle.url, sources),
+          subContent: scaleAssSubtitleContent(content, scaleRef.current),
           workerUrl: jassubWorkerUrl,
           wasmUrl: jassubWasmUrl,
           modernWasmUrl: jassubModernWasmUrl,
         });
         assRenderer.current = instance;
         await instance.ready;
+        if (!active || version !== assVersion.current) return;
+        assSubtitleContent.current = {
+          url: subtitle.url,
+          content,
+          ready: true,
+        };
+        await instance.renderer.setTrack(
+          scaleAssSubtitleContent(content, scaleRef.current),
+        );
       } catch {
         if (version === assVersion.current)
           setTrackSelection({ key: sourceKey, url: '' });
@@ -614,33 +834,45 @@ export function VideoPlayer({
 
   useEffect(() => {
     const instance = plyrRef.current;
-    if (!instance) return;
-    const index = webVttSubtitles.findIndex(
-      (track) => track.url === selectedTrack,
-    );
     const video = rootRef.current?.querySelector('video');
-    if (!(video instanceof HTMLVideoElement)) return;
-    if (index >= 0 && index < video.textTracks.length) {
-      const track = video.textTracks[index];
-      if (track.language) {
-        try {
-          instance.currentTrack = index;
-          instance.toggleCaptions(true);
-          return;
-        } catch {
-          // Fall back to the native track mode if Plyr has not indexed it yet.
-        }
+    if (!instance || !(video instanceof HTMLVideoElement)) return;
+    const syncSelection = () => {
+      if (video.textTracks.length < captionTracks.length) return;
+      const index = instance.currentTrack;
+      const selected = index >= 0 ? captionTracks[index] : undefined;
+      if (selected) {
+        setTrackSelection({ key: sourceKey, url: selected.url });
+        return;
       }
-    }
-    for (
-      let trackIndex = 0;
-      trackIndex < video.textTracks.length;
-      trackIndex++
-    ) {
-      video.textTracks[trackIndex].mode =
-        trackIndex === index ? 'showing' : 'disabled';
-    }
-  }, [selectedTrack, webVttSubtitles, proxiedSource]);
+      if (trackSelection.key !== sourceKey) {
+        const preferredIndex = captionTracks.findIndex(
+          (track) => track.url === defaultSubtitle?.url,
+        );
+        if (preferredIndex >= 0 && preferredIndex < video.textTracks.length) {
+          const preferredTrack = video.textTracks[preferredIndex];
+          if (preferredTrack.language) {
+            try {
+              instance.currentTrack = preferredIndex;
+              instance.toggleCaptions(true);
+              return;
+            } catch {
+              preferredTrack.mode = 'showing';
+            }
+          }
+        }
+        setTrackSelection({ key: sourceKey, url: '' });
+      } else {
+        setTrackSelection({ key: sourceKey, url: '' });
+      }
+    };
+    video.textTracks.addEventListener('change', syncSelection);
+    video.textTracks.addEventListener('addtrack', syncSelection);
+    syncSelection();
+    return () => {
+      video.textTracks.removeEventListener('change', syncSelection);
+      video.textTracks.removeEventListener('addtrack', syncSelection);
+    };
+  }, [captionTracks, defaultSubtitle?.url, sourceKey, trackSelection.key]);
 
   const playerError =
     error ??
@@ -718,96 +950,6 @@ export function VideoPlayer({
           {skip.label} →
         </button>
       )}
-      {subtitles.length > 0 && (
-        <label className="absolute top-3 right-3 z-10 flex items-center gap-2 rounded-lg bg-black/75 px-2 py-1.5 text-[10px] text-white/75">
-          Legenda
-          <select
-            value={selectedTrack}
-            aria-label="Selecionar legenda"
-            onChange={(event) => {
-              setTrackSelection({ key: sourceKey, url: event.target.value });
-              const selectedIndex = webVttSubtitles.findIndex(
-                (track) => track.url === event.target.value,
-              );
-              if (plyrRef.current) {
-                const player = plyrRef.current;
-                const video = rootRef.current?.querySelector('video');
-                const textTrack =
-                  video instanceof HTMLVideoElement && selectedIndex >= 0
-                    ? video.textTracks[selectedIndex]
-                    : undefined;
-                if (selectedIndex < 0) {
-                  for (
-                    let index = 0;
-                    video instanceof HTMLVideoElement &&
-                    index < video.textTracks.length;
-                    index++
-                  ) {
-                    video.textTracks[index].mode = 'disabled';
-                  }
-                  return;
-                }
-                if (
-                  textTrack?.language &&
-                  typeof player.toggleCaptions === 'function'
-                ) {
-                  try {
-                    player.currentTrack = selectedIndex;
-                    player.toggleCaptions(true);
-                  } catch {
-                    textTrack.mode = 'showing';
-                  }
-                } else {
-                  if (video instanceof HTMLVideoElement) {
-                    for (
-                      let index = 0;
-                      index < video.textTracks.length;
-                      index++
-                    ) {
-                      video.textTracks[index].mode =
-                        index === selectedIndex ? 'showing' : 'disabled';
-                    }
-                  }
-                }
-              }
-            }}
-            className="max-w-40 bg-transparent text-[10px] outline-none"
-          >
-            <option value="">Desativada</option>
-            {subtitles.map((track) => (
-              <option key={track.url} value={track.url}>
-                {getSubtitleLabel(track.lang ?? '')}
-                {track.format ? ` · ${track.format.toUpperCase()}` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <div
-        className="absolute right-3 bottom-3 z-10 flex gap-1 rounded-lg bg-black/75 p-1"
-        aria-label="Tamanho da legenda"
-      >
-        {(['small', 'medium', 'large', 'xlarge'] as SubtitleSize[]).map(
-          (option) => (
-            <button
-              key={option}
-              type="button"
-              aria-label={`Legenda ${SUBTITLE_LABEL[option]}`}
-              aria-pressed={size === option}
-              title={SUBTITLE_LABEL[option]}
-              onClick={() => setSize(option)}
-              className={`grid size-7 place-items-center rounded text-[10px] font-bold ${size === option ? 'bg-[#49d77a] text-black' : 'text-white/65 hover:bg-white/10'}`}
-            >
-              A
-              {SUBTITLE_SCALE[option] > 1
-                ? '+'
-                : SUBTITLE_SCALE[option] < 1
-                  ? '−'
-                  : ''}
-            </button>
-          ),
-        )}
-      </div>
     </div>
   );
 }
