@@ -70,6 +70,24 @@ function requireBase(): string {
   return API_BASE;
 }
 
+function inferRefererFromEmbed(
+  embedUrl: string | undefined,
+): string | undefined {
+  if (!embedUrl) return undefined;
+  try {
+    const embed = new URL(embedUrl);
+    if (
+      embed.protocol === 'https:' &&
+      (embed.hostname === 'flixcloud.cc' ||
+        embed.hostname.endsWith('.flixcloud.cc'))
+    )
+      return 'https://flixcloud.cc/';
+  } catch {
+    // Invalid embed URLs are ignored; the player validates the URL separately.
+  }
+  return undefined;
+}
+
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
@@ -361,7 +379,10 @@ export const AnivexaCatalog = {
               ? stream.url
               : undefined;
         const referer =
-          stream.referer ?? stream.headers?.Referer ?? stream.headers?.referer;
+          stream.referer ??
+          stream.headers?.Referer ??
+          stream.headers?.referer ??
+          inferRefererFromEmbed(embedUrl);
         return {
           headers: {
             ...(payload.headers ?? {}),

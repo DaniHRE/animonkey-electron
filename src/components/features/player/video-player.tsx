@@ -76,13 +76,14 @@ export function VideoPlayer({
   const sourceKey = `${sources?.format ?? ''}:${sources?.sourceUrl ?? ''}:${sources?.embedUrl ?? ''}`;
   const [fallbackState, setFallbackState] = useState({
     key: '',
+    direct: false,
     embed: false,
     failed: false,
   });
   const fallback =
     fallbackState.key === sourceKey
       ? fallbackState
-      : { key: sourceKey, embed: false, failed: false };
+      : { key: sourceKey, direct: false, embed: false, failed: false };
   const failed = fallback.failed;
   const [playerInitError, setPlayerInitError] = useState<{
     key: string;
@@ -115,9 +116,10 @@ export function VideoPlayer({
       : (defaultSubtitle?.url ?? '');
 
   const sourceUrl = sources?.sourceUrl ?? '';
+  const hasPlaylistKey = Boolean(sources?.playlistKey);
   const proxiedSource =
     sourceUrl && sources ? createMediaProxyUrl(sourceUrl, sources) : '';
-  const activeSource = proxiedSource;
+  const activeSource = fallback.direct ? sourceUrl : proxiedSource;
   const isDash = sources?.format === 'dash';
   const embedUrl =
     sources?.embedUrl && /^https:\/\//i.test(sources.embedUrl)
@@ -130,7 +132,7 @@ export function VideoPlayer({
       setFallbackState((current) => ({
         ...(current.key === sourceKey
           ? current
-          : { key: sourceKey, embed: false, failed: false }),
+          : { key: sourceKey, direct: false, embed: false, failed: false }),
         ...patch,
         key: sourceKey,
       }));
@@ -284,15 +286,43 @@ export function VideoPlayer({
   const reportPlaybackFailure = useCallback(() => {
     if (failureReported.current) return;
     failureReported.current = true;
+    if (
+      sources?.format === 'hls' &&
+      sourceUrl &&
+      !hasPlaylistKey &&
+      !fallback.direct
+    ) {
+      setFallback({ direct: true });
+      return;
+    }
     const advanced = onSourceFailure?.() ?? false;
-    if (!advanced && embedUrl) setFallback({ embed: true });
+    if (advanced) return;
+    if (embedUrl && !fallback.embed) setFallback({ embed: true });
     else setFallback({ failed: true });
-  }, [embedUrl, onSourceFailure, setFallback]);
+  }, [
+    embedUrl,
+    fallback.direct,
+    fallback.embed,
+    onSourceFailure,
+    setFallback,
+    hasPlaylistKey,
+    sourceUrl,
+    sources?.format,
+  ]);
+
+  const retryPlayback = useCallback(() => {
+    failureReported.current = false;
+    resumed.current = false;
+    setFallbackState({ key: '', direct: false, embed: false, failed: false });
+    setPlayerInitError({ key: '', message: '' });
+    setMediaLoading(false);
+    onRetry?.();
+  }, [onRetry]);
 
   useEffect(() => {
     resumed.current = false;
     failureReported.current = false;
-  }, [sourceKey]);
+  }, [fallback.direct, sourceKey]);
 
   useEffect(() => {
     const video = rootRef.current?.querySelector('video');
@@ -593,7 +623,7 @@ export function VideoPlayer({
             {playerError && onRetry && (
               <button
                 type="button"
-                onClick={onRetry}
+                onClick={retryPlayback}
                 className="mt-3 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15"
               >
                 Tentar novamente

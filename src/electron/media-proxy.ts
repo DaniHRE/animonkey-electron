@@ -302,6 +302,16 @@ function unwrapFlixSegment(body: Uint8Array): Uint8Array | null {
       output[index] ^= xorKey[index % xorKey.length];
     }
   }
+  // FlixCloud segments decode to MPEG-TS. Avoid serving arbitrary images as
+  // video if a provider reuses the same filename pattern for another asset.
+  if (
+    output.length < 3 * 188 ||
+    output[0] !== 0x47 ||
+    output[188] !== 0x47 ||
+    output[376] !== 0x47
+  ) {
+    return null;
+  }
   return output;
 }
 
@@ -414,7 +424,6 @@ export function installMediaProxy(): void {
         });
       }
       if (
-        target.hostname.endsWith('atomic4cdn.top') &&
         /\/seg-[^/]+\.(?:png|webp)$/i.test(target.pathname) &&
         request.method === 'GET'
       ) {
