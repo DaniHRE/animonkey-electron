@@ -48,4 +48,5 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 ## Commits por etapa
 
 - `b49d82e feat: migrate catalog and player workflows to Electron` — base de catálogo/player e erros voltados ao usuário; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados.
-- A etapa de smoke visual desta revisão é registrada separadamente; seu hash será anotado no tracker no próximo passo concluído.
+- `e091ae9 docs: record migration smoke status` — smoke em desenvolvimento documentado; catálogo, detalhes e configurações locais renderizaram. A reprodução audiovisual ficou sem confirmação.
+- A regra explícita para não usar controle visual sem solicitação e aprovação do usuário será registrada em commit documental separado; seu hash entra no tracker na próxima etapa.

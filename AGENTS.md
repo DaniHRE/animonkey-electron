@@ -47,3 +47,9 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - Etapa registrada em 2026-11-08: mensagens de erro de rede/provedor no catálogo e no fluxo de episódios são convertidas para orientação em português; repetições seguintes devem acrescentar a data e as novas regras aprendidas nesta seção.
 - Etapa registrada em 2026-11-08: smoke em desenvolvimento confirmou renderização e navegação do catálogo, detalhes e configurações locais. A automação não chegou ao fluxo de reprodução nesta execução; não declarar paridade audiovisual sem essa evidência.
 - O hash de cada etapa é anotado no tracker na etapa seguinte, já que o commit não pode incluir o próprio hash sem autorreferência.
+
+## Controle do computador
+
+- Não usar controle do computador, captura de tela, interação com janelas ou automação de interface nesta máquina, a menos que o usuário solicite formalmente essa ação e a aprove explicitamente. Aprovação para uma tarefa não se estende a tarefas futuras.
+- Preferir inspeção por código, terminal e ferramentas de validação não visuais. Não iniciar ou retomar uma sessão de controle visual sem a aprovação exigida acima.
+- Regra registrada em 2026-11-08 após instrução explícita do usuário.
