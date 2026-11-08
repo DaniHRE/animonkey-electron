@@ -1,0 +1,180 @@
+import {
+  Bookmark,
+  CalendarDays,
+  ChevronDown,
+  Clapperboard,
+  Compass,
+  Flame,
+  History,
+  House,
+  ListVideo,
+  Search,
+  Settings2,
+  Sparkles,
+} from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+
+const navItems = [
+  { label: 'Início', path: '/', icon: House, end: true },
+  { label: 'Explorar', path: '/search', icon: Compass },
+  { label: 'Em alta', path: '/trending', icon: Flame },
+  { label: 'Lançamentos', path: '/updates', icon: Sparkles },
+  { label: 'Agenda', path: '/schedule', icon: CalendarDays },
+];
+
+const libraryItems = [
+  { label: 'Continuar assistindo', icon: History, path: '/continue-watching' },
+  { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
+  { label: 'Adicionados recentemente', icon: ListVideo, path: '/recent' },
+  { label: 'Mais populares', icon: Flame, path: '/popular' },
+  { label: 'Concluídos', icon: Clapperboard, path: '/completed' },
+];
+
+export function AppShell() {
+  const [search, setSearch] = useState('');
+  const navigate = useNavigate();
+
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const query = search.trim();
+    navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0b0b0c] text-[#f5f5f5]">
+      <aside className="fixed inset-y-0 left-0 z-30 flex w-[244px] flex-col border-r border-white/[0.06] bg-[#0d0d0f] px-4 py-6">
+        <NavLink to="/" className="mb-10 flex items-center gap-3 px-3">
+          <span className="grid size-10 place-items-center rounded-xl bg-[#49d77a] text-[#07110a]">
+            <Clapperboard size={21} strokeWidth={2.2} />
+          </span>
+          <span className="text-[19px] font-extrabold tracking-tight">
+            ani<span className="text-[#49d77a]">monkey</span>
+          </span>
+        </NavLink>
+
+        <p className="px-3 pb-3 text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">
+          Descobrir
+        </p>
+        <nav className="space-y-1" aria-label="Navegação principal">
+          {navItems.map(({ label, path, icon: Icon, end }) => (
+            <NavLink
+              key={label}
+              to={path}
+              end={end}
+              className={({ isActive }) =>
+                `flex h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
+                  isActive
+                    ? 'bg-[#49d77a]/10 text-[#67e58f]'
+                    : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+                }`
+              }
+            >
+              <Icon size={18} strokeWidth={1.8} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <p className="mt-9 px-3 pb-3 text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase">
+          Minha biblioteca
+        </p>
+        <nav className="space-y-1" aria-label="Biblioteca">
+          {libraryItems.map(({ label, icon: Icon, path }) =>
+            path ? (
+              <NavLink
+                key={label}
+                to={path}
+                className={({ isActive }) =>
+                  `flex h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
+                    isActive
+                      ? 'bg-[#49d77a]/10 text-[#67e58f]'
+                      : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+                  }`
+                }
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                {label}
+              </NavLink>
+            ) : (
+              <button
+                key={label}
+                type="button"
+                disabled
+                title="Esta seção será conectada na próxima etapa da migração"
+                className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium text-white/35"
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                {label}
+                <span className="ml-auto text-[9px] text-white/25">
+                  EM BREVE
+                </span>
+              </button>
+            ),
+          )}
+        </nav>
+
+        <div className="mt-auto rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+          <div className="mb-2 flex items-center gap-2 text-xs font-bold text-white/80">
+            <Clapperboard size={15} className="text-[#49d77a]" />
+            Animonkey Desktop
+          </div>
+          <p className="text-[11px] leading-relaxed text-white/40">
+            Sua biblioteca de animes, agora no desktop.
+          </p>
+        </div>
+      </aside>
+
+      <div className="ml-[244px] min-h-screen">
+        <a
+          href="#main-content"
+          className="sr-only z-50 rounded bg-[#49d77a] p-3 text-sm font-bold text-black focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        >
+          Pular para o conteúdo
+        </a>
+        <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/[0.06] bg-[#0b0b0c]/90 px-10 backdrop-blur-xl">
+          <form
+            onSubmit={submitSearch}
+            className="relative w-full max-w-[520px]"
+          >
+            <Search
+              size={17}
+              className="absolute top-1/2 left-4 -translate-y-1/2 text-white/35"
+            />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Busque por anime, gênero ou temporada..."
+              aria-label="Buscar animes"
+              className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.035] pr-16 pl-11 text-[13px] text-white outline-none transition placeholder:text-white/30 focus:border-[#49d77a]/45 focus:bg-white/[0.05]"
+            />
+            <kbd className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-1 text-[9px] text-white/30">
+              ENTER
+            </kbd>
+          </form>
+
+          <NavLink
+            to="/settings"
+            className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left opacity-70"
+            title="Configurações locais"
+          >
+            <span className="grid size-8 place-items-center rounded-full bg-[#49d77a]/15 text-[#49d77a]">
+              <Settings2 size={16} />
+            </span>
+            <span className="text-xs font-semibold">Perfil</span>
+            <ChevronDown size={14} className="text-white/40" />
+          </NavLink>
+        </header>
+
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto min-h-[calc(100vh-76px)] max-w-[1600px] px-10 py-9 outline-none"
+        >
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

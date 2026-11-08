@@ -1,0 +1,87 @@
+@import 'plyr/dist/plyr.css';
+
+:root {
+  --plyr-color-main: #2caf57;
+  --plyr-font-family: Inter, sans-serif;
+  --plyr-video-progress-buffered-background: rgba(255, 255, 255, 0.25);
+}
+
+.plyr__progress input[type='range'] {
+  z-index: 3;
+  position: relative;
+}
+.plyr__progress__buffer {
+  display: block !important;
+  opacity: 1 !important;
+}
+.plyr__video-wrapper {
+  isolation: isolate;
+}
+.plyr__video-wrapper.plyr-video-wrapper--ass-active {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+.plyr__video-wrapper video.plyr-video--ass-active {
+  z-index: 0;
+}
+.plyr__video-wrapper canvas.JASSUB {
+  z-index: 1;
+}
+.plyr .plyr__captions {
+  font-family: Inter, sans-serif;
+  font-size: calc(
+    var(--subtitle-scale, 1) * var(--plyr-font-size-small, 13px)
+  ) !important;
+}
+@media (min-width: 480px) {
+  .plyr .plyr__captions {
+    font-size: calc(
+      var(--subtitle-scale, 1) * var(--plyr-font-size-base, 15px)
+    ) !important;
+  }
+}
+@media (min-width: 768px) {
+  .plyr .plyr__captions {
+    font-size: calc(
+      var(--subtitle-scale, 1) * var(--plyr-font-size-large, 18px)
+    ) !important;
+  }
+}
+.plyr--fullscreen .plyr__captions,
+.plyr--fullscreen-fallback .plyr__captions {
+  font-size: calc(
+    var(--subtitle-scale, 1) * var(--plyr-font-size-xlarge, 21px)
+  ) !important;
+}
+.plyr__caption,
+.plyr__caption span {
+  background: transparent !important;
+  color: #fff;
+  font-family: Inter, sans-serif;
+  text-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.9),
+    0 0 4px rgba(0, 0, 0, 0.8);
+  line-height: 1.5;
+}
+video::cue {
+  background: transparent;
+  color: #fff;
+  font-family: Inter, sans-serif;
+  font-size: calc(1rem * var(--subtitle-scale, 1));
+}
+.plyr__progress__marker-label {
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  bottom: calc(100% + 8px);
+}
+.plyr-video--ass-active {
+  z-index: 0;
+}
+.plyr-video-wrapper--ass-active canvas.JASSUB {
+  z-index: 1;
+}

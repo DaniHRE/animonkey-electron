@@ -1,0 +1,411 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
+import { VideoPlayer } from '@/components/features/player/video-player';
+import { PlayerErrorBoundary } from '@/components/features/player/player-error-boundary';
+import { AniListCatalog } from '@/services/anilist.service';
+import { AnivexaCatalog } from '@/services/anivexa.service';
+import { useEpisodeProgress } from '@/hooks/use-episode-progress';
+import { useSaveEpisodeProgress } from '@/hooks/use-save-episode-progress';
+import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
+import type { AnimeInfo } from '@/types/anime';
+import type {
+  AnimeEpisode,
+  EpisodeServer,
+  EpisodeSources,
+} from '@/types/player';
+
+export function WatchPage() {
+  const { id = '' } = useParams();
+  const [params, setParams] = useSearchParams();
+  const requestedEpisodeId = params.get('ep') ?? '';
+  const [animeState, setAnimeState] = useState<{
+    id: string;
+    anime: AnimeInfo | null;
+    error: string | null;
+  }>({ id: '', anime: null, error: null });
+  const [episodeState, setEpisodeState] = useState<{
+    id: string;
+    episodes: AnimeEpisode[];
+    error: string | null;
+  }>({ id: '', episodes: [], error: null });
+  const [serverState, setServerState] = useState<{
+    episodeId: string;
+    servers: EpisodeServer[];
+    activeId: string;
+    error: string | null;
+  }>({ episodeId: '', servers: [], activeId: '', error: null });
+  const [sourceState, setSourceState] = useState<{
+    key: string;
+    sources: EpisodeSources | null;
+    error: string | null;
+  }>({ key: '', sources: null, error: null });
+  const [retryVersion, setRetryVersion] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    AniListCatalog.getAnime(id, controller.signal)
+      .then((anime) =>
+        setAnimeState({
+          id,
+          anime,
+          error: anime ? null : 'Anime não encontrado.',
+        }),
+      )
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setAnimeState({
+            id,
+            anime: null,
+            error:
+              'Não foi possível carregar os dados deste anime. Tente novamente.',
+          });
+      });
+    return () => controller.abort();
+  }, [id, retryVersion]);
+  const anime = animeState.id === id ? animeState.anime : null;
+
+  useEffect(() => {
+    if (!anime) return;
+    const animeId = anime.id;
+    const controller = new AbortController();
+    AnivexaCatalog.episodes(animeId, controller.signal)
+      .then((episodes) =>
+        setEpisodeState({ id: animeId, episodes, error: null }),
+      )
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setEpisodeState({
+            id: animeId,
+            episodes: [],
+            error:
+              cause instanceof Error
+                ? cause.message
+                : 'Não foi possível carregar os episódios. Tente novamente.',
+          });
+      });
+    return () => controller.abort();
+  }, [anime, retryVersion]);
+
+  const episodes = useMemo(
+    () => (episodeState.id === anime?.id ? episodeState.episodes : []),
+    [anime?.id, episodeState.episodes, episodeState.id],
+  );
+  const currentEpisodeId = episodes.some(
+    (episode) => episode.id === requestedEpisodeId,
+  )
+    ? requestedEpisodeId
+    : (episodes[0]?.id ?? '');
+  const currentEpisode = useMemo(
+    () => episodes.find((episode) => episode.id === currentEpisodeId) ?? null,
+    [currentEpisodeId, episodes],
+  );
+
+  useEffect(() => {
+    if (!currentEpisodeId || currentEpisodeId === requestedEpisodeId) return;
+    const next = new URLSearchParams(params);
+    next.set('ep', currentEpisodeId);
+    setParams(next, { replace: true });
+  }, [currentEpisodeId, params, requestedEpisodeId, setParams]);
+
+  useEffect(() => {
+    if (!currentEpisodeId) return;
+    const controller = new AbortController();
+    AnivexaCatalog.servers(currentEpisodeId, controller.signal)
+      .then((servers) =>
+        setServerState({
+          episodeId: currentEpisodeId,
+          servers,
+          activeId: servers[0]?.id ?? '',
+          error: servers.length
+            ? null
+            : 'Nenhum servidor compatível encontrado.',
+        }),
+      )
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setServerState({
+            episodeId: currentEpisodeId,
+            servers: [],
+            activeId: '',
+            error:
+              cause instanceof Error
+                ? cause.message
+                : 'Não foi possível consultar os servidores. Tente novamente.',
+          });
+      });
+    return () => controller.abort();
+  }, [currentEpisodeId, retryVersion]);
+
+  const currentServerState =
+    serverState.episodeId === currentEpisodeId
+      ? serverState
+      : { episodeId: currentEpisodeId, servers: [], activeId: '', error: null };
+  const activeServerId = currentServerState.activeId;
+  const activeServerIndex = currentServerState.servers.findIndex(
+    (server) => server.id === activeServerId,
+  );
+  const nextServerId = currentServerState.servers
+    .slice(Math.max(activeServerIndex + 1, 0))
+    .find((server) => server.id !== activeServerId)?.id;
+  const advanceServer = useCallback(() => {
+    if (!nextServerId) return false;
+    setServerState((state) =>
+      state.episodeId === currentEpisodeId
+        ? { ...state, activeId: nextServerId }
+        : state,
+    );
+    return true;
+  }, [currentEpisodeId, nextServerId]);
+  const requestKey = `${currentEpisodeId}:${activeServerId}`;
+  useEffect(() => {
+    if (!currentEpisodeId || !activeServerId) return;
+    const controller = new AbortController();
+    AnivexaCatalog.sources(currentEpisodeId, activeServerId, controller.signal)
+      .then((sources) =>
+        setSourceState({ key: requestKey, sources, error: null }),
+      )
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setSourceState({
+            key: requestKey,
+            sources: null,
+            error:
+              cause instanceof Error
+                ? cause.message
+                : 'Não foi possível preparar a transmissão. Tente novamente.',
+          });
+      });
+    return () => controller.abort();
+  }, [activeServerId, currentEpisodeId, requestKey, retryVersion]);
+
+  const progress = useEpisodeProgress(id, currentEpisode?.number);
+  const { save } = useSaveEpisodeProgress(
+    id,
+    currentEpisodeId,
+    currentEpisode?.number,
+  );
+  const activeIndex = episodes.findIndex(
+    (episode) => episode.id === currentEpisodeId,
+  );
+  const selectEpisode = (episodeId: string) => {
+    const next = new URLSearchParams(params);
+    next.set('ep', episodeId);
+    setParams(next);
+  };
+  const retryPlayer = () => {
+    setEpisodeState({ id: '', episodes: [], error: null });
+    setServerState({
+      episodeId: '',
+      servers: [],
+      activeId: '',
+      error: null,
+    });
+    setSourceState({ key: '', sources: null, error: null });
+    setRetryVersion((version) => version + 1);
+  };
+
+  if (animeState.id !== id)
+    return <div className="h-96 animate-pulse rounded-2xl bg-white/[0.035]" />;
+  if (!anime)
+    return (
+      <div
+        role="alert"
+        className="rounded-xl border border-red-300/10 bg-red-400/[0.04] p-5 text-sm text-red-200/80"
+      >
+        {animeState.error ?? 'Anime não encontrado.'}
+      </div>
+    );
+  const title = resolveAnimeTitle(anime.title);
+  const poster = getAnimeImage(anime);
+  const loadingEpisodes = episodeState.id !== anime.id;
+  const loadingServers =
+    Boolean(currentEpisodeId) && serverState.episodeId !== currentEpisodeId;
+  const loadingSources =
+    Boolean(activeServerId) && sourceState.key !== requestKey;
+  const sources = sourceState.key === requestKey ? sourceState.sources : null;
+  const streamError = sourceState.key === requestKey ? sourceState.error : null;
+
+  return (
+    <div className="mx-auto max-w-[1500px] space-y-5">
+      <Link
+        to={`/anime/${anime.id}`}
+        className="inline-flex items-center gap-2 text-xs font-semibold text-white/50 hover:text-white"
+      >
+        <ArrowLeft size={14} /> Voltar aos detalhes
+      </Link>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-4">
+          <PlayerErrorBoundary
+            key={`${currentEpisodeId}:${activeServerId}`}
+            onRetry={retryPlayer}
+          >
+            <VideoPlayer
+              sources={sources}
+              title={`${title}${currentEpisode ? ` · Episódio ${currentEpisode.number}` : ''}`}
+              poster={anime.banner ?? poster}
+              loading={loadingEpisodes || loadingServers || loadingSources}
+              loadingLabel={
+                loadingEpisodes
+                  ? 'Carregando episódios…'
+                  : loadingServers
+                    ? 'Buscando servidores…'
+                    : sourceState.key.startsWith(`${currentEpisodeId}:`) &&
+                        sourceState.sources
+                      ? 'Alternando servidor…'
+                      : 'Preparando transmissão…'
+              }
+              error={
+                streamError ??
+                currentServerState.error ??
+                (episodeState.id === anime.id ? episodeState.error : null)
+              }
+              onRetry={retryPlayer}
+              onSourceFailure={advanceServer}
+              initialTime={
+                progress && !progress.completed
+                  ? progress.currentTime
+                  : undefined
+              }
+              onProgress={save}
+            />
+          </PlayerErrorBoundary>
+          <div className="flex items-center justify-between rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+            <button
+              type="button"
+              disabled={activeIndex <= 0}
+              onClick={() => selectEpisode(episodes[activeIndex - 1]?.id ?? '')}
+              className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold text-white/70 hover:bg-white/[0.06] disabled:opacity-30"
+            >
+              <ArrowLeft size={14} /> Anterior
+            </button>
+            <span className="text-xs font-semibold text-white/65">
+              {currentEpisode
+                ? `Episódio ${currentEpisode.number}${currentEpisode.title ? ` · ${currentEpisode.title}` : ''}`
+                : 'Carregando episódios'}
+            </span>
+            <button
+              type="button"
+              disabled={activeIndex < 0 || activeIndex >= episodes.length - 1}
+              onClick={() => selectEpisode(episodes[activeIndex + 1]?.id ?? '')}
+              className="inline-flex h-9 items-center gap-2 rounded-lg px-3 text-xs font-semibold text-white/70 hover:bg-white/[0.06] disabled:opacity-30"
+            >
+              Próximo <ArrowRight size={14} />
+            </button>
+          </div>
+          <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h1 className="text-base font-bold">{title}</h1>
+                <p className="mt-1 text-xs text-white/45">
+                  {currentEpisode
+                    ? `Episódio ${currentEpisode.number}`
+                    : 'Selecione um episódio'}
+                </p>
+              </div>
+              {poster && (
+                <img
+                  src={poster}
+                  alt=""
+                  className="h-20 w-14 rounded-lg object-cover"
+                />
+              )}
+            </div>
+            <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-white/45">
+              {stripHtml(anime.description)}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <label className="flex items-center gap-2 text-[10px] font-semibold text-white/45">
+                Servidor
+                <select
+                  value={activeServerId}
+                  disabled={currentServerState.servers.length === 0}
+                  onChange={(event) =>
+                    setServerState((state) =>
+                      state.episodeId === currentEpisodeId
+                        ? { ...state, activeId: event.target.value }
+                        : state,
+                    )
+                  }
+                  className="h-9 max-w-72 rounded-lg border border-white/10 bg-[#151517] px-3 text-xs text-white/80 outline-none focus:border-[#49d77a]/60"
+                >
+                  {currentServerState.servers.map((server) => (
+                    <option key={server.id} value={server.id}>
+                      {server.name}
+                    </option>
+                  ))}
+                </select>
+                {loadingSources && (
+                  <span role="status" className="text-[10px] text-white/40">
+                    Carregando…
+                  </span>
+                )}
+              </label>
+              <a
+                href="https://anilist.co"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-[10px] font-semibold text-white/50 hover:text-white"
+              >
+                AniList <ExternalLink size={12} />
+              </a>
+            </div>
+          </section>
+        </div>
+        <aside className="max-h-[75vh] overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+          <h2 className="sticky top-0 z-10 bg-[#0d0d0f] px-2 py-3 text-xs font-bold">
+            Episódios <span className="text-white/35">{episodes.length}</span>
+          </h2>
+          {loadingEpisodes ? (
+            <div className="space-y-2 p-2">
+              {Array.from({ length: 8 }, (_, index) => (
+                <div
+                  key={index}
+                  className="h-14 animate-pulse rounded-lg bg-white/[0.04]"
+                />
+              ))}
+            </div>
+          ) : episodes.length ? (
+            <div className="space-y-1">
+              {episodes.map((episode) => (
+                <button
+                  key={episode.id}
+                  type="button"
+                  aria-current={
+                    episode.id === currentEpisodeId ? 'true' : undefined
+                  }
+                  onClick={() => selectEpisode(episode.id)}
+                  className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${episode.id === currentEpisodeId ? 'bg-[#49d77a]/10 text-[#70e793]' : 'text-white/60 hover:bg-white/[0.05]'}`}
+                >
+                  {episode.image ? (
+                    <img
+                      src={episode.image}
+                      alt=""
+                      className="h-12 w-20 rounded-md object-cover"
+                    />
+                  ) : (
+                    <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold">
+                      {episode.number}
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block text-[11px] font-bold">
+                      Episódio {episode.number}
+                    </span>
+                    <span className="mt-1 block truncate text-[10px] text-white/35">
+                      {episode.title ?? 'Anime'}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="p-3 text-xs leading-relaxed text-white/40">
+              {episodeState.error ?? 'Nenhum episódio disponível pela Anivexa.'}
+            </p>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}

@@ -1,9 +1,7 @@
 import { createRoot } from 'react-dom/client';
+import { AppRoot } from '@/app-root';
 
-const root = createRoot(document.getElementById('app') as HTMLElement);
-root.render(
-  <main className="space-y-2">
-    <h1 className="text-2xl font-semibold">Electron React App</h1>
-    <p className="text-slate-600">Start building your desktop application.</p>
-  </main>,
-);
+const rootElement = document.getElementById('app');
+if (!rootElement) throw new Error('App root element was not found.');
+
+createRoot(rootElement).render(<AppRoot />);

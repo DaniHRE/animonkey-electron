@@ -35,3 +35,14 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm start` e `pnpm make` são os comandos do destino.
 - Não enfraquecer TypeScript strict. Evitar `any`, segredos em logs, `console.log` persistente e supressões de lint sem motivo.
 - Para segurança Electron ou player, a validação exige executar o app empacotado e conferir o comportamento real, não apenas compilar.
+
+## Etapas e commits da migração
+
+- Trabalhar em etapas pequenas, verticais e revisáveis. Cada etapa deve atualizar este `AGENTS.md` com regras novas aprendidas durante o trabalho e atualizar `MIGRATION_PROGRESS.md` com escopo, estado, evidência, validações e próximo passo.
+- Ao concluir cada etapa coerente, criar um commit local Conventional Commit que inclua a implementação e as atualizações correspondentes de documentação. Não acumular etapas concluídas em um único commit; não fazer push sem solicitação explícita.
+- Antes de iniciar uma etapa, conferir `git status`, branch e diff. Preservar alterações locais e nunca incluir arquivos não relacionados ou segredos no commit. Se alterações preexistentes não puderem ser separadas com segurança, registrar isso e manter o conjunto intacto até uma fronteira de commit clara.
+- Após a implementação da etapa, rodar as validações proporcionais ao escopo, revisar o diff e `git diff --check`, atualizar os documentos e então commitar. Registrar no tracker o hash do commit e as verificações feitas.
+- Player e streaming só podem ser marcados como paridade completa após smoke audiovisual no app empacotado para os formatos e legendas suportados; compilação ou contenção de erro, isoladamente, não confirma reprodução.
+- Erros apresentados ao usuário devem ser localizados, acionáveis e sem stack traces, mensagens internas de providers, URLs, headers ou credenciais. Detalhes técnicos ficam fora da UI e nunca devem incluir tokens.
+- Etapa registrada em 2026-11-08: mensagens de erro de rede/provedor no catálogo e no fluxo de episódios são convertidas para orientação em português; repetições seguintes devem acrescentar a data e as novas regras aprendidas nesta seção.
+- O hash de cada etapa é anotado no tracker na etapa seguinte, já que o commit não pode incluir o próprio hash sem autorreferência.

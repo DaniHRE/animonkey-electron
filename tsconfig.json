@@ -18,9 +18,8 @@
     "sourceMap": true,
     "outDir": "dist",
     "strict": true,
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     },
     "noImplicitAny": true,
     "noUnusedLocals": true,
