@@ -2,16 +2,16 @@
 
 Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualizado em 08/11/2026.
 
-| Fase                              | Estado       | Evidência / próximo passo                                                                                                                                                                                                                                                      |
-| --------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0 — Repositório e baseline        | Concluída    | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                                                                  |
-| 1 — Fundação UI e compatibilidade | Parcial      | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                                                               |
-| 2 — Domínio e dados públicos      | Parcial      | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                                                                             |
+| Fase                              | Estado       | Evidência / próximo passo                                                                                                                                                                                                                                                            |
+| --------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0 — Repositório e baseline        | Concluída    | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                                                                        |
+| 1 — Fundação UI e compatibilidade | Parcial      | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                                                                     |
+| 2 — Domínio e dados públicos      | Parcial      | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                                                                                   |
 | 3 — Player e streaming            | Parcial      | Episódios/fontes reais via Anivexa; proxy no main para HLS/DASH, Range e redirects; Plyr/HLS.js/dash.js/JASSUB; avanço automático entre servidores e erro de renderização contido no quadro. Erros de rede/provedor agora exibem orientação amigável. Falta QA audiovisual completo. |
-| 4 — Persistência offline          | Parcial      | IndexedDB schema v3 com Assistir Depois, cache, progresso e preferências; Continue Watching e backup JSON validado com merge por timestamp. Smoke confirma tela de configurações e exportação; falta importar/restaurar e testar upgrade.                                      |
-| 5 — Conta e sync                  | Não iniciado | Definir integração HTTPS compatível com NextAuth/Supabase sem credenciais privadas no app.                                                                                                                                                                                     |
-| 6 — Watch Together e complementos | Não iniciado | Adaptar PartyKit, feed/admin e páginas institucionais; revisar todo inventário de paridade.                                                                                                                                                                                    |
-| 7 — Distribuição                  | Parcial      | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                                                                       |
+| 4 — Persistência offline          | Parcial      | IndexedDB schema v3 com Assistir Depois, cache, progresso e preferências; Continue Watching e backup JSON validado com merge por timestamp. Smoke confirma tela de configurações e exportação; falta importar/restaurar e testar upgrade.                                            |
+| 5 — Conta e sync                  | Não iniciado | Definir integração HTTPS compatível com NextAuth/Supabase sem credenciais privadas no app.                                                                                                                                                                                           |
+| 6 — Watch Together e complementos | Não iniciado | Adaptar PartyKit, feed/admin e páginas institucionais; revisar todo inventário de paridade.                                                                                                                                                                                          |
+| 7 — Distribuição                  | Parcial      | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                                                                             |
 
 ## Entregue até aqui
 
@@ -36,6 +36,7 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - API local: `GET /map/16498` e `GET /episodes/16498` responderam 200; conferido o formato real de IDs por provedor e o especial episódio 0 sem expor URLs de streaming.
 - O pacote usa worker ES para o build Vite/JASSUB.
 - 08/11/2026: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram após sanitizar mensagens de erro no catálogo/episódios. O detalhe técnico permanece como `cause` interno e não é renderizado na UI.
+- Smoke em desenvolvimento em 08/11/2026: catálogo/home, detalhes de anime e configurações locais renderizaram no Electron. A automação da janela não chegou à reprodução nesta execução; o estado audiovisual continua pendente.
 
 ## Próximos passos
 
@@ -46,4 +47,5 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Commits por etapa
 
-- A etapa de fundação e catálogo/player existente e o tratamento amigável de erros desta rodada são registrados no histórico Git em commits separados quando houver fronteiras seguras. Hashes são adicionados aqui pela atualização da etapa seguinte.
+- `b49d82e feat: migrate catalog and player workflows to Electron` — base de catálogo/player e erros voltados ao usuário; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados.
+- A etapa de smoke visual desta revisão é registrada separadamente; seu hash será anotado no tracker no próximo passo concluído.

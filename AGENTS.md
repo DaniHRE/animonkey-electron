@@ -45,4 +45,5 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - Player e streaming só podem ser marcados como paridade completa após smoke audiovisual no app empacotado para os formatos e legendas suportados; compilação ou contenção de erro, isoladamente, não confirma reprodução.
 - Erros apresentados ao usuário devem ser localizados, acionáveis e sem stack traces, mensagens internas de providers, URLs, headers ou credenciais. Detalhes técnicos ficam fora da UI e nunca devem incluir tokens.
 - Etapa registrada em 2026-11-08: mensagens de erro de rede/provedor no catálogo e no fluxo de episódios são convertidas para orientação em português; repetições seguintes devem acrescentar a data e as novas regras aprendidas nesta seção.
+- Etapa registrada em 2026-11-08: smoke em desenvolvimento confirmou renderização e navegação do catálogo, detalhes e configurações locais. A automação não chegou ao fluxo de reprodução nesta execução; não declarar paridade audiovisual sem essa evidência.
 - O hash de cada etapa é anotado no tracker na etapa seguinte, já que o commit não pode incluir o próprio hash sem autorreferência.
