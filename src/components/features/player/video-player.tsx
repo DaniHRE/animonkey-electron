@@ -93,6 +93,10 @@ export function VideoPlayer({
     key: string;
     url: string;
   }>({ key: '', url: '' });
+  const [captionBlobUrls, setCaptionBlobUrls] = useState<{
+    key: string;
+    urls: Record<string, string>;
+  }>({ key: '', urls: {} });
   const [skip, setSkip] = useState<{ label: string; time: number } | null>(
     null,
   );
@@ -139,16 +143,65 @@ export function VideoPlayer({
     },
     [sourceKey],
   );
+  useEffect(() => {
+    let active = true;
+    const objectUrls: string[] = [];
+    if (!sources || webVttSubtitles.length === 0) {
+      return () => {
+        active = false;
+      };
+    }
+    void Promise.all(
+      webVttSubtitles.map(async (track) => {
+        try {
+          const response = await fetch(createMediaProxyUrl(track.url, sources));
+          if (!response.ok) return null;
+          const blob = new Blob([await response.arrayBuffer()], {
+            type: 'text/vtt',
+          });
+          const url = URL.createObjectURL(blob);
+          objectUrls.push(url);
+          return [track.url, url] as const;
+        } catch {
+          return null;
+        }
+      }),
+    ).then((entries) => {
+      if (active)
+        setCaptionBlobUrls({
+          key: sourceKey,
+          urls: Object.fromEntries(
+            entries.filter(
+              (entry): entry is readonly [string, string] => entry !== null,
+            ),
+          ),
+        });
+    });
+    return () => {
+      active = false;
+      objectUrls.forEach(URL.revokeObjectURL);
+    };
+  }, [sourceKey, sources, webVttSubtitles]);
   const captionTracks = useMemo(
     () =>
-      webVttSubtitles.map((track) => ({
-        kind: 'captions' as const,
-        label: `${getSubtitleLabel(track.lang ?? '')}${track.format ? ` · ${track.format.toUpperCase()}` : ''}`,
-        srcLang: track.lang?.toLowerCase() ?? 'und',
-        src: sources ? createMediaProxyUrl(track.url, sources) : track.url,
-        default: track.url === defaultSubtitle?.url,
-      })),
-    [defaultSubtitle?.url, sources, webVttSubtitles],
+      webVttSubtitles.flatMap((track) => {
+        const src =
+          captionBlobUrls.key === sourceKey
+            ? captionBlobUrls.urls[track.url]
+            : undefined;
+        return src
+          ? [
+              {
+                kind: 'captions' as const,
+                label: getSubtitleLabel(track.lang ?? ''),
+                srcLang: track.lang?.toLowerCase() ?? 'und',
+                src,
+                default: track.url === defaultSubtitle?.url,
+              },
+            ]
+          : [];
+      }),
+    [captionBlobUrls, defaultSubtitle?.url, sourceKey, webVttSubtitles],
   );
   const intro = sources?.intro;
   const outro = sources?.outro;
@@ -565,13 +618,20 @@ export function VideoPlayer({
     const index = webVttSubtitles.findIndex(
       (track) => track.url === selectedTrack,
     );
-    if (typeof instance.toggleCaptions === 'function') {
-      instance.currentTrack = index;
-      instance.toggleCaptions(index >= 0);
-      return;
-    }
     const video = rootRef.current?.querySelector('video');
     if (!(video instanceof HTMLVideoElement)) return;
+    if (index >= 0 && index < video.textTracks.length) {
+      const track = video.textTracks[index];
+      if (track.language) {
+        try {
+          instance.currentTrack = index;
+          instance.toggleCaptions(true);
+          return;
+        } catch {
+          // Fall back to the native track mode if Plyr has not indexed it yet.
+        }
+      }
+    }
     for (
       let trackIndex = 0;
       trackIndex < video.textTracks.length;
@@ -671,11 +731,33 @@ export function VideoPlayer({
               );
               if (plyrRef.current) {
                 const player = plyrRef.current;
-                if (typeof player.toggleCaptions === 'function') {
-                  player.currentTrack = selectedIndex;
-                  player.toggleCaptions(selectedIndex >= 0);
+                const video = rootRef.current?.querySelector('video');
+                const textTrack =
+                  video instanceof HTMLVideoElement && selectedIndex >= 0
+                    ? video.textTracks[selectedIndex]
+                    : undefined;
+                if (selectedIndex < 0) {
+                  for (
+                    let index = 0;
+                    video instanceof HTMLVideoElement &&
+                    index < video.textTracks.length;
+                    index++
+                  ) {
+                    video.textTracks[index].mode = 'disabled';
+                  }
+                  return;
+                }
+                if (
+                  textTrack?.language &&
+                  typeof player.toggleCaptions === 'function'
+                ) {
+                  try {
+                    player.currentTrack = selectedIndex;
+                    player.toggleCaptions(true);
+                  } catch {
+                    textTrack.mode = 'showing';
+                  }
                 } else {
-                  const video = rootRef.current?.querySelector('video');
                   if (video instanceof HTMLVideoElement) {
                     for (
                       let index = 0;

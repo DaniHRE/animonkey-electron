@@ -215,6 +215,23 @@ function corsHeaders(headers: HeadersInit = {}): Headers {
   return result;
 }
 
+function passthroughHeaders(response: Response): Headers {
+  const headers = new Headers();
+  for (const name of [
+    'content-type',
+    'content-length',
+    'content-range',
+    'accept-ranges',
+    'cache-control',
+    'last-modified',
+    'etag',
+  ]) {
+    const value = response.headers.get(name);
+    if (value) headers.set(name, value);
+  }
+  return headers;
+}
+
 async function fetchUpstream(
   source: URL,
   headers: Headers,
@@ -301,16 +318,6 @@ function unwrapFlixSegment(body: Uint8Array): Uint8Array | null {
     for (let index = 0; index < output.length; index += 1) {
       output[index] ^= xorKey[index % xorKey.length];
     }
-  }
-  // FlixCloud segments decode to MPEG-TS. Avoid serving arbitrary images as
-  // video if a provider reuses the same filename pattern for another asset.
-  if (
-    output.length < 3 * 188 ||
-    output[0] !== 0x47 ||
-    output[188] !== 0x47 ||
-    output[376] !== 0x47
-  ) {
-    return null;
   }
   return output;
 }
@@ -425,11 +432,11 @@ export function installMediaProxy(): void {
       }
       if (
         /\/seg-[^/]+\.(?:png|webp)$/i.test(target.pathname) &&
-        request.method === 'GET'
+        request.method === 'GET' &&
+        upstream.ok
       ) {
-        const unwrapped = unwrapFlixSegment(
-          new Uint8Array(await upstream.arrayBuffer()),
-        );
+        const segment = new Uint8Array(await upstream.arrayBuffer());
+        const unwrapped = unwrapFlixSegment(segment);
         if (unwrapped) {
           const segmentBuffer = new ArrayBuffer(unwrapped.byteLength);
           new Uint8Array(segmentBuffer).set(unwrapped);
@@ -441,23 +448,19 @@ export function installMediaProxy(): void {
             }),
           });
         }
-      }
-      const passthroughHeaders = new Headers();
-      for (const name of [
-        'content-type',
-        'content-length',
-        'content-range',
-        'accept-ranges',
-        'cache-control',
-        'last-modified',
-        'etag',
-      ]) {
-        const value = upstream.headers.get(name);
-        if (value) passthroughHeaders.set(name, value);
+        // unwrapFlixSegment consumes the upstream body; retain the bytes for
+        // passthrough when a provider returns a raw multipart without an
+        // image signature.
+        const segmentBuffer = new ArrayBuffer(segment.byteLength);
+        new Uint8Array(segmentBuffer).set(segment);
+        return new Response(segmentBuffer, {
+          status: upstream.status,
+          headers: corsHeaders(passthroughHeaders(upstream)),
+        });
       }
       return new Response(request.method === 'HEAD' ? null : upstream.body, {
         status: upstream.status,
-        headers: corsHeaders(passthroughHeaders),
+        headers: corsHeaders(passthroughHeaders(upstream)),
       });
     } catch {
       return new Response(null, { status: 502, headers: corsHeaders() });
