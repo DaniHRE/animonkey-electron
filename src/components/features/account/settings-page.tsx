@@ -1,29 +1,15 @@
 import { useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { Download, Upload } from 'lucide-react';
-import { useLocalPreference } from '@/hooks/use-local-preference';
 import {
   exportLocalBackup,
   importLocalBackup,
 } from '@/services/cache/local-db';
 
-const subtitleSizes = [
-  ['small', 'Pequena'],
-  ['medium', 'Média'],
-  ['large', 'Grande'],
-  ['xlarge', 'Extra grande'],
-] as const;
-type SubtitleSize = (typeof subtitleSizes)[number][0];
-
 export function SettingsPage() {
   const backupInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const subtitleSize = useLocalPreference<SubtitleSize>(
-    'player.subtitle-size',
-    'medium',
-  );
-
   const downloadBackup = async () => {
     setError(null);
     try {
@@ -77,23 +63,10 @@ export function SettingsPage() {
       <div className="space-y-5">
         <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
           <h2 className="text-sm font-bold">Legendas</h2>
-          <label className="mt-4 grid max-w-xs gap-2 text-xs font-semibold text-white/55">
-            Tamanho padrão
-            <select
-              value={subtitleSize.value}
-              disabled={!subtitleSize.loaded}
-              onChange={(event) =>
-                subtitleSize.update(event.target.value as SubtitleSize)
-              }
-              className="h-10 rounded-lg border border-white/10 bg-[#151517] px-3 text-xs text-white/80 outline-none focus:border-[#49d77a]/60"
-            >
-              {subtitleSizes.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p className="mt-2 max-w-xl text-xs leading-relaxed text-white/45">
+            Durante a reprodução, ajuste o tamanho e a aparência em
+            Acessibilidade → Estilos de legenda no menu do Vidstack.
+          </p>
         </section>
 
         <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
