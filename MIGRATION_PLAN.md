@@ -12,18 +12,26 @@ O repositório web continua sendo a referência funcional e uma aplicação inde
 - A base inclui AniList GraphQL, Anivexa, Supabase/NextAuth, sync offline-first, HLS, MPEG-DASH, WebVTT, ASS/SSA/JASSUB e sincronização social via PartyKit.
 - No início da migração, `animonkey-electron` era o starter: `src/app.tsx`, `src/main.ts`, `src/preload.ts`, `src/renderer.ts`, Vite separado por processo e Tailwind 4. O trabalho inicial já adicionou React Router, configuração shadcn, shell e features de catálogo; player e integrações de usuário seguem pendentes.
 - O destino agora tem controle Git local na branch `main`, acompanhando `origin/main` em `https://github.com/DaniHRE/animonkey-electron`; foi adicionado `AGENTS.md` local de arquitetura e segurança. O plano não pressupõe alterações no histórico do repo web.
+- Diagnóstico conferido em 10/11/2026, antes desta atualização documental: `main` estava sete commits à frente de `origin/main` e o working tree não tinha alterações. O app usa Electron Forge 7.11, Vite 5, React 19, TypeScript estrito e pnpm; o player de `src/components/features/player/video-player.tsx` usa Plyr 3.8.5, HLS.js, dash.js e JASSUB. O preload expõe somente a plataforma; não há handlers IPC, Zustand, Playback Controller, Source Resolver ou Service Manager identificados. Estado de interface está em React; cache, preferências e progresso ficam no IndexedDB do renderer. Não foram encontrados testes automatizados.
+- A decisão de produto registrada em 10/11/2026 é usar **Vidstack como player principal**. O principal benefício esperado é sua biblioteca de captions, que documenta VTT, SRT, SSA/ASS e JSON, além de integração opcional com libass via JASSUB. Essa capacidade é da biblioteca de captions/renderização do Vidstack, não implica que todos os providers ou captions embutidos sejam automaticamente selecionáveis; a compatibilidade de cada fonte continua sujeita a validação.
+- Risco de ciclo de vida: a documentação oficial do Vidstack declara manutenção somente de segurança para a linha 1.x, com patches prioritários até janeiro de 2028, e que o desenvolvimento futuro ocorre em Video.js 10. A escolha de Vidstack permanece aprovada para este projeto, mas a dependência deve ficar encapsulada atrás de adapters e o plano deve rever suporte/manutenção antes dessa data e em cada release principal. Se o suporte necessário não puder ser mantido, avaliar migração de implementação sem alterar contratos de domínio.
 
 ## Arquitetura alvo
 
 ```text
 React renderer (UI, React Router, shadcn, Tailwind)
   ├─ features / hooks / contexts / services de domínio compartilháveis
+  ├─ Vidstack (player e captions; integração JASSUB somente onde necessária)
+  ├─ Playback Controller (contrato de comandos/eventos independente do player)
+  ├─ Source Resolver (normalização de formato, MIME e metadados de fonte)
+  ├─ Zustand (estado compartilhado; engine continua autoridade sobre estado de mídia ao vivo)
   ├─ adaptadores de armazenamento local (IndexedDB; migração versionada)
   ├─ APIs públicas permitidas (ex.: AniList, se CORS e CSP permitirem)
-  └─ bridge tipada e mínima via window.animonkey (preload)
-       └─ IPC validado por canal e payload
-            └─ Electron main (janelas, ciclo de vida, storage de segredos,
-                filesystem seletivo, atualização, protocolo e operações privilegiadas)
+  └─ bridge tipada e mínima via window.animonkey (preload), somente para
+       capacidades privilegiadas realmente necessárias
+       └─ IPC validado por canal, origem e payload, se introduzido
+            └─ Electron main (janelas, ciclo de vida, protocolo de mídia e
+                operações privilegiadas; sem backend improvisado)
 
 APIs remotas confiáveis (auth, Supabase protegido, Anivexa/proxy, PartyKit)
   └─ chamadas HTTPS; segredos de servidor permanecem fora do aplicativo distribuído
@@ -39,19 +47,19 @@ Regras da fronteira Electron:
 
 ## Inventário de funcionalidades e destino
 
-| Área do app web        | Funcionalidades a preservar                                                                          | Destino / observação                                                                                                                                                                                                                                             |
-| ---------------------- | ---------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Shell e navegação      | home, layouts, navbar, tema, transições, not-found e erros                                           | Renderer React Router; adaptar links, navegação, erros e rotas dinâmicas.                                                                                                                                                                                        |
-| Catálogo               | home, trending, recentes, updates, detalhes, recomendações, personagens e metadados                  | Reusar serviços, normalizadores, tipos e componentes após remover dependências Next; navegação e metadata viram recursos de renderer.                                                                                                                            |
-| Busca                  | busca de anime, filtros, debounce e histórico                                                        | Preservar `mediaType: ANIME` e `isAdult`; validar comportamento de API/CORS e mover acesso HTTP para serviços.                                                                                                                                                   |
-| Agenda                 | schedule e cache                                                                                     | Reusar serviço/cache, revisar TTL e invalidação sem mudar as chaves silenciosamente.                                                                                                                                                                             |
-| Player                 | episódios, seleção de server/source, HLS, DASH, proxy, progresso, VTT/ASS/SSA, JASSUB e preferências | Migração própria de maior risco; preservar headers, Range, reescrita de BaseURL, worker/WASM e sequência de montagem documentada. Não substituir formatos por conveniência.                                                                                      |
-| Dados locais           | watch-later, continue-watching, histórico/cache e preferências                                       | IndexedDB permanece renderer; versionar esquema, testar upgrade e preservar dados já existentes quando possível.                                                                                                                                                 |
-| Conta e sync           | cadastro/login/logout, perfil/senha/avatar, ratings, privacidade, export, feed e sync                | NextAuth e seus Route Handlers não existem no Electron. Manter backend HTTPS remoto no início ou extrair backend independente antes de desligar rotas; migração não coloca service role/JWT secret no cliente. Supabase RLS e auth precisam de desenho validado. |
-| Watch together         | salas, chat, presença, sync de player e admin de sala                                                | PartyKit segue serviço remoto; adaptar conexão/ciclo de vida, identidade, reconnect e permissões. Nunca incluir token administrativo no bundle.                                                                                                                  |
-| Admin                  | dashboard, health, rooms                                                                             | Definir se pertence ao produto desktop; preservar acesso e autorização. Painel não substitui autorização server-side.                                                                                                                                            |
-| Páginas institucionais | DMCA e termos                                                                                        | Manter como telas locais versionadas ou abrir conteúdo web oficial conforme decisão de produto; não omitir no inventário.                                                                                                                                        |
-| Recursos web           | sitemap, robots, metadata/SEO, Analytics e Speed Insights                                            | SEO/crawlers não se aplicam da mesma forma ao app desktop; manter site web separado e decidir telemetria desktop com consentimento/configuração compatíveis.                                                                                                     |
+| Área do app web        | Funcionalidades a preservar                                                                          | Destino / observação                                                                                                                                                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shell e navegação      | home, layouts, navbar, tema, transições, not-found e erros                                           | Renderer React Router; adaptar links, navegação, erros e rotas dinâmicas.                                                                                                                                                                                                                                   |
+| Catálogo               | home, trending, recentes, updates, detalhes, recomendações, personagens e metadados                  | Reusar serviços, normalizadores, tipos e componentes após remover dependências Next; navegação e metadata viram recursos de renderer.                                                                                                                                                                       |
+| Busca                  | busca de anime, filtros, debounce e histórico                                                        | Preservar `mediaType: ANIME` e `isAdult`; validar comportamento de API/CORS e mover acesso HTTP para serviços.                                                                                                                                                                                              |
+| Agenda                 | schedule e cache                                                                                     | Reusar serviço/cache, revisar TTL e invalidação sem mudar as chaves silenciosamente.                                                                                                                                                                                                                        |
+| Player                 | episódios, seleção de server/source, HLS, DASH, proxy, progresso, VTT/ASS/SSA, JASSUB e preferências | Vidstack é a implementação principal aprovada. Preservar headers, Range, reescrita de BaseURL, worker/WASM e sequência de montagem; verificar captions/legendas por provider e não presumir equivalência para conteúdo hard-sub ou faixas embutidas. Encapsular a biblioteca para permitir evolução futura. |
+| Dados locais           | watch-later, continue-watching, histórico/cache e preferências                                       | IndexedDB permanece renderer; versionar esquema, testar upgrade e preservar dados já existentes quando possível.                                                                                                                                                                                            |
+| Conta e sync           | cadastro/login/logout, perfil/senha/avatar, ratings, privacidade, export, feed e sync                | NextAuth e seus Route Handlers não existem no Electron. Manter backend HTTPS remoto no início ou extrair backend independente antes de desligar rotas; migração não coloca service role/JWT secret no cliente. Supabase RLS e auth precisam de desenho validado.                                            |
+| Watch together         | salas, chat, presença, sync de player e admin de sala                                                | PartyKit segue serviço remoto; adaptar conexão/ciclo de vida, identidade, reconnect e permissões. Nunca incluir token administrativo no bundle.                                                                                                                                                             |
+| Admin                  | dashboard, health, rooms                                                                             | Definir se pertence ao produto desktop; preservar acesso e autorização. Painel não substitui autorização server-side.                                                                                                                                                                                       |
+| Páginas institucionais | DMCA e termos                                                                                        | Manter como telas locais versionadas ou abrir conteúdo web oficial conforme decisão de produto; não omitir no inventário.                                                                                                                                                                                   |
+| Recursos web           | sitemap, robots, metadata/SEO, Analytics e Speed Insights                                            | SEO/crawlers não se aplicam da mesma forma ao app desktop; manter site web separado e decidir telemetria desktop com consentimento/configuração compatíveis.                                                                                                                                                |
 
 ## Estratégia recomendada
 
@@ -92,15 +100,31 @@ Regras da fronteira Electron:
 
 ### Fase 3 — Biblioteca do player e streaming
 
-- Isolar player e dependências (Plyr, HLS.js, dash.js, JASSUB/WASM/Workers) no renderer; configurar assets de build e caminhos de produção.
+- Migrar gradualmente Plyr para Vidstack, que será o player principal; manter o player atual funcional durante a implementação isolada e remover Plyr somente após critérios de regressão atendidos.
+- Fixar e documentar versões compatíveis de `@vidstack/react` e dependências. Confirmar integração com React 19, Vite 5, Electron/Chromium empacotado, workers/WASM do JASSUB e build Windows antes de concluir a adoção.
+- Usar a biblioteca de captions do Vidstack para validar VTT, SRT, SSA/ASS e JSON conforme as fontes reais. Avaliar JASSUB/libass somente para arquivos ou estilos que não atinjam paridade pelo renderizador de captions; não duplicar processamento sem necessidade.
+- Isolar player e dependências (Vidstack, HLS.js, dash.js e, se necessário, JASSUB/WASM/Workers) no renderer; configurar assets de build e caminhos de produção.
+- Implementar um Playback Controller fino para comandos/eventos e um Source Resolver para formato, MIME e metadados. Manter detalhes de provider, proxy, headers, tokens e transformação no adapter correspondente; não transferir segredos ao Zustand.
+- Zustand será introduzido somente para estado compartilhado necessário. Estado transitório de mídia (tempo, buffering, volume e tracks efetivos) deve derivar dos eventos/store do Vidstack; Zustand pode espelhar o mínimo necessário para UI fora da árvore do player, sem duas fontes de verdade.
 - Implementar a estratégia de acesso ao provider: backend/proxy HTTPS existente no primeiro corte; preservar Referer, Authorization, Range, token/chave de manifesto, segmentos e fallback. Não assumir que CORS permite chamada direta nem que URL de embed substitui HLS/DASH.
 - Adaptar protocolo de mídia/URLs e testar as mesmas fontes, troca de episódio, troca de servidor, retomar progresso, captions VTT e renderização ASS/SSA.
-- Preservar a preparação ASS antes do HLS, o ciclo destroy do JASSUB, worker/WASM no Forge e todas as restrições descritas em `docs/player-subtitles.md` e `docs/provider-streaming.md`.
+- Preservar os contratos de providers, proxy e progressão documentados em `docs/player-subtitles.md` e `docs/provider-streaming.md`. A sequência especial de preparação ASS antes do HLS e o ciclo destroy de JASSUB só permanecem se o adapter JASSUB continuar necessário; nesse caso, preservar worker/WASM no Forge.
 - **Step de coleta/análise de providers e legendas:** para cada resposta da API, registrar de forma sanitizada provider/server, tipo de stream, audio/sub, `subtitleType`, tracks do stream e do payload, extensão/formato, idioma (`srclang`, `lang`, `label`, `language`), `default`, grupos HLS `EXT-X-MEDIA`, headers exigidos por categoria (sem valores), classificação soft-sub/hard-sub/unknown e como essa classificação foi confirmada. Comparar os metadados com as faixas que o player realmente mostra; não inferir soft-sub só porque a API listou um arquivo. Repetir a coleta em HD-2, HD-1 e H-SUB do Re-anime, Anikoto e Ani.pm e anexar evidência sem segredos à matriz de QA.
 
-**Saída:** matriz de testes de player cobre HLS proxied/direto/fallback, DASH com segmentos/Range, providers com headers, VTT e ASS/SSA; falhas em legenda não impedem vídeo.
+**Saída:** matriz de testes de player cobre HLS proxied/direto/fallback, DASH com segmentos/Range, providers com headers, captions VTT/SRT/SSA/ASS/JSON disponíveis nas fontes e casos JASSUB quando aplicável; falhas em legenda não impedem vídeo. Smoke audiovisual no app empacotado é obrigatório.
+
+#### Decisão Vidstack e manutenção
+
+- **Decisão aprovada em 10/11/2026:** Vidstack é o player principal planejado por sua composição React/TypeScript, providers HLS/DASH e suporte de captions. A adoção é incremental; Plyr continua como baseline até os cenários cobertos pelo passo correspondente passarem.
+- A documentação oficial do Vidstack declara manutenção de segurança apenas para a linha 1.x, com patches prioritários até janeiro de 2028, e direciona o desenvolvimento ativo para Video.js 10. Esse risco foi aceito para o plano atual; isso não significa suporte funcional garantido até essa data.
+- Manter contratos de source e Playback Controller independentes da API Vidstack, registrar versão suportada, revisar avisos de segurança/manutenção em cada release e reavaliar biblioteca antes de janeiro de 2028. Uma eventual mudança futura de player deve ser implementada por adapter e não alterar contratos de provider ou dados.
+- Vidstack documenta VTT, SRT, SSA/ASS e JSON na biblioteca de captions; SSA/ASS pode ser mapeado para VTT estendido pelo renderizador. Há plugin opcional de libass via JASSUB. Testar estilo, posicionamento, encoding, temporização, troca de track, fullscreen e desempenho com os arquivos/provedores reais; a lista de formatos, sozinha, não comprova paridade visual.
+- Compatibilidade React 19/Electron 43 e produção Windows x64 é item de validação deste projeto. A documentação web do Vidstack não é evidência de smoke no Electron empacotado.
+- Referências oficiais: [status do Vidstack](https://vidstack.io/docs/player/), [formatos e carregamento de captions](https://vidstack.io/docs/player/core-concepts/loading/) e [integração opcional JASSUB](https://vidstack.io/docs/player/core-concepts/loading/).
 
 #### Verificações atuais de faixa e elegibilidade
+
+> Esta subseção registra o comportamento observado no player legado Plyr e serve de baseline de comparação; não define automaticamente a implementação de captions no Vidstack.
 
 - O adapter procura idioma nos campos `srclang`, `lang`, `label` e `language`, tanto em tracks do stream quanto do payload, e normaliza apenas português (incluindo PT-BR) e inglês para os badges atuais.
 - Tracks duplicadas pelo mesmo URL são consolidadas. O formato ASS/SSA é reconhecido pela extensão no pathname da URL. No player, `filterSubtitles` mantém apenas captions com idioma conhecido (PT-BR/EN) e no máximo uma faixa por idioma.
@@ -144,11 +168,22 @@ Regras da fronteira Electron:
 
 ## Critérios de estabilidade e acompanhamento
 
+- Usar estados rastreáveis `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED` e `CANCELLED`. `COMPLETED` exige critérios de aceite atendidos e validações executadas; se uma validação necessária não puder ser feita, registrar a limitação e manter a etapa incompleta.
+- Ao concluir cada etapa, registrar escopo e arquivos/módulos, decisões, testes e resultados, riscos/bloqueios, desvios e próximas tarefas em `MIGRATION_PROGRESS.md`; preservar entradas históricas existentes.
 - A matriz funcional é a fonte de verdade para paridade. Cada item registra status (`não iniciado`, `em progresso`, `migrado`, `bloqueado`, `decisão de produto`), evidência e riscos.
 - Toda fatia deve compilar, passar typecheck/lint e ter testes proporcionais: unitários para normalizadores/regras, integração para IPC/adaptadores e smoke/E2E para fluxos de UI críticos. Não declarar paridade somente por build verde.
 - Em cada release candidata, comparar cenários equivalentes nos dois apps e verificar que o `animonkey` web continua buildável e utilizável. Mudanças inevitáveis no backend devem manter contratos web retrocompatíveis.
 - Preservar dados: nenhuma migração de IndexedDB/cache ou formato de progresso é feita sem versão, backup/estratégia de recuperação e teste de upgrade.
 - Não fazer cutover ou encerrar o site/backend Next até todos os clientes e serviços consumidores terem migrado e os dados/contratos estarem validados.
+
+### Critérios adicionais de aceite da modernização
+
+- Vidstack está encapsulado pelo Playback Controller, integrado ao Zustand sem duplicação de autoridade e consegue trocar source/engine e limpar listeners/recursos no ciclo de vida correto.
+- Source Resolver preserva formatos, MIME types, legendas e metadados necessários; HLS/DASH mantêm o proxy, headers, autenticação, Range e reescritas exigidas por provider.
+- Captions VTT, SRT, SSA/ASS e JSON são verificadas com fixtures/fontes representativas; integração JASSUB só é considerada aprovada após validação visual e de ciclo de vida quando necessária.
+- IPC introduzido tem contratos compartilhados, canais permitidos, validação de origem/payload, erros padronizados, unsubscribe e timeout/cancelamento quando aplicável. Se nenhuma capacidade privilegiada nova precisar de IPC, manter a bridge mínima existente e registrar essa decisão.
+- Service Manager só é implementado para serviços/processos que o app efetivamente precise iniciar ou supervisionar; chamadas HTTP remotas não justificam, por si, um gerenciador de processos.
+- Build e smoke empacotados Windows x64 aprovados para reprodução, troca de episódio/provider, controles, captions, erros e encerramento; os formatos sem evidência continuam pendentes.
 
 ## Decisões pendentes antes das fases dependentes
 
