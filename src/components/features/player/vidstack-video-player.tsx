@@ -13,11 +13,15 @@ import {
   DefaultVideoLayout,
 } from '@vidstack/react/player/layouts/default';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { usePlaybackController } from '@/hooks/use-playback-controller';
 import type { EpisodeSources, EpisodeSubtitle } from '@/types/player';
-import { useSubtitleSize } from '@/hooks/use-subtitle-size';
 import { createMediaProxyUrl } from '@/lib/media-proxy';
-import { filterSubtitles, getSubtitleLabel } from '@/lib/subtitle';
+import { resolvePlaybackSource } from '@/lib/player-source-resolver';
+import {
+  filterSubtitles,
+  getSubtitleLabel,
+  normalizeSubtitleLanguage,
+} from '@/lib/subtitle';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
 import './vidstack-video-player.css';
@@ -60,20 +64,6 @@ function getSubtitleFormat(subtitle: EpisodeSubtitle): SubtitleFormat {
   return 'vtt';
 }
 
-function isAllowedEmbedUrl(value: string | undefined): value is string {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === 'https:' &&
-      url.hostname !== 'embed.settlar.io' &&
-      !url.hostname.endsWith('.embed.settlar.io')
-    );
-  } catch {
-    return false;
-  }
-}
-
 export function VidstackVideoPlayer({
   sources,
   sourceId,
@@ -91,19 +81,23 @@ export function VidstackVideoPlayer({
   const sourceKey =
     sourceId ??
     `${sources?.format ?? ''}:${sources?.sourceUrl ?? ''}:${sources?.embedUrl ?? ''}`;
-  const [fallback, setFallback] = useState({
-    key: '',
-    direct: false,
-    embed: false,
-    failed: false,
+  const {
+    fallback: activeFallback,
+    reportFailure: reportPlaybackFailure,
+    markHealthy,
+    reset: resetPlayback,
+  } = usePlaybackController({ sourceKey, sources, onSourceFailure });
+  const resolvedSource = resolvePlaybackSource(sources, {
+    direct: activeFallback.direct,
+    embed: activeFallback.embed,
   });
-  const activeFallback =
-    fallback.key === sourceKey
-      ? fallback
-      : { key: sourceKey, direct: false, embed: false, failed: false };
-  const embedUrl = isAllowedEmbedUrl(sources?.embedUrl) ? sources.embedUrl : '';
-  const useEmbed =
-    activeFallback.embed || (!sources?.sourceUrl && Boolean(embedUrl));
+  const embedUrl =
+    resolvedSource.kind === 'embed'
+      ? resolvedSource.url
+      : resolvedSource.kind === 'media'
+        ? resolvedSource.embedUrl
+        : '';
+  const useEmbed = resolvedSource.kind === 'embed';
   const playbackKey = `${sourceKey}:${activeFallback.direct ? 'direct' : 'proxy'}:${useEmbed ? 'embed' : 'media'}`;
   const [mediaLoadingState, setMediaLoadingState] = useState<{
     key: string;
@@ -118,24 +112,20 @@ export function VidstackVideoPlayer({
       ? mediaLoadingState.value
       : Boolean(sources?.sourceUrl && !useEmbed);
   const skip = skipState.key === playbackKey ? skipState.value : null;
-  const { size, scale, setSize: setSubtitleSize } = useSubtitleSize();
   const lastSavedAt = useRef(0);
   const resumed = useRef(false);
-  const failureReported = useRef(false);
   const sourcesRef = useRef(sources);
 
-  const sourceUrl = sources?.sourceUrl ?? '';
-  const proxiedSource =
-    sources && sourceUrl ? createMediaProxyUrl(sourceUrl, sources) : '';
-  const activeSource = activeFallback.direct ? sourceUrl : proxiedSource;
+  const activeSource =
+    resolvedSource.kind === 'media' ? resolvedSource.url : '';
   const auth = sources?.headers.Authorization ?? sources?.headers.authorization;
   const subtitles = useMemo(
     () => filterSubtitles(sources?.subtitles ?? []),
     [sources?.subtitles],
   );
-  const defaultSubtitle =
-    subtitles.find((track) => track.lang?.toLowerCase().startsWith('pt')) ??
-    subtitles.find((track) => track.lang?.toLowerCase().startsWith('en'));
+  const defaultSubtitle = subtitles.find(
+    (track) => normalizeSubtitleLanguage(track.lang ?? '') === 'pt-BR',
+  );
   const intro = sources?.intro;
   const outro = sources?.outro;
 
@@ -180,7 +170,6 @@ export function VidstackVideoPlayer({
 
   useEffect(() => {
     resumed.current = false;
-    failureReported.current = false;
     lastSavedAt.current = 0;
   }, [playbackKey]);
 
@@ -194,43 +183,6 @@ export function VidstackVideoPlayer({
       setSkipState({ key: playbackKey, value }),
     [playbackKey],
   );
-
-  const updateFallback = useCallback(
-    (patch: Partial<typeof activeFallback>) => {
-      setFallback((current) => ({
-        ...(current.key === sourceKey
-          ? current
-          : { key: sourceKey, direct: false, embed: false, failed: false }),
-        ...patch,
-        key: sourceKey,
-      }));
-    },
-    [sourceKey],
-  );
-
-  const reportPlaybackFailure = useCallback(() => {
-    if (failureReported.current) return;
-    failureReported.current = true;
-    if (
-      sourcesRef.current?.format === 'hls' &&
-      sourceUrl &&
-      !sourcesRef.current.playlistKey &&
-      !activeFallback.direct
-    ) {
-      updateFallback({ direct: true });
-      return;
-    }
-    if (onSourceFailure?.()) return;
-    if (embedUrl && !activeFallback.embed) updateFallback({ embed: true });
-    else updateFallback({ failed: true });
-  }, [
-    activeFallback.direct,
-    activeFallback.embed,
-    embedUrl,
-    onSourceFailure,
-    sourceUrl,
-    updateFallback,
-  ]);
 
   const handleProviderChange = useCallback(
     (provider: MediaProviderAdapter | null) => {
@@ -294,20 +246,15 @@ export function VidstackVideoPlayer({
   );
 
   const retryPlayback = useCallback(() => {
-    failureReported.current = false;
     resumed.current = false;
-    setFallback({ key: '', direct: false, embed: false, failed: false });
+    resetPlayback();
     setPlaybackLoading(false);
     onRetry?.();
-  }, [onRetry, setPlaybackLoading]);
+  }, [onRetry, resetPlayback, setPlaybackLoading]);
 
   const sourceType =
-    sources?.format === 'hls'
-      ? 'application/x-mpegurl'
-      : sources?.format === 'dash'
-        ? 'application/dash+xml'
-        : 'video/mp4';
-  const canMountPlayer = Boolean(sources && !useEmbed && activeSource);
+    resolvedSource.kind === 'media' ? resolvedSource.type : 'video/mp4';
+  const canMountPlayer = resolvedSource.kind === 'media';
   const playerError =
     error ??
     (activeFallback.failed
@@ -323,14 +270,7 @@ export function VidstackVideoPlayer({
   const showOverlay = loading || mediaLoading || Boolean(playerError);
 
   return (
-    <div
-      style={
-        {
-          '--subtitle-scale': String(scale),
-        } as CSSProperties
-      }
-      className="vidstack-player relative aspect-video w-full overflow-hidden rounded-xl bg-black"
-    >
+    <div className="vidstack-player relative aspect-video w-full overflow-hidden rounded-xl bg-black">
       {showOverlay && (
         <div className="absolute inset-0 z-20 grid place-items-center bg-black/55 backdrop-blur-[2px]">
           <div className="max-w-md rounded-2xl border border-white/10 bg-[#101012]/90 px-7 py-5 text-center shadow-2xl">
@@ -367,12 +307,12 @@ export function VidstackVideoPlayer({
           onProviderChange={handleProviderChange}
           onCanPlay={() => {
             setPlaybackLoading(false);
-            failureReported.current = false;
+            markHealthy();
           }}
           onWaiting={() => setPlaybackLoading(true)}
           onPlaying={() => {
             setPlaybackLoading(false);
-            failureReported.current = false;
+            markHealthy();
           }}
           onTimeUpdate={handleTimeUpdate}
           onPause={() => {
@@ -417,31 +357,6 @@ export function VidstackVideoPlayer({
                   )
                 : undefined
             }
-            slots={{
-              captionsMenuItemsEnd: (
-                <div
-                  className="vidstack-caption-size"
-                  aria-label="Tamanho da legenda"
-                >
-                  <label htmlFor="vidstack-caption-size">
-                    Tamanho da legenda
-                  </label>
-                  <select
-                    id="vidstack-caption-size"
-                    value={size}
-                    onChange={(event) =>
-                      setSubtitleSize(event.target.value as typeof size)
-                    }
-                    className="rounded border border-white/20 bg-black px-2 py-1 text-xs text-white"
-                  >
-                    <option value="small">Pequeno</option>
-                    <option value="medium">Médio</option>
-                    <option value="large">Grande</option>
-                    <option value="xlarge">Muito grande</option>
-                  </select>
-                </div>
-              ),
-            }}
           />
         </MediaPlayer>
       )}

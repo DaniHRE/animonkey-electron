@@ -14,8 +14,9 @@ export interface EpisodeTimestamp {
 }
 
 export interface EpisodeServer {
-  name: string;
   id: string;
+  provider: string;
+  serverName: string;
   subtitleLanguages: Array<'pt-BR' | 'en'>;
   subtitlePresentation?: 'tracks' | 'embedded';
   subtitleType?: 'softsub' | 'hardsub' | 'unknown';

@@ -207,7 +207,14 @@ function supportedLanguages(
     const normalized = language ? normalizeSubtitleLanguage(language) : null;
     if (normalized) found.add(normalized);
   }
-  return [...found];
+  return (['pt-BR', 'en'] as const).filter((language) => found.has(language));
+}
+
+function subtitlePriority(server: EpisodeServer): number {
+  if (server.subtitleLanguages.includes('pt-BR')) return 0;
+  if (server.subtitlePresentation === 'embedded') return 1;
+  if (server.subtitleLanguages.includes('en')) return 2;
+  return 1;
 }
 
 function subtitleType(value: unknown): 'softsub' | 'hardsub' | 'unknown' {
@@ -341,10 +348,12 @@ export const AnivexaCatalog = {
               presentation !== 'hardsub'
             )
               return [];
+            const serverName = stream.server ?? `Fonte ${streamIndex + 1}`;
             return [
               {
-                name: `${provider} · ${stream.server ?? `Fonte ${streamIndex + 1}`}`,
                 id: `${provider}|${streamIndex}`,
+                provider,
+                serverName,
                 subtitleLanguages: languages,
                 subtitlePresentation:
                   languages.length && presentation !== 'hardsub'
@@ -359,7 +368,11 @@ export const AnivexaCatalog = {
         }
       }),
     );
-    return resolved.flat();
+    return resolved
+      .flat()
+      .sort(
+        (first, second) => subtitlePriority(first) - subtitlePriority(second),
+      );
   },
 
   async sources(

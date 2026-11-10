@@ -1,11 +1,14 @@
 .vidstack-player {
   --media-brand: #49d77a;
   --media-font-family: Inter, sans-serif;
-  --media-cue-font-size: calc(
-    var(--overlay-height) / 100 * 4.5 * var(--subtitle-scale, 1)
-  );
   --media-cue-color: #fff;
-  --media-cue-bg: rgba(0, 0, 0, 0.72);
+  --media-cue-bg: transparent;
+  --media-cue-display-bg: transparent;
+  --media-cue-display-padding: 0;
+  --media-cue-box-shadow: none;
+  --media-cue-border: 0;
+  --animonkey-caption-shadow:
+    0 2px 8px rgb(0 0 0 / 90%), 0 0 4px rgb(0 0 0 / 80%);
   isolation: isolate;
 }
 
@@ -15,12 +18,21 @@
   height: 100%;
 }
 
-.vidstack-caption-size {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.5rem 0.75rem;
-  color: #fff;
-  font-size: 0.75rem;
+.vidstack-player .vds-captions [data-part='cue'] {
+  background: transparent !important;
+  padding: 0 !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: #fff !important;
+  font-size: inherit !important;
+  text-shadow: var(--animonkey-caption-shadow) !important;
+}
+
+.vidstack-player .vds-captions [data-part='cue'] * {
+  background-color: transparent !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  text-shadow: inherit !important;
 }

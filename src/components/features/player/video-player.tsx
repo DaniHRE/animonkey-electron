@@ -13,8 +13,14 @@ import {
 } from 'react';
 import type { EpisodeSources } from '@/types/player';
 import { useSubtitleSize } from '@/hooks/use-subtitle-size';
+import { usePlaybackController } from '@/hooks/use-playback-controller';
 import { createMediaProxyUrl } from '@/lib/media-proxy';
-import { filterSubtitles, getSubtitleLabel } from '@/lib/subtitle';
+import { resolvePlaybackSource } from '@/lib/player-source-resolver';
+import {
+  filterSubtitles,
+  getSubtitleLabel,
+  normalizeSubtitleLanguage,
+} from '@/lib/subtitle';
 import { SUBTITLE_LABEL, SUBTITLE_SIZES } from '@/types/subtitle';
 import type { SubtitleSize } from '@/types/subtitle';
 import plyrIconsUrl from '@/assets/plyr.svg?url';
@@ -232,20 +238,15 @@ function PlyrVideoPlayer({
   } | null>(null);
   const assVersion = useRef(0);
   const resumed = useRef(false);
-  const failureReported = useRef(false);
   const sourceKey =
     sourceId ??
     `${sources?.format ?? ''}:${sources?.sourceUrl ?? ''}:${sources?.embedUrl ?? ''}`;
-  const [fallbackState, setFallbackState] = useState({
-    key: '',
-    direct: false,
-    embed: false,
-    failed: false,
-  });
-  const fallback =
-    fallbackState.key === sourceKey
-      ? fallbackState
-      : { key: sourceKey, direct: false, embed: false, failed: false };
+  const {
+    fallback,
+    reportFailure: reportPlaybackFailure,
+    markHealthy,
+    reset: resetPlayback,
+  } = usePlaybackController({ sourceKey, sources, onSourceFailure });
   const failed = fallback.failed;
   const [playerInitError, setPlayerInitError] = useState<{
     key: string;
@@ -280,46 +281,35 @@ function PlyrVideoPlayer({
     () => filterSubtitles(sources?.subtitles ?? []),
     [sources?.subtitles],
   );
-  const defaultSubtitle =
-    subtitles.find((track) => track.lang?.toLowerCase().startsWith('pt')) ??
-    subtitles.find((track) => track.lang?.toLowerCase().startsWith('en'));
+  const defaultSubtitle = subtitles.find(
+    (track) => normalizeSubtitleLanguage(track.lang ?? '') === 'pt-BR',
+  );
   const selectedTrack =
     trackSelection.key === sourceKey
       ? trackSelection.url
       : (defaultSubtitle?.url ?? '');
 
   const sourceUrl = sources?.sourceUrl ?? '';
-  const hasPlaylistKey = Boolean(sources?.playlistKey);
+  const resolvedSource = resolvePlaybackSource(sources, {
+    direct: fallback.direct,
+    embed: fallback.embed,
+  });
   const proxiedSource =
-    sourceUrl && sources ? createMediaProxyUrl(sourceUrl, sources) : '';
-  const activeSource = fallback.direct ? sourceUrl : proxiedSource;
-  const isDash = sources?.format === 'dash';
+    resolvedSource.kind === 'media' ? resolvedSource.proxyUrl : '';
+  const activeSource =
+    resolvedSource.kind === 'media' ? resolvedSource.url : '';
+  const isDash =
+    resolvedSource.kind === 'media' && resolvedSource.format === 'dash';
   const embedUrl =
-    sources?.embedUrl &&
-    /^https:\/\//i.test(sources.embedUrl) &&
-    (() => {
-      try {
-        return new URL(sources.embedUrl).hostname !== 'embed.settlar.io';
-      } catch {
-        return false;
-      }
-    })()
-      ? sources.embedUrl
-      : '';
-  const useEmbed = fallback.embed || (!sourceUrl && Boolean(embedUrl));
+    resolvedSource.kind === 'embed'
+      ? resolvedSource.url
+      : resolvedSource.kind === 'media'
+        ? resolvedSource.embedUrl
+        : '';
+  const useEmbed = resolvedSource.kind === 'embed';
+  const sourceType =
+    resolvedSource.kind === 'media' ? resolvedSource.type : 'video/mp4';
   const auth = sources?.headers.Authorization ?? sources?.headers.authorization;
-  const setFallback = useCallback(
-    (patch: Partial<typeof fallback>) => {
-      setFallbackState((current) => ({
-        ...(current.key === sourceKey
-          ? current
-          : { key: sourceKey, direct: false, embed: false, failed: false }),
-        ...patch,
-        key: sourceKey,
-      }));
-    },
-    [sourceKey],
-  );
   useEffect(() => {
     let active = true;
     const objectUrls: string[] = [];
@@ -439,10 +429,7 @@ function PlyrVideoPlayer({
             ? [
                 {
                   src: activeSource,
-                  type:
-                    sources?.format === 'hls'
-                      ? 'application/x-mpegURL'
-                      : 'video/mp4',
+                  type: sourceType,
                 },
               ]
             : [],
@@ -468,7 +455,7 @@ function PlyrVideoPlayer({
       chapterUrl,
       isDash,
       poster,
-      sources?.format,
+      sourceType,
       title,
       useEmbed,
     ],
@@ -501,7 +488,7 @@ function PlyrVideoPlayer({
     video.className = 'plyr-react plyr';
     video.playsInline = true;
     mount.replaceChildren(video);
-    failureReported.current = false;
+    markHealthy();
     try {
       const player = new PlyrCore(video, plyrOptions);
       plyrRef.current = player;
@@ -522,7 +509,7 @@ function PlyrVideoPlayer({
       );
       return () => mount.replaceChildren();
     }
-  }, [canMountPlayer, plyrOptions, playerSource, sourceKey]);
+  }, [canMountPlayer, markHealthy, plyrOptions, playerSource, sourceKey]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -565,45 +552,16 @@ function PlyrVideoPlayer({
     })().catch(() => undefined);
   }, [scale, selectedTrack, size]);
 
-  const reportPlaybackFailure = useCallback(() => {
-    if (failureReported.current) return;
-    failureReported.current = true;
-    if (
-      sources?.format === 'hls' &&
-      sourceUrl &&
-      !hasPlaylistKey &&
-      !fallback.direct
-    ) {
-      setFallback({ direct: true });
-      return;
-    }
-    const advanced = onSourceFailure?.() ?? false;
-    if (advanced) return;
-    if (embedUrl && !fallback.embed) setFallback({ embed: true });
-    else setFallback({ failed: true });
-  }, [
-    embedUrl,
-    fallback.direct,
-    fallback.embed,
-    onSourceFailure,
-    setFallback,
-    hasPlaylistKey,
-    sourceUrl,
-    sources?.format,
-  ]);
-
   const retryPlayback = useCallback(() => {
-    failureReported.current = false;
     resumed.current = false;
-    setFallbackState({ key: '', direct: false, embed: false, failed: false });
+    resetPlayback();
     setPlayerInitError({ key: '', message: '' });
     setMediaLoading(false);
     onRetry?.();
-  }, [onRetry]);
+  }, [onRetry, resetPlayback]);
 
   useEffect(() => {
     resumed.current = false;
-    failureReported.current = false;
   }, [fallback.direct, sourceKey]);
 
   useEffect(() => {
