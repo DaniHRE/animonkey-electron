@@ -1,0 +1,26 @@
+.vidstack-player {
+  --media-brand: #49d77a;
+  --media-font-family: Inter, sans-serif;
+  --media-cue-font-size: calc(
+    var(--overlay-height) / 100 * 4.5 * var(--subtitle-scale, 1)
+  );
+  --media-cue-color: #fff;
+  --media-cue-bg: rgba(0, 0, 0, 0.72);
+  isolation: isolate;
+}
+
+.vidstack-player .vds-player,
+.vidstack-player .vds-video-layout {
+  width: 100%;
+  height: 100%;
+}
+
+.vidstack-caption-size {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem;
+  color: #fff;
+  font-size: 0.75rem;
+}

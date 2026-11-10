@@ -2,7 +2,15 @@ import Hls from 'hls.js';
 import PlyrCore from 'plyr';
 import type { PlyrSource } from 'plyr-react';
 import { LoaderCircle } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { EpisodeSources } from '@/types/player';
 import { useSubtitleSize } from '@/hooks/use-subtitle-size';
 import { createMediaProxyUrl } from '@/lib/media-proxy';
@@ -14,6 +22,12 @@ import './video-player.css';
 import jassubWorkerUrl from 'jassub/dist/wasm/jassub-worker.js?url';
 import jassubWasmUrl from 'jassub/dist/wasm/jassub-worker.wasm?url';
 import jassubModernWasmUrl from 'jassub/dist/wasm/jassub-worker-modern.wasm?url';
+
+const VidstackVideoPlayer = lazy(() =>
+  import('@/components/features/player/vidstack-video-player').then(
+    (module) => ({ default: module.VidstackVideoPlayer }),
+  ),
+);
 
 interface Props {
   sources: EpisodeSources | null;
@@ -192,7 +206,7 @@ function injectSubtitleSizeMenu(
   };
 }
 
-export function VideoPlayer({
+function PlyrVideoPlayer({
   sources,
   sourceId,
   title,
@@ -1012,4 +1026,21 @@ export function VideoPlayer({
       )}
     </div>
   );
+}
+
+export function VideoPlayer(props: Props) {
+  if (import.meta.env.VITE_PLAYER_ENGINE === 'vidstack')
+    return (
+      <Suspense
+        fallback={
+          <div
+            className="aspect-video w-full rounded-xl bg-black"
+            aria-label="Carregando reprodutor"
+          />
+        }
+      >
+        <VidstackVideoPlayer {...props} />
+      </Suspense>
+    );
+  return <PlyrVideoPlayer {...props} />;
 }
