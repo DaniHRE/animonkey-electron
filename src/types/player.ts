@@ -18,6 +18,7 @@ export interface EpisodeServer {
   id: string;
   subtitleLanguages: Array<'pt-BR' | 'en'>;
   subtitlePresentation?: 'tracks' | 'embedded';
+  subtitleType?: 'softsub' | 'hardsub' | 'unknown';
 }
 
 export interface EpisodeSubtitle {
@@ -33,6 +34,7 @@ export interface EpisodeSources {
   format?: 'hls' | 'dash' | 'mp4' | 'embed';
   subtitles: EpisodeSubtitle[];
   embedUrl?: string;
+  subtitleType?: 'softsub' | 'hardsub' | 'unknown';
   playlistKey?: string;
   intro?: EpisodeTimestamp;
   outro?: EpisodeTimestamp;

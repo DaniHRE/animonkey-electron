@@ -17,6 +17,7 @@ import jassubModernWasmUrl from 'jassub/dist/wasm/jassub-worker-modern.wasm?url'
 
 interface Props {
   sources: EpisodeSources | null;
+  sourceId?: string;
   title: string;
   poster?: string;
   loading: boolean;
@@ -193,6 +194,7 @@ function injectSubtitleSizeMenu(
 
 export function VideoPlayer({
   sources,
+  sourceId,
   title,
   poster,
   loading,
@@ -217,7 +219,9 @@ export function VideoPlayer({
   const assVersion = useRef(0);
   const resumed = useRef(false);
   const failureReported = useRef(false);
-  const sourceKey = `${sources?.format ?? ''}:${sources?.sourceUrl ?? ''}:${sources?.embedUrl ?? ''}`;
+  const sourceKey =
+    sourceId ??
+    `${sources?.format ?? ''}:${sources?.sourceUrl ?? ''}:${sources?.embedUrl ?? ''}`;
   const [fallbackState, setFallbackState] = useState({
     key: '',
     direct: false,
@@ -245,6 +249,10 @@ export function VideoPlayer({
     null,
   );
   const [mediaLoading, setMediaLoading] = useState(false);
+  const [subtitleError, setSubtitleError] = useState<{
+    key: string;
+    message: string;
+  }>({ key: '', message: '' });
   const { size, scale, setSize } = useSubtitleSize();
   const sizeRef = useRef(size);
   const scaleRef = useRef(scale);
@@ -273,7 +281,15 @@ export function VideoPlayer({
   const activeSource = fallback.direct ? sourceUrl : proxiedSource;
   const isDash = sources?.format === 'dash';
   const embedUrl =
-    sources?.embedUrl && /^https:\/\//i.test(sources.embedUrl)
+    sources?.embedUrl &&
+    /^https:\/\//i.test(sources.embedUrl) &&
+    (() => {
+      try {
+        return new URL(sources.embedUrl).hostname !== 'embed.settlar.io';
+      } catch {
+        return false;
+      }
+    })()
       ? sources.embedUrl
       : '';
   const useEmbed = fallback.embed || (!sourceUrl && Boolean(embedUrl));
@@ -359,6 +375,8 @@ export function VideoPlayer({
       }),
     [captionBlobUrls, defaultSubtitle?.url, sourceKey, subtitles],
   );
+  const captionsReady =
+    !sources || subtitles.length === 0 || captionBlobUrls.key === sourceKey;
   const intro = sources?.intro;
   const outro = sources?.outro;
   const chapters = useMemo(() => {
@@ -443,7 +461,7 @@ export function VideoPlayer({
   );
 
   const canMountPlayer = Boolean(
-    sources && !useEmbed && (activeSource || isDash),
+    sources && captionsReady && !useEmbed && (activeSource || isDash),
   );
   const plyrOptions = useMemo(
     () => ({
@@ -578,6 +596,7 @@ export function VideoPlayer({
     const video = rootRef.current?.querySelector('video');
     if (
       !(video instanceof HTMLVideoElement) ||
+      !canMountPlayer ||
       !sources ||
       isDash ||
       useEmbed ||
@@ -623,19 +642,33 @@ export function VideoPlayer({
     sources,
     reportPlaybackFailure,
     useEmbed,
+    canMountPlayer,
   ]);
 
   useEffect(() => {
-    if (!sources || isDash || sources.format === 'hls' || useEmbed) return;
+    if (
+      !canMountPlayer ||
+      !sources ||
+      isDash ||
+      sources.format === 'hls' ||
+      useEmbed
+    )
+      return;
     const video = rootRef.current?.querySelector('video');
     if (!(video instanceof HTMLVideoElement)) return;
     video.addEventListener('error', reportPlaybackFailure);
     return () => video.removeEventListener('error', reportPlaybackFailure);
-  }, [reportPlaybackFailure, isDash, sources, useEmbed]);
+  }, [canMountPlayer, reportPlaybackFailure, isDash, sources, useEmbed]);
 
   useEffect(() => {
     const video = rootRef.current?.querySelector('video');
-    if (!(video instanceof HTMLVideoElement) || !sources || !isDash || useEmbed)
+    if (
+      !(video instanceof HTMLVideoElement) ||
+      !canMountPlayer ||
+      !sources ||
+      !isDash ||
+      useEmbed
+    )
       return;
     let active = true;
     void import('dashjs')
@@ -659,7 +692,15 @@ export function VideoPlayer({
       dashInstance.current?.reset();
       dashInstance.current = null;
     };
-  }, [auth, isDash, proxiedSource, reportPlaybackFailure, sources, useEmbed]);
+  }, [
+    auth,
+    canMountPlayer,
+    isDash,
+    proxiedSource,
+    reportPlaybackFailure,
+    sources,
+    useEmbed,
+  ]);
 
   useEffect(() => {
     const container = rootRef.current;
@@ -824,7 +865,11 @@ export function VideoPlayer({
         );
       } catch {
         if (version === assVersion.current)
-          setTrackSelection({ key: sourceKey, url: '' });
+          setSubtitleError({
+            key: sourceKey,
+            message:
+              'Não foi possível renderizar esta legenda. Você pode continuar assistindo ou escolher outra faixa.',
+          });
       }
     })();
     return () => {
@@ -882,12 +927,20 @@ export function VideoPlayer({
       : !loading && !activeSource && !embedUrl
         ? 'Nenhuma fonte disponível para este episódio.'
         : null);
-  const showOverlay = loading || mediaLoading || Boolean(playerError);
+  const currentSubtitleError =
+    subtitleError.key === sourceKey ? subtitleError.message : '';
+  const showOverlay =
+    loading ||
+    mediaLoading ||
+    Boolean(playerError) ||
+    (!captionsReady && Boolean(sources));
   const statusLabel = loading
     ? loadingLabel
-    : mediaLoading
-      ? 'Carregando vídeo…'
-      : null;
+    : !captionsReady
+      ? 'Preparando legendas…'
+      : mediaLoading
+        ? 'Carregando vídeo…'
+        : null;
 
   return (
     <div
@@ -932,11 +985,18 @@ export function VideoPlayer({
         <iframe
           src={embedUrl}
           title={title}
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
           className="absolute inset-0 size-full"
         />
+      )}
+      {currentSubtitleError && !playerError && !loading && !mediaLoading && (
+        <p
+          role="status"
+          className="absolute right-3 bottom-3 z-20 max-w-sm rounded-lg border border-amber-200/20 bg-black/80 px-3 py-2 text-xs text-amber-100"
+        >
+          {currentSubtitleError}
+        </p>
       )}
       {skip && (
         <button

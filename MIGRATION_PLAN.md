@@ -96,8 +96,16 @@ Regras da fronteira Electron:
 - Implementar a estratégia de acesso ao provider: backend/proxy HTTPS existente no primeiro corte; preservar Referer, Authorization, Range, token/chave de manifesto, segmentos e fallback. Não assumir que CORS permite chamada direta nem que URL de embed substitui HLS/DASH.
 - Adaptar protocolo de mídia/URLs e testar as mesmas fontes, troca de episódio, troca de servidor, retomar progresso, captions VTT e renderização ASS/SSA.
 - Preservar a preparação ASS antes do HLS, o ciclo destroy do JASSUB, worker/WASM no Forge e todas as restrições descritas em `docs/player-subtitles.md` e `docs/provider-streaming.md`.
+- **Step de coleta/análise de providers e legendas:** para cada resposta da API, registrar de forma sanitizada provider/server, tipo de stream, audio/sub, `subtitleType`, tracks do stream e do payload, extensão/formato, idioma (`srclang`, `lang`, `label`, `language`), `default`, grupos HLS `EXT-X-MEDIA`, headers exigidos por categoria (sem valores), classificação soft-sub/hard-sub/unknown e como essa classificação foi confirmada. Comparar os metadados com as faixas que o player realmente mostra; não inferir soft-sub só porque a API listou um arquivo. Repetir a coleta em HD-2, HD-1 e H-SUB do Re-anime, Anikoto e Ani.pm e anexar evidência sem segredos à matriz de QA.
 
 **Saída:** matriz de testes de player cobre HLS proxied/direto/fallback, DASH com segmentos/Range, providers com headers, VTT e ASS/SSA; falhas em legenda não impedem vídeo.
+
+#### Verificações atuais de faixa e elegibilidade
+
+- O adapter procura idioma nos campos `srclang`, `lang`, `label` e `language`, tanto em tracks do stream quanto do payload, e normaliza apenas português (incluindo PT-BR) e inglês para os badges atuais.
+- Tracks duplicadas pelo mesmo URL são consolidadas. O formato ASS/SSA é reconhecido pela extensão no pathname da URL. No player, `filterSubtitles` mantém apenas captions com idioma conhecido (PT-BR/EN) e no máximo uma faixa por idioma.
+- Antes desta etapa, fonte sem idioma detectado era descartada salvo título adulto/Hentai. Agora `subtitleType: hardsub` explícito também mantém a fonte e a identifica como embutida; `softsub` com tracks segue selecionável. `unknown` não é uma confirmação visual de nenhum dos dois casos.
+- Limitação a resolver no step de coleta: metadados podem omitir idioma/extensão ou declarar softsub/hardsub incorretamente, e HLS pode anunciar captions no próprio manifesto. Comparar API, playlist, menu real e imagem de vídeo antes de alterar filtros. O tamanho customizado se aplica a WebVTT via Plyr e a ASS/SSA via escala de estilos/tags; não altera legenda já queimada no vídeo.
 
 ### Fase 4 — Persistência e experiência offline
 

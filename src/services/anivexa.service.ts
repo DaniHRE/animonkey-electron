@@ -51,6 +51,8 @@ interface StreamPayload {
     key?: string;
     playlist_key?: string;
     embed?: string;
+    embedUrl?: string;
+    subtitleType?: string;
     referer?: string;
     headers?: Record<string, string>;
     subtitles?: Array<Record<string, unknown>>;
@@ -208,6 +210,19 @@ function supportedLanguages(
   return [...found];
 }
 
+function subtitleType(value: unknown): 'softsub' | 'hardsub' | 'unknown' {
+  const normalized =
+    typeof value === 'string'
+      ? value
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z]/g, '')
+      : '';
+  if (/(hard|hsub|burn)/.test(normalized)) return 'hardsub';
+  if (/(soft|sub)/.test(normalized)) return 'softsub';
+  return 'unknown';
+}
+
 function asTimestamp(value: unknown): EpisodeTimestamp | undefined {
   if (typeof value !== 'object' || value === null) return undefined;
   const maybe = value as { start?: unknown; end?: unknown };
@@ -317,15 +332,25 @@ export const AnivexaCatalog = {
           return (payload.streams ?? []).flatMap((stream, streamIndex) => {
             if (!stream.url) return [];
             const languages = supportedLanguages(payload, stream);
-            if (!languages.length && !allowEmbeddedSubtitles) return [];
+            const presentation = subtitleType(
+              stream.subtitleType ?? stream.server,
+            );
+            if (
+              !languages.length &&
+              !allowEmbeddedSubtitles &&
+              presentation !== 'hardsub'
+            )
+              return [];
             return [
               {
                 name: `${provider} · ${stream.server ?? `Fonte ${streamIndex + 1}`}`,
                 id: `${provider}|${streamIndex}`,
                 subtitleLanguages: languages,
-                subtitlePresentation: languages.length
-                  ? ('tracks' as const)
-                  : ('embedded' as const),
+                subtitlePresentation:
+                  languages.length && presentation !== 'hardsub'
+                    ? ('tracks' as const)
+                    : ('embedded' as const),
+                subtitleType: presentation,
               },
             ];
           });
@@ -373,11 +398,13 @@ export const AnivexaCatalog = {
         const isHls = type === 'hls' || /\.m3u8?(?:$|\?)/i.test(stream.url);
         const isDash = type === 'dash' || /\.mpd(?:$|\?)/i.test(stream.url);
         const embedUrl =
-          typeof stream.embed === 'string'
-            ? stream.embed
-            : type === 'embed'
-              ? stream.url
-              : undefined;
+          typeof stream.embedUrl === 'string'
+            ? stream.embedUrl
+            : typeof stream.embed === 'string'
+              ? stream.embed
+              : type === 'embed'
+                ? stream.url
+                : undefined;
         const referer =
           stream.referer ??
           stream.headers?.Referer ??
@@ -398,6 +425,7 @@ export const AnivexaCatalog = {
               ? { sourceUrl: stream.url, format: 'mp4' as const }
               : {}),
           subtitles: mapTracks(payload, stream),
+          subtitleType: subtitleType(stream.subtitleType ?? stream.server),
           embedUrl,
           playlistKey: stream.playlist_key ?? stream.key,
           intro: asTimestamp(stream.intro ?? payload.intro),

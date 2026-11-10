@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 import { VideoPlayer } from '@/components/features/player/video-player';
+import { ServerSelector } from '@/components/features/player/server-selector';
 import { PlayerErrorBoundary } from '@/components/features/player/player-error-boundary';
 import { AniListCatalog } from '@/services/anilist.service';
 import { AnivexaCatalog } from '@/services/anivexa.service';
@@ -242,6 +243,7 @@ export function WatchPage() {
           >
             <VideoPlayer
               sources={sources}
+              sourceId={requestKey}
               title={`${title}${currentEpisode ? ` · Episódio ${currentEpisode.number}` : ''}`}
               poster={anime.banner ?? poster}
               loading={loadingEpisodes || loadingServers || loadingSources}
@@ -314,33 +316,29 @@ export function WatchPage() {
             <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-white/45">
               {stripHtml(anime.description)}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <label className="flex items-center gap-2 text-[10px] font-semibold text-white/45">
-                Servidor
-                <select
-                  value={activeServerId}
-                  disabled={currentServerState.servers.length === 0}
-                  onChange={(event) =>
-                    setServerState((state) =>
-                      state.episodeId === currentEpisodeId
-                        ? { ...state, activeId: event.target.value }
-                        : state,
-                    )
-                  }
-                  className="h-9 max-w-72 rounded-lg border border-white/10 bg-[#151517] px-3 text-xs text-white/80 outline-none focus:border-[#49d77a]/60"
-                >
-                  {currentServerState.servers.map((server) => (
-                    <option key={server.id} value={server.id}>
-                      {server.name}
-                    </option>
-                  ))}
-                </select>
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                  Servidores de reprodução
+                </span>
                 {loadingSources && (
                   <span role="status" className="text-[10px] text-white/40">
                     Carregando…
                   </span>
                 )}
-              </label>
+              </div>
+              <ServerSelector
+                servers={currentServerState.servers}
+                activeId={activeServerId}
+                disabled={loadingSources}
+                onSelect={(id) =>
+                  setServerState((state) =>
+                    state.episodeId === currentEpisodeId
+                      ? { ...state, activeId: id }
+                      : state,
+                  )
+                }
+              />
               <a
                 href="https://anilist.co"
                 target="_blank"
