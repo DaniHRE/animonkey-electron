@@ -1,7 +1,20 @@
-import { app, BrowserWindow, shell } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  type IpcMainInvokeEvent,
+} from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
+import { accountService } from './electron/account-service';
+import type {
+  AccountCredentials,
+  AccountRegistration,
+  EpisodeProgressInput,
+  WatchLaterRemoteItem,
+} from './types/account';
 
 registerMediaScheme();
 
@@ -17,6 +30,94 @@ const EXTERNAL_LINK_HOSTS = new Set([
   'dailymotion.com',
   'status.animonkey.app',
 ]);
+
+let mainWindow: BrowserWindow | null = null;
+
+function assertTrustedIpcSender(event: IpcMainInvokeEvent): void {
+  if (
+    !mainWindow ||
+    event.sender !== mainWindow.webContents ||
+    event.senderFrame !== event.sender.mainFrame
+  ) {
+    throw new Error('A solicitação do aplicativo não pôde ser autorizada.');
+  }
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('Dados da conta inválidos.');
+  }
+  return value as Record<string, unknown>;
+}
+
+function parseCredentials(value: unknown): AccountCredentials {
+  const input = asObject(value);
+  if (typeof input.email !== 'string' || typeof input.password !== 'string') {
+    throw new Error('Informe e-mail e senha.');
+  }
+  return { email: input.email, password: input.password };
+}
+
+function parseRegistration(value: unknown): AccountRegistration {
+  const input = asObject(value);
+  const credentials = parseCredentials(input);
+  if (input.name !== undefined && typeof input.name !== 'string') {
+    throw new Error('Nome inválido.');
+  }
+  return { ...credentials, name: input.name as string | undefined };
+}
+
+function registerAccountIpc(): void {
+  ipcMain.handle('account:register', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    return accountService.register(parseRegistration(value));
+  });
+  ipcMain.handle('account:login', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    return accountService.login(parseCredentials(value));
+  });
+  ipcMain.handle('account:logout', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.logout();
+  });
+  ipcMain.handle('account:get-session', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.getSession();
+  });
+  ipcMain.handle('account:watch-later:list', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.listWatchLater();
+  });
+  ipcMain.handle('account:watch-later:upsert', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    return accountService.upsertWatchLater(
+      asObject(value) as unknown as WatchLaterRemoteItem,
+    );
+  });
+  ipcMain.handle('account:watch-later:remove', (event, animeId: unknown) => {
+    assertTrustedIpcSender(event);
+    if (typeof animeId !== 'string') throw new Error('Anime inválido.');
+    return accountService.removeWatchLater(animeId);
+  });
+  ipcMain.handle('account:episode-progress:list', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.listEpisodeProgress();
+  });
+  ipcMain.handle('account:episode-progress:upsert', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    return accountService.upsertEpisodeProgress(
+      asObject(value) as EpisodeProgressInput,
+    );
+  });
+  ipcMain.handle(
+    'account:episode-progress:remove-anime',
+    (event, animeId: unknown) => {
+      assertTrustedIpcSender(event);
+      if (typeof animeId !== 'string') throw new Error('Anime inválido.');
+      return accountService.removeEpisodeProgressForAnime(animeId);
+    },
+  );
+}
 
 function isAllowedExternalUrl(value: string): boolean {
   try {
@@ -34,7 +135,7 @@ function isAllowedExternalUrl(value: string): boolean {
 
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1440,
     height: 920,
     minWidth: 900,
@@ -69,6 +170,8 @@ const createWindow = () => {
     );
   }
 };
+
+registerAccountIpc();
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

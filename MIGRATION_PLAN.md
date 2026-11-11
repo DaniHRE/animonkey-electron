@@ -155,13 +155,15 @@ Regras da fronteira Electron:
 
 ### Fase 5 — Conta, autenticação e sincronização
 
-- Antes da UI, decidir o backend final. A recomendação é manter temporariamente os endpoints Next em serviço HTTPS independente do ciclo de vida desktop e depois extrair auth/API para backend próprio.
-- Auditoria do código atual do repositório web em 11/11/2026 encontrou divergência de segurança: `auth.ts` compara a senha informada diretamente com `password_hash`, e `/api/auth/register` grava a senha sem hash, embora `docs/nextauth-setup.md` descreva `bcrypt-ts`. Não portar esse fluxo para o Electron; corrigir autenticação no servidor e confirmar uma API HTTPS nativa segura antes.
-- Redesenhar autenticação nativa para OAuth/deep-link ou fluxo web seguro conforme o backend suportar. NextAuth Credentials/cookies e adapter atuais não são automaticamente compatíveis com renderer Electron.
-- Nunca incluir chaves service-role/JWT de Supabase ou segredo de NextAuth no desktop; não permitir que renderer escolha user_id. Fazer operações privilegiadas e validação de ownership no servidor, mantendo RLS.
+- O desktop usa Supabase Edge Function dedicada `desktop-api` em HTTPS. O app web antigo permanece independente e não é requisito para a autenticação/sync desktop.
+- A correção web usa bcrypt-ts para cadastro, login e troca de senha; login aceita somente hashes. O banco tinha as quatro tabelas vazias do Auth.js e objetos de trigger incompletos; em 11/11/2026 foram aplicadas as tabelas Auth + Sync com zero usuários legados, então não há senhas existentes para migrar.
+- Fluxo desktop implementado em `desktop-api`: o processo main envia credenciais por HTTPS; renderer nunca recebe tokens. Access token opaco de 10 minutos fica em memória e refresh opaco rotativo por até 30 dias é persistido com `safeStorage`. O servidor guarda hashes dos tokens, associa sessão a usuário/dispositivo e revoga a família após replay. Login usa bcrypt-ts e limitação de tentativas.
+- Como a Edge Function valida o access token opaco, a função está configurada com `verify_jwt=false`; cada operação exige token bearer, hash ativo, sessão válida e deriva o usuário no servidor. Logout revoga a sessão e todas as operações filtram pelo `user_id` autenticado. Nunca aceitar `user_id` definido pelo renderer.
+- Expor ao renderer apenas operações IPC tipadas de alto nível e seus dados de domínio. Não expor token, `ipcRenderer`, fetch genérico ou acesso a filesystem. Se `safeStorage` não tiver criptografia disponível no sistema, não persistir refresh token e pedir login após reiniciar; expiração/rede indisponível mantém dados locais e não bloqueia uso offline.
+- Nunca incluir chaves secret/service-role, JWT secret ou segredo de NextAuth no desktop. O cliente recebe somente URL da Edge Function e publishable key; a função usa credencial server-side do ambiente Supabase. Operações privilegiadas e ownership ficam no servidor; manter RLS.
 - Migrar conta, configurações, avatar, export, watch-later remoto, progresso, ratings, privacidade e feed; preservar retry e mensagens de falha sem bloquear o modo offline.
 
-**Saída:** fluxos de usuário anônimo e autenticado, sessão expirada, revogação/logout, políticas RLS, reconcile e atualização do site funcionam sem credencial privada no pacote.
+**Saída:** fluxos de usuário anônimo e autenticado, sessão expirada, revogação/logout, políticas RLS, reconcile e atualização do site funcionam sem credencial privada no pacote. Backend/contrato IPC e smoke de rotação, replay, logout e sync estão implementados; completar UI, reconcile offline-first, expiração/reinício e troca de conta antes de concluir.
 
 ### Fase 6 — Watch together e recursos complementares
 

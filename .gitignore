@@ -90,3 +90,7 @@ typings/
 
 # Electron-Forge
 out/
+
+# Supabase CLI and Deno local metadata
+supabase/.temp/
+supabase/functions/desktop-api/.npmrc
