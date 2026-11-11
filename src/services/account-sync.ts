@@ -1,9 +1,12 @@
 import {
   applyRemoteEpisodeProgress,
   applyRemoteEpisodeProgressDeletion,
+  applyRemoteAnimeRating,
+  applyRemoteAnimeRatingDeletion,
   applyRemoteWatchLater,
   applyRemoteWatchLaterDeletion,
   getEpisodeProgressSyncData,
+  getAnimeRatingsSyncData,
   getWatchLaterSyncData,
 } from '@/services/cache/local-db';
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
@@ -180,6 +183,52 @@ async function syncEpisodeProgress(): Promise<void> {
   }
 }
 
+async function syncAnimeRatings(): Promise<void> {
+  const local = await getAnimeRatingsSyncData();
+  const remote = await window.animonkey.account.listAnimeRatings();
+  const localRatings = new Map(
+    local.ratings.map((rating) => [rating.animeId, rating]),
+  );
+  const remoteRatings = new Map(
+    remote.ratings.map((rating) => [rating.animeId, rating]),
+  );
+  const localTombstones = getTombstoneMap(local.tombstones);
+  const remoteTombstones = getTombstoneMap(remote.tombstones);
+  const ids = new Set([
+    ...localRatings.keys(),
+    ...remoteRatings.keys(),
+    ...localTombstones.keys(),
+    ...remoteTombstones.keys(),
+  ]);
+  for (const animeId of ids) {
+    const localRating = localRatings.get(animeId);
+    const remoteRating = remoteRatings.get(animeId);
+    const localDeleted = localTombstones.get(animeId);
+    const remoteDeleted = remoteTombstones.get(animeId);
+    const localAt = Math.max(localRating?.updatedAt ?? 0, localDeleted ?? 0);
+    const remoteAt = Math.max(remoteRating?.updatedAt ?? 0, remoteDeleted ?? 0);
+    if (localAt > remoteAt) {
+      if (
+        localDeleted !== undefined &&
+        localDeleted >= (localRating?.updatedAt ?? 0)
+      ) {
+        await window.animonkey.account.removeAnimeRating(animeId, localDeleted);
+      } else if (localRating) {
+        await window.animonkey.account.upsertAnimeRating(localRating);
+      }
+    } else if (remoteAt > 0) {
+      if (
+        remoteDeleted !== undefined &&
+        remoteDeleted >= (remoteRating?.updatedAt ?? 0)
+      ) {
+        await applyRemoteAnimeRatingDeletion(animeId, remoteDeleted);
+      } else if (remoteRating) {
+        await applyRemoteAnimeRating(remoteRating);
+      }
+    }
+  }
+}
+
 function groupProgress(
   records: EpisodeProgressRecord[],
 ): Map<string, EpisodeProgressRecord[]> {
@@ -195,5 +244,6 @@ function groupProgress(
 export async function reconcileAccountData(): Promise<void> {
   await syncWatchLater();
   await syncEpisodeProgress();
+  await syncAnimeRatings();
   window.dispatchEvent(new Event('animonkey:account-sync-applied'));
 }

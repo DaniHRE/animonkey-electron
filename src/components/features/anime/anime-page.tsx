@@ -13,6 +13,7 @@ import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeInfo } from '@/types/anime';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { useWatchLater } from '@/hooks/use-watch-later';
+import { useAnimeRating } from '@/hooks/use-anime-rating';
 
 export function AnimePage() {
   const { id = '' } = useParams();
@@ -22,6 +23,11 @@ export function AnimePage() {
     error: string | null;
   }>({ id: '', anime: null, error: null });
   const { isInList, toggle } = useWatchLater();
+  const userRating = useAnimeRating(id);
+  const [reviewDraft, setReviewDraft] = useState<string | null>(null);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+
+  const reviewValue = reviewDraft ?? userRating.rating?.review ?? '';
 
   useEffect(() => {
     const controller = new AbortController();
@@ -177,6 +183,101 @@ export function AnimePage() {
                 </a>
               )}
             </div>
+            <section
+              className="mt-5 max-w-lg rounded-xl border border-white/10 bg-black/20 p-4"
+              aria-label="Minha avaliação"
+            >
+              <h2 className="mb-2 text-xs font-bold text-white/80">
+                Minha avaliação
+              </h2>
+              {userRating.isAuthenticated ? (
+                <>
+                  <div
+                    className="flex flex-wrap gap-1.5"
+                    role="group"
+                    aria-label="Nota de 1 a 10"
+                  >
+                    {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                      (score) => (
+                        <button
+                          key={score}
+                          type="button"
+                          disabled={userRating.busy}
+                          aria-pressed={userRating.rating?.score === score}
+                          onClick={() => {
+                            setRatingError(null);
+                            void userRating
+                              .save(score, reviewValue)
+                              .catch(() =>
+                                setRatingError(
+                                  'Não foi possível salvar a avaliação local.',
+                                ),
+                              );
+                          }}
+                          className={`size-8 rounded-md text-xs font-bold ${userRating.rating?.score === score ? 'bg-[#49d77a] text-[#07110a]' : 'bg-white/[0.07] text-white/70 hover:bg-white/15'}`}
+                        >
+                          {score}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                  <textarea
+                    value={reviewValue}
+                    maxLength={2000}
+                    onChange={(event) => setReviewDraft(event.target.value)}
+                    placeholder="Comentário opcional (até 2000 caracteres)"
+                    className="mt-3 min-h-20 w-full resize-y rounded-lg border border-white/10 bg-black/20 p-2 text-xs text-white/80 placeholder:text-white/35"
+                  />
+                  <div className="mt-2 flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!userRating.rating || userRating.busy}
+                      onClick={() => {
+                        setRatingError(null);
+                        void userRating
+                          .save(userRating.rating!.score, reviewValue)
+                          .catch(() =>
+                            setRatingError(
+                              'Não foi possível salvar a avaliação local.',
+                            ),
+                          );
+                      }}
+                      className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+                    >
+                      Salvar comentário
+                    </button>
+                    {userRating.rating && (
+                      <button
+                        type="button"
+                        disabled={userRating.busy}
+                        onClick={() => {
+                          void userRating
+                            .clear()
+                            .then(() => setReviewDraft(''))
+                            .catch(() =>
+                              setRatingError(
+                                'Não foi possível remover a avaliação local.',
+                              ),
+                            );
+                        }}
+                        className="px-2 py-1.5 text-xs text-white/50"
+                      >
+                        Remover
+                      </button>
+                    )}
+                  </div>
+                  {ratingError && (
+                    <p role="alert" className="mt-2 text-xs text-red-300">
+                      {ratingError}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-white/45">
+                  Entre na conta nas configurações para avaliar e sincronizar.
+                </p>
+              )}
+            </section>
           </div>
         </div>
       </div>

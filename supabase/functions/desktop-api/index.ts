@@ -34,6 +34,12 @@ type EpisodeProgressRow = {
   completed: boolean;
   updated_at: string;
 };
+type AnimeRatingRow = {
+  anime_id: string;
+  score: number;
+  review: string | null;
+  updated_at: string;
+};
 type SyncTombstoneRow = {
   record_key: string;
   deleted_at: string;
@@ -718,6 +724,117 @@ async function episodeProgressRemoveAnime(
   return response(200, { success: true });
 }
 
+async function animeRatingsList(userId: string): Promise<Response> {
+  const [ratingsResult, tombstonesResult] = await Promise.all([
+    admin
+      .from('anime_ratings')
+      .select('anime_id,score,review,updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false }),
+    admin
+      .from('desktop_sync_tombstones')
+      .select('record_key,deleted_at')
+      .eq('user_id', userId)
+      .eq('entity', 'anime-rating'),
+  ]);
+  if (ratingsResult.error || tombstonesResult.error)
+    throw new ApiError(503, 'service_unavailable');
+  const ratings = ((ratingsResult.data ?? []) as AnimeRatingRow[]).map(
+    (row) => ({
+      animeId: row.anime_id,
+      score: row.score,
+      review: row.review,
+      updatedAt: Date.parse(row.updated_at),
+    }),
+  );
+  const tombstones = ((tombstonesResult.data ?? []) as SyncTombstoneRow[]).map(
+    (row) => ({
+      recordKey: row.record_key,
+      deletedAt: Date.parse(row.deleted_at),
+    }),
+  );
+  return response(200, { ratings, tombstones });
+}
+
+async function animeRatingUpsert(
+  userId: string,
+  value: unknown,
+): Promise<Response> {
+  const rating = asObject(value);
+  const animeId = validateAnimeId(rating.animeId);
+  const score = rating.score;
+  const review = rating.review;
+  const updatedAt = rating.updatedAt;
+  if (
+    !Number.isInteger(score) ||
+    (score as number) < 1 ||
+    (score as number) > 10 ||
+    (review !== null && typeof review !== 'string') ||
+    (typeof review === 'string' && review.length > 2000) ||
+    !Number.isSafeInteger(updatedAt) ||
+    (updatedAt as number) <= 0 ||
+    (updatedAt as number) > Date.now() + 5 * 60_000
+  ) {
+    throw new ApiError(400, 'invalid_request');
+  }
+  const timestamp = new Date(updatedAt as number).toISOString();
+  const { data, error } = await admin
+    .from('anime_ratings')
+    .upsert(
+      {
+        user_id: userId,
+        anime_id: animeId,
+        score,
+        review: review || null,
+        updated_at: timestamp,
+      },
+      { onConflict: 'user_id,anime_id' },
+    )
+    .select('anime_id,score,review,updated_at')
+    .single();
+  if (error || !data) throw new ApiError(503, 'service_unavailable');
+  const { error: clearError } = await admin
+    .from('desktop_sync_tombstones')
+    .delete()
+    .eq('user_id', userId)
+    .eq('entity', 'anime-rating')
+    .eq('record_key', animeId)
+    .lte('deleted_at', timestamp);
+  if (clearError) throw new ApiError(503, 'service_unavailable');
+  const row = data as AnimeRatingRow;
+  return response(200, {
+    rating: {
+      animeId: row.anime_id,
+      score: row.score,
+      review: row.review,
+      updatedAt: Date.parse(row.updated_at),
+    },
+  });
+}
+
+async function animeRatingRemove(
+  userId: string,
+  value: unknown,
+): Promise<Response> {
+  const body = asObject(value);
+  const animeId = validateAnimeId(body.animeId);
+  const deletedAt = validateDeletionTimestamp(body.deletedAt);
+  const effective = await upsertSyncTombstone(
+    userId,
+    'anime-rating',
+    animeId,
+    deletedAt,
+  );
+  const { error } = await admin
+    .from('anime_ratings')
+    .delete()
+    .eq('user_id', userId)
+    .eq('anime_id', animeId)
+    .lte('updated_at', new Date(effective).toISOString());
+  if (error) throw new ApiError(503, 'service_unavailable');
+  return response(200, { success: true });
+}
+
 function validateDeletionTimestamp(value: unknown): number {
   if (
     typeof value !== 'number' ||
@@ -732,7 +849,7 @@ function validateDeletionTimestamp(value: unknown): number {
 
 async function upsertSyncTombstone(
   userId: string,
-  entity: 'watch-later' | 'episode-progress',
+  entity: 'watch-later' | 'episode-progress' | 'anime-rating',
   recordKey: string,
   deletedAt: number,
 ): Promise<number> {
@@ -781,6 +898,12 @@ async function handle(request: Request): Promise<Response> {
       return await episodeProgressUpsert(auth.userId, body.record);
     case 'episode-progress.remove-anime':
       return await episodeProgressRemoveAnime(auth.userId, body);
+    case 'anime-ratings.list':
+      return await animeRatingsList(auth.userId);
+    case 'anime-ratings.upsert':
+      return await animeRatingUpsert(auth.userId, body.rating);
+    case 'anime-ratings.remove':
+      return await animeRatingRemove(auth.userId, body);
     default:
       throw new ApiError(404, 'not_found');
   }

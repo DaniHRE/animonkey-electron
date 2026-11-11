@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type {
+  AnimeRatingsSyncSnapshot,
   AccountCredentials,
   AccountRegistration,
   AccountSession,
@@ -14,6 +15,7 @@ import type {
   WatchLaterSyncSnapshot,
 } from '../types/account';
 import type { EpisodeProgressRecord } from '../services/cache/local-db';
+import type { AnimeRating } from '../types/anime';
 
 declare const __DESKTOP_API_URL__: string;
 declare const __SUPABASE_PUBLISHABLE_KEY__: string;
@@ -506,6 +508,37 @@ class DesktopAccountService {
     deletedAt: number,
   ): Promise<void> {
     await this.authenticatedRequest('episode-progress.remove-anime', {
+      animeId,
+      deletedAt,
+    });
+  }
+
+  async listAnimeRatings(): Promise<AnimeRatingsSyncSnapshot> {
+    const body = await this.authenticatedRequest('anime-ratings.list');
+    return {
+      ratings: Array.isArray(body.ratings)
+        ? (body.ratings as AnimeRating[])
+        : [],
+      tombstones: Array.isArray(body.tombstones)
+        ? (body.tombstones as RemoteSyncTombstone[])
+        : [],
+    };
+  }
+
+  async upsertAnimeRating(rating: AnimeRating): Promise<AnimeRating> {
+    const body = await this.authenticatedRequest('anime-ratings.upsert', {
+      rating,
+    });
+    if (!body.rating || typeof body.rating !== 'object') {
+      throw new AccountServiceError(
+        'O serviço de sync retornou dados inválidos.',
+      );
+    }
+    return body.rating as AnimeRating;
+  }
+
+  async removeAnimeRating(animeId: string, deletedAt: number): Promise<void> {
+    await this.authenticatedRequest('anime-ratings.remove', {
       animeId,
       deletedAt,
     });

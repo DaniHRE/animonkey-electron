@@ -1,5 +1,5 @@
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
-import type { AnimeTitle, WatchLaterItem } from '@/types/anime';
+import type { AnimeRating, AnimeTitle, WatchLaterItem } from '@/types/anime';
 
 export interface AccountUser {
   id: string;
@@ -46,6 +46,11 @@ export interface EpisodeProgressSyncSnapshot {
   tombstones: RemoteSyncTombstone[];
 }
 
+export interface AnimeRatingsSyncSnapshot {
+  ratings: AnimeRating[];
+  tombstones: RemoteSyncTombstone[];
+}
+
 export interface AccountBridge {
   register(input: AccountRegistration): Promise<AccountSession>;
   login(input: AccountCredentials): Promise<AccountSession>;
@@ -62,4 +67,7 @@ export interface AccountBridge {
     animeId: string,
     deletedAt: number,
   ): Promise<void>;
+  listAnimeRatings(): Promise<AnimeRatingsSyncSnapshot>;
+  upsertAnimeRating(rating: AnimeRating): Promise<AnimeRating>;
+  removeAnimeRating(animeId: string, deletedAt: number): Promise<void>;
 }

@@ -15,6 +15,7 @@ import type {
   EpisodeProgressInput,
   WatchLaterRemoteItem,
 } from './types/account';
+import type { AnimeRating } from './types/anime';
 
 registerMediaScheme();
 
@@ -132,6 +133,39 @@ function registerAccountIpc(): void {
       );
     },
   );
+  ipcMain.handle('account:anime-ratings:list', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.listAnimeRatings();
+  });
+  ipcMain.handle('account:anime-ratings:upsert', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    if (
+      typeof input.animeId !== 'string' ||
+      !/^\d+$/.test(input.animeId) ||
+      typeof input.score !== 'number' ||
+      !Number.isInteger(input.score) ||
+      input.score < 1 ||
+      input.score > 10 ||
+      (input.review !== null && typeof input.review !== 'string') ||
+      (typeof input.review === 'string' && input.review.length > 2000) ||
+      typeof input.updatedAt !== 'number' ||
+      !Number.isFinite(input.updatedAt)
+    )
+      throw new Error('Avaliação inválida.');
+    return accountService.upsertAnimeRating(input as unknown as AnimeRating);
+  });
+  ipcMain.handle('account:anime-ratings:remove', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    if (
+      typeof input.animeId !== 'string' ||
+      !/^\d+$/.test(input.animeId) ||
+      typeof input.deletedAt !== 'number'
+    )
+      throw new Error('Anime inválido.');
+    return accountService.removeAnimeRating(input.animeId, input.deletedAt);
+  });
 }
 
 function isAllowedExternalUrl(value: string): boolean {

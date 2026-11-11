@@ -1,12 +1,13 @@
-import type { AnimeTitle, WatchLaterItem } from '@/types/anime';
+import type { AnimeRating, AnimeTitle, WatchLaterItem } from '@/types/anime';
 
 const DATABASE_NAME = 'animonkey-desktop';
-const DATABASE_VERSION = 5;
+const DATABASE_VERSION = 6;
 const WATCH_LATER_STORE = 'watch-later';
 const CATALOG_CACHE_STORE = 'catalog-cache';
 const EPISODE_PROGRESS_STORE = 'episode-progress';
 const PREFERENCES_STORE = 'preferences';
 const SYNC_TOMBSTONE_STORE = 'sync-tombstones';
+const ANIME_RATING_STORE = 'anime-ratings';
 const CATALOG_CACHE_STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const GUEST_SCOPE_ID = 'guest';
 
@@ -28,7 +29,7 @@ export interface EpisodeProgressRecord {
   updatedAt: number;
 }
 
-export type SyncEntity = 'watch-later' | 'episode-progress';
+export type SyncEntity = 'watch-later' | 'episode-progress' | 'anime-rating';
 
 export interface LocalSyncTombstone {
   entity: SyncEntity;
@@ -42,6 +43,7 @@ interface ScopedRecord {
 
 type ScopedWatchLater = WatchLaterItem & ScopedRecord;
 type ScopedEpisodeProgress = EpisodeProgressRecord & ScopedRecord;
+type ScopedAnimeRating = AnimeRating & ScopedRecord;
 type StoredSyncTombstone = LocalSyncTombstone & { scopeId: string };
 
 function withoutScope<T extends ScopedRecord>(record: T): Omit<T, 'scopeId'> {
@@ -162,6 +164,12 @@ function openDatabase(): Promise<IDBDatabase> {
         database.createObjectStore(SYNC_TOMBSTONE_STORE, {
           keyPath: ['scopeId', 'entity', 'recordKey'],
         });
+      }
+      if (!database.objectStoreNames.contains(ANIME_RATING_STORE)) {
+        const ratings = database.createObjectStore(ANIME_RATING_STORE, {
+          keyPath: ['scopeId', 'animeId'],
+        });
+        ratings.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
   });
@@ -626,6 +634,136 @@ export async function getAllWatchLater(): Promise<WatchLaterItem[]> {
           .sort((first, second) => second.addedAt - first.addedAt),
       );
   });
+}
+
+export async function getAllAnimeRatings(): Promise<AnimeRating[]> {
+  const database = await openDatabase();
+  return await new Promise((resolve, reject) => {
+    const request = database
+      .transaction(ANIME_RATING_STORE, 'readonly')
+      .objectStore(ANIME_RATING_STORE)
+      .getAll();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () =>
+      resolve(
+        (request.result as ScopedAnimeRating[])
+          .filter((record) => record.scopeId === activeScopeId)
+          .map(withoutScope)
+          .sort((a, b) => b.updatedAt - a.updatedAt),
+      );
+  });
+}
+
+export async function getAnimeRating(
+  animeId: string,
+): Promise<AnimeRating | null> {
+  const database = await openDatabase();
+  const request = database
+    .transaction(ANIME_RATING_STORE, 'readonly')
+    .objectStore(ANIME_RATING_STORE)
+    .get([activeScopeId, animeId]);
+  const record = (await requestResult(request)) as
+    ScopedAnimeRating | undefined;
+  return record ? withoutScope(record) : null;
+}
+
+export async function putAnimeRating(rating: AnimeRating): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [ANIME_RATING_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  transaction
+    .objectStore(ANIME_RATING_STORE)
+    .put({ ...rating, scopeId: activeScopeId } satisfies ScopedAnimeRating);
+  transaction
+    .objectStore(SYNC_TOMBSTONE_STORE)
+    .delete([activeScopeId, 'anime-rating', rating.animeId]);
+  await transactionDone(transaction);
+  notifyLocalDataChanged('anime-rating');
+}
+
+export async function deleteAnimeRating(animeId: string): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [ANIME_RATING_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  const tombstones = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+  const request = tombstones.get([activeScopeId, 'anime-rating', animeId]);
+  request.onsuccess = () => {
+    const current = request.result as StoredSyncTombstone | undefined;
+    tombstones.put({
+      scopeId: activeScopeId,
+      entity: 'anime-rating',
+      recordKey: animeId,
+      deletedAt: Math.max(Date.now(), current?.deletedAt ?? 0),
+    } satisfies StoredSyncTombstone);
+  };
+  transaction.objectStore(ANIME_RATING_STORE).delete([activeScopeId, animeId]);
+  await transactionDone(transaction);
+  notifyLocalDataChanged('anime-rating');
+}
+
+export async function getAnimeRatingsSyncData(): Promise<{
+  ratings: AnimeRating[];
+  tombstones: LocalSyncTombstone[];
+}> {
+  return {
+    ratings: await getAllAnimeRatings(),
+    tombstones: await getSyncTombstones('anime-rating'),
+  };
+}
+
+export async function applyRemoteAnimeRating(
+  rating: AnimeRating,
+): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [ANIME_RATING_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  transaction
+    .objectStore(ANIME_RATING_STORE)
+    .put({ ...rating, scopeId: activeScopeId } satisfies ScopedAnimeRating);
+  transaction
+    .objectStore(SYNC_TOMBSTONE_STORE)
+    .delete([activeScopeId, 'anime-rating', rating.animeId]);
+  await transactionDone(transaction);
+}
+
+export async function applyRemoteAnimeRatingDeletion(
+  animeId: string,
+  deletedAt: number,
+): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [ANIME_RATING_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  const ratings = transaction.objectStore(ANIME_RATING_STORE);
+  const tombstones = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+  const tombstoneRequest = tombstones.get([
+    activeScopeId,
+    'anime-rating',
+    animeId,
+  ]);
+  tombstoneRequest.onsuccess = () => {
+    const current = tombstoneRequest.result as StoredSyncTombstone | undefined;
+    tombstones.put({
+      scopeId: activeScopeId,
+      entity: 'anime-rating',
+      recordKey: animeId,
+      deletedAt: Math.max(deletedAt, current?.deletedAt ?? 0),
+    } satisfies StoredSyncTombstone);
+  };
+  const ratingRequest = ratings.get([activeScopeId, animeId]);
+  ratingRequest.onsuccess = () => {
+    const existing = ratingRequest.result as ScopedAnimeRating | undefined;
+    if (existing && existing.updatedAt <= deletedAt)
+      ratings.delete([activeScopeId, animeId]);
+  };
+  await transactionDone(transaction);
 }
 
 export async function putWatchLater(item: WatchLaterItem): Promise<void> {

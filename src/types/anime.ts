@@ -62,3 +62,10 @@ export interface WatchLaterItem {
   releaseDate?: number;
   addedAt: number;
 }
+
+export interface AnimeRating {
+  animeId: string;
+  score: number;
+  review: string | null;
+  updatedAt: number;
+}

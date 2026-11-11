@@ -6,6 +6,7 @@ import type {
   EpisodeProgressInput,
   WatchLaterRemoteItem,
 } from './types/account';
+import type { AnimeRating } from './types/anime';
 
 contextBridge.exposeInMainWorld('animonkey', {
   platform: process.platform,
@@ -27,6 +28,14 @@ contextBridge.exposeInMainWorld('animonkey', {
       ipcRenderer.invoke('account:episode-progress:upsert', input),
     removeEpisodeProgressForAnime: (animeId: string, deletedAt: number) =>
       ipcRenderer.invoke('account:episode-progress:remove-anime', {
+        animeId,
+        deletedAt,
+      }),
+    listAnimeRatings: () => ipcRenderer.invoke('account:anime-ratings:list'),
+    upsertAnimeRating: (rating: AnimeRating) =>
+      ipcRenderer.invoke('account:anime-ratings:upsert', rating),
+    removeAnimeRating: (animeId: string, deletedAt: number) =>
+      ipcRenderer.invoke('account:anime-ratings:remove', {
         animeId,
         deletedAt,
       }),
