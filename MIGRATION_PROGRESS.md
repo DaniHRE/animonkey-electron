@@ -63,7 +63,7 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Commits por etapa
 
-- Fase 5 concluída: senha, avatar, privacidade e feed; hash do commit será registrado após commit da implementação.
+- `95a4030 feat: complete desktop account phase` — senha bcrypt, perfil/avatar, export, privacidade e feed paginado; Supabase `desktop-api` v9 ativa. Validação remota descartável e package Windows x64 aprovados; registros temporários removidos.
 - `6dd41f6 feat: add account profile and data export` — edição de nome autenticada, export de conta e backup local v2 com avaliações; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados. Edge Function `desktop-api` v6 ativa.
 - `ec5a4f9 feat: sync anime ratings offline` — store IndexedDB v6, UI de avaliação, reconcile com tombstones e Edge Function v5; typecheck, lint, formatação e `git diff --check` aprovados.
 - `b49d82e feat: migrate catalog and player workflows to Electron` — base de catálogo/player e erros voltados ao usuário; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados.
