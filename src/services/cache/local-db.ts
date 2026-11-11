@@ -1,11 +1,12 @@
 import type { AnimeTitle, WatchLaterItem } from '@/types/anime';
 
 const DATABASE_NAME = 'animonkey-desktop';
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 const WATCH_LATER_STORE = 'watch-later';
 const CATALOG_CACHE_STORE = 'catalog-cache';
 const EPISODE_PROGRESS_STORE = 'episode-progress';
 const PREFERENCES_STORE = 'preferences';
+const CATALOG_CACHE_STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 interface CacheRecord {
   cacheKey: string;
@@ -65,6 +66,11 @@ function openDatabase(): Promise<IDBDatabase> {
         database.createObjectStore(CATALOG_CACHE_STORE, {
           keyPath: 'cacheKey',
         });
+      }
+      const catalogCache =
+        request.transaction?.objectStore(CATALOG_CACHE_STORE);
+      if (catalogCache && !catalogCache.indexNames.contains('expiresAt')) {
+        catalogCache.createIndex('expiresAt', 'expiresAt', { unique: false });
       }
       if (!database.objectStoreNames.contains(EPISODE_PROGRESS_STORE)) {
         const progress = database.createObjectStore(EPISODE_PROGRESS_STORE, {
@@ -432,7 +438,19 @@ export async function putCatalogCache<T>(
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(CATALOG_CACHE_STORE, 'readwrite');
-    transaction.objectStore(CATALOG_CACHE_STORE).put({
+    const store = transaction.objectStore(CATALOG_CACHE_STORE);
+    const staleCutoff = Date.now() - CATALOG_CACHE_STALE_RETENTION_MS;
+    const cursorRequest = store
+      .index('expiresAt')
+      .openKeyCursor(IDBKeyRange.upperBound(staleCutoff));
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (!cursor) return;
+      if (cursor.primaryKey !== cacheKey) cursor.delete();
+      cursor.continue();
+    };
+    cursorRequest.onerror = () => transaction.abort();
+    store.put({
       cacheKey,
       value,
       expiresAt: Date.now() + ttlMs,

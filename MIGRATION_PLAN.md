@@ -145,6 +145,7 @@ Regras da fronteira Electron:
 ### Fase 4 — Persistência e experiência offline
 
 - Reusar IndexedDB no renderer quando viável; verificar segurança de origem/storage no Electron, migrações de schema, quota, limpeza e recuperação.
+- O cache público do catálogo mantém registros vencidos para fallback offline por até 30 dias após o TTL; a limpeza deve preservar esse período e remover os registros antigos gradualmente quando novas consultas forem gravadas.
 - Preservar `watch-later`, histórico, continue-watching, preferências e cache público; não conflitar stores de dados privados com cache de catálogo.
 - Implementar export/backup local e política de migração dos dados web: não assumir que IndexedDB do Chromium do site é visível ao app desktop; oferecer importação explícita se desejado.
 - Tratar o conteúdo do backup importado como entrada não confiável e validar o esquema e os campos aninhados antes de iniciar qualquer gravação; mesclar em uma transação para evitar importação parcial.
