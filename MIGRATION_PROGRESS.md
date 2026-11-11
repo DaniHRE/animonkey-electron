@@ -68,7 +68,7 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Commits por etapa
 
-- Fase 8, primeira implementação (shell full-bleed, ajuste visual de anime/player e CSP de avatar): hash será registrado após o commit.
+- `53779b9 feat: improve full-width visual parity` — shell full-bleed, detalhe/player ajustados, relacionados/recomendações no player, CSP permite somente a origem Supabase pública configurada. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `git diff --check`, `pnpm package` Windows x64 e inspeção da CSP empacotada aprovados; comparação visual lado a lado continua pendente.
 - `1f9f3f0 fix: repair desktop activity and profile UX` — trigger idempotente para progresso preexistente, refresh de feed, avatar real no topo/feed e avaliação reposicionada; migration `20261111222217` aplicada e verificada no Supabase. Typecheck, lint, formatação, diff check e package Windows x64 aprovados.
 - `95a4030 feat: complete desktop account phase` — senha bcrypt, perfil/avatar, export, privacidade e feed paginado; Supabase `desktop-api` v9 ativa. Validação remota descartável e package Windows x64 aprovados; registros temporários removidos.
 - `6dd41f6 feat: add account profile and data export` — edição de nome autenticada, export de conta e backup local v2 com avaliações; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados. Edge Function `desktop-api` v6 ativa.
