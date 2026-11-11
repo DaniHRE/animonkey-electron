@@ -86,3 +86,4 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - `pnpm package` Windows x64 com `VITE_PLAYER_ENGINE=vidstack` passou após integrar resolver e controller; bundler mostrou avisos de diretivas `use client` em Vidstack/dependências, sem falha.
 - Commit local desta fatia: `be3a8f0 feat: centralize player playback control`.
 - 10/11/2026 — corte para Vidstack único aprovado: removidos Plyr/plyr-react, JASSUB legado, CSS/ícone, wrapper/fallback por engine e controles antigos de tamanho em Configurações. Removidos `use-subtitle-size` e tipos de escala; Configurações aponta para o menu nativo Vidstack. `pnpm remove` atualizou lockfile. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `git diff --check` e `pnpm package` Windows x64 sem flag de engine passaram. Bundler manteve apenas avisos `use client` de Vidstack/dependências. Smoke audiovisual ainda pendente.
+- Commit local do corte: `72ffccb feat: make Vidstack the sole player`.
