@@ -14,6 +14,10 @@ import type { AnimeInfo } from '@/types/anime';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { useAnimeRating } from '@/hooks/use-anime-rating';
+import { AnivexaCatalog } from '@/services/anivexa.service';
+import type { AnimeEpisode } from '@/types/player';
+
+type DetailTab = 'episodes' | 'characters' | 'relations';
 
 export function AnimePage() {
   const { id = '' } = useParams();
@@ -26,6 +30,12 @@ export function AnimePage() {
   const userRating = useAnimeRating(id);
   const [reviewDraft, setReviewDraft] = useState<string | null>(null);
   const [ratingError, setRatingError] = useState<string | null>(null);
+  const [episodeState, setEpisodeState] = useState<{
+    id: string;
+    episodes: AnimeEpisode[];
+    error: string | null;
+  }>({ id: '', episodes: [], error: null });
+  const [detailTab, setDetailTab] = useState<DetailTab>('episodes');
 
   const reviewValue = reviewDraft ?? userRating.rating?.review ?? '';
 
@@ -44,6 +54,24 @@ export function AnimePage() {
                 : 'Falha ao carregar anime.',
           });
         }
+      });
+    return () => controller.abort();
+  }, [id]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    AnivexaCatalog.episodes(id, controller.signal)
+      .then((episodes) => setEpisodeState({ id, episodes, error: null }))
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted)
+          setEpisodeState({
+            id,
+            episodes: [],
+            error:
+              cause instanceof Error
+                ? cause.message
+                : 'Não foi possível carregar os episódios.',
+          });
       });
     return () => controller.abort();
   }, [id]);
@@ -78,6 +106,9 @@ export function AnimePage() {
   }
 
   const image = getAnimeImage(anime);
+  const episodesLoading = episodeState.id !== id;
+  const episodes = episodeState.id === id ? episodeState.episodes : [];
+  const episodesError = episodeState.id === id ? episodeState.error : null;
   return (
     <article className="w-full bg-[#111113]">
       <div className="relative min-h-[360px] overflow-hidden lg:min-h-[420px]">
@@ -198,10 +229,76 @@ export function AnimePage() {
           ))}
         </div>
       )}
-      {anime.characters.length > 0 && (
-        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
-          <h2 className="mb-4 text-sm font-bold">Personagens</h2>
-          <div className="flex flex-wrap gap-3">
+      <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
+        <div
+          role="tablist"
+          aria-label="Informações do anime"
+          className="mb-5 inline-flex gap-1 rounded-lg bg-white/[0.035] p-1"
+        >
+          {(
+            [
+              ['episodes', 'Episódios'],
+              ['characters', 'Personagens'],
+              ['relations', 'Relações'],
+            ] as const
+          ).map(([tab, label]) => (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={detailTab === tab}
+              onClick={() => setDetailTab(tab)}
+              className={`rounded-md px-4 py-2 text-xs font-semibold transition ${detailTab === tab ? 'bg-white/[0.07] text-white' : 'text-white/45 hover:text-white/75'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {detailTab === 'episodes' && (
+          <div role="tabpanel" className="space-y-2">
+            {episodes.map((episode) => (
+              <Link
+                key={episode.id}
+                to={`/watch/${anime.id}?ep=${encodeURIComponent(episode.id)}`}
+                className="flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.025] p-3 transition hover:bg-white/[0.06]"
+              >
+                {episode.image ? (
+                  <img
+                    src={episode.image}
+                    alt=""
+                    className="h-12 w-20 rounded-md object-cover"
+                  />
+                ) : (
+                  <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold text-white/60">
+                    {episode.number}
+                  </span>
+                )}
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold text-white/85">
+                    {episode.number}
+                    {' · '}
+                    {episode.title ?? `Episódio ${episode.number}`}
+                  </span>
+                  {episode.description && (
+                    <span className="mt-1 block truncate text-[11px] text-white/40">
+                      {stripHtml(episode.description)}
+                    </span>
+                  )}
+                </span>
+              </Link>
+            ))}
+            {!episodes.length && (
+              <p className="rounded-lg bg-white/[0.025] p-5 text-sm text-white/45">
+                {episodesError ??
+                  (episodesLoading
+                    ? 'Carregando episódios…'
+                    : 'Nenhum episódio disponível pela Anivexa.')}
+              </p>
+            )}
+          </div>
+        )}
+        {detailTab === 'characters' && (
+          <div role="tabpanel" className="flex flex-wrap gap-3">
             {anime.characters.map((character) => (
               <div
                 key={character.id}
@@ -226,23 +323,13 @@ export function AnimePage() {
                 </div>
               </div>
             ))}
+            {!anime.characters.length && (
+              <p className="text-sm text-white/45">Sem personagens listados.</p>
+            )}
           </div>
-        </section>
-      )}
-      {anime.recommendations.length > 0 && (
-        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
-          <h2 className="mb-5 text-sm font-bold">Você também pode gostar</h2>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-6">
-            {anime.recommendations.map((recommendation) => (
-              <AnimeCard key={recommendation.id} anime={recommendation} />
-            ))}
-          </div>
-        </section>
-      )}
-      {anime.relations.length > 0 && (
-        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
-          <h2 className="mb-3 text-sm font-bold">Obras relacionadas</h2>
-          <div className="flex flex-wrap gap-2">
+        )}
+        {detailTab === 'relations' && (
+          <div role="tabpanel" className="flex flex-wrap gap-2">
             {anime.relations.map((relation) => (
               <Link
                 key={`${relation.id}-${relation.relationType}`}
@@ -252,6 +339,19 @@ export function AnimePage() {
                 {relation.relationType.replaceAll('_', ' ')} ·{' '}
                 {resolveAnimeTitle(relation.title)}
               </Link>
+            ))}
+            {!anime.relations.length && (
+              <p className="text-sm text-white/45">Sem obras relacionadas.</p>
+            )}
+          </div>
+        )}
+      </section>
+      {anime.recommendations.length > 0 && (
+        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
+          <h2 className="mb-5 text-sm font-bold">Você também pode gostar</h2>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-6">
+            {anime.recommendations.map((recommendation) => (
+              <AnimeCard key={recommendation.id} anime={recommendation} />
             ))}
           </div>
         </section>

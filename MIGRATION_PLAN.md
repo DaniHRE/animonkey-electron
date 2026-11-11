@@ -195,6 +195,8 @@ Regras da fronteira Electron:
 - Testar imagens remotas na build empacotada. A CSP deve permitir somente origens públicas necessárias e derivar a origem Supabase da URL pública configurada; verificar renderização de avatar, posters e thumbs.
 - Registrar rota, viewport, estado comparado, diferenças encontradas e evidência visual; corrigir diferenças antes de marcar cada rota como paridade completa.
 
+**Verificação inicial em 11/11/2026:** comparação de `/anime/159042` e `/watch/159042` no site local e no Electron. As janelas não estavam no mesmo viewport (Chrome 1520×900; Electron 1426×912), então esta rodada identifica diferenças, mas não é aceite final. No detalhe, o legado apresenta poster/título nativo e inglês, ações, e abas Episódios/Personagens/Relações; o Electron tinha personagens e recomendações, mas não mostrava os episódios nem as abas. A lista por abas foi adicionada ao Electron usando os episódios da Anivexa; requer conferência visual no mesmo viewport. No player, os dois runtimes exibiram “nenhum servidor disponível”; o estado vazio de vídeo e a composição não permitem concluir paridade audiovisual ou de controles. Ambas as rotas seguem `IN_PROGRESS` até comparação pareada de estados carregado, reprodução e erro.
+
 **Saída:** matriz visual por rota com evidência lado a lado; player e informações do anime aprovados em paridade visual total no app empacotado.
 
 ## Critérios de estabilidade e acompanhamento
