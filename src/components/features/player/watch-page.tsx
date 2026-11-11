@@ -8,6 +8,7 @@ import { AniListCatalog } from '@/services/anilist.service';
 import { AnivexaCatalog } from '@/services/anivexa.service';
 import { useEpisodeProgress } from '@/hooks/use-episode-progress';
 import { useSaveEpisodeProgress } from '@/hooks/use-save-episode-progress';
+import { usePlaybackSessionStore } from '@/stores/playback-session-store';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import type { AnimeInfo } from '@/types/anime';
 import type {
@@ -33,15 +34,19 @@ export function WatchPage() {
   const [serverState, setServerState] = useState<{
     episodeId: string;
     servers: EpisodeServer[];
-    activeId: string;
     error: string | null;
-  }>({ episodeId: '', servers: [], activeId: '', error: null });
+  }>({ episodeId: '', servers: [], error: null });
   const [sourceState, setSourceState] = useState<{
     key: string;
     sources: EpisodeSources | null;
     error: string | null;
   }>({ key: '', sources: null, error: null });
   const [retryVersion, setRetryVersion] = useState(0);
+  const selection = usePlaybackSessionStore((state) => state.selection);
+  const selectServer = usePlaybackSessionStore((state) => state.selectServer);
+  const clearSelection = usePlaybackSessionStore(
+    (state) => state.clearSelection,
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -113,22 +118,28 @@ export function WatchPage() {
     if (!currentEpisodeId) return;
     const controller = new AbortController();
     AnivexaCatalog.servers(currentEpisodeId, controller.signal)
-      .then((servers) =>
+      .then((servers) => {
         setServerState({
           episodeId: currentEpisodeId,
           servers,
-          activeId: servers[0]?.id ?? '',
           error: servers.length
             ? null
             : 'Nenhum servidor compatível encontrado.',
-        }),
-      )
+        });
+        const currentSelection = usePlaybackSessionStore.getState().selection;
+        const selectedServerId =
+          currentSelection?.episodeId === currentEpisodeId &&
+          servers.some((server) => server.id === currentSelection.serverId)
+            ? currentSelection.serverId
+            : (servers[0]?.id ?? '');
+        if (selectedServerId) selectServer(currentEpisodeId, selectedServerId);
+        else clearSelection();
+      })
       .catch((cause: unknown) => {
         if (!controller.signal.aborted)
           setServerState({
             episodeId: currentEpisodeId,
             servers: [],
-            activeId: '',
             error:
               cause instanceof Error
                 ? cause.message
@@ -136,13 +147,19 @@ export function WatchPage() {
           });
       });
     return () => controller.abort();
-  }, [currentEpisodeId, retryVersion]);
+  }, [clearSelection, currentEpisodeId, retryVersion, selectServer]);
 
   const currentServerState =
     serverState.episodeId === currentEpisodeId
       ? serverState
-      : { episodeId: currentEpisodeId, servers: [], activeId: '', error: null };
-  const activeServerId = currentServerState.activeId;
+      : { episodeId: currentEpisodeId, servers: [], error: null };
+  const activeServerId =
+    selection?.episodeId === currentEpisodeId &&
+    currentServerState.servers.some(
+      (server) => server.id === selection.serverId,
+    )
+      ? selection.serverId
+      : (currentServerState.servers[0]?.id ?? '');
   const activeServerIndex = currentServerState.servers.findIndex(
     (server) => server.id === activeServerId,
   );
@@ -151,13 +168,9 @@ export function WatchPage() {
     .find((server) => server.id !== activeServerId)?.id;
   const advanceServer = useCallback(() => {
     if (!nextServerId) return false;
-    setServerState((state) =>
-      state.episodeId === currentEpisodeId
-        ? { ...state, activeId: nextServerId }
-        : state,
-    );
+    selectServer(currentEpisodeId, nextServerId);
     return true;
-  }, [currentEpisodeId, nextServerId]);
+  }, [currentEpisodeId, nextServerId, selectServer]);
   const requestKey = `${currentEpisodeId}:${activeServerId}`;
   useEffect(() => {
     if (!currentEpisodeId || !activeServerId) return;
@@ -199,9 +212,9 @@ export function WatchPage() {
     setServerState({
       episodeId: '',
       servers: [],
-      activeId: '',
       error: null,
     });
+    clearSelection();
     setSourceState({ key: '', sources: null, error: null });
     setRetryVersion((version) => version + 1);
   };
@@ -331,12 +344,8 @@ export function WatchPage() {
                 servers={currentServerState.servers}
                 activeId={activeServerId}
                 disabled={loadingSources}
-                onSelect={(id) =>
-                  setServerState((state) =>
-                    state.episodeId === currentEpisodeId
-                      ? { ...state, activeId: id }
-                      : state,
-                  )
+                onSelect={(serverId) =>
+                  selectServer(currentEpisodeId, serverId)
                 }
               />
               <a
