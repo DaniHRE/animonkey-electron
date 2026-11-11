@@ -34,6 +34,10 @@ type EpisodeProgressRow = {
   completed: boolean;
   updated_at: string;
 };
+type SyncTombstoneRow = {
+  record_key: string;
+  deleted_at: string;
+};
 
 class ApiError extends Error {
   readonly status: number;
@@ -433,16 +437,25 @@ function validateTitle(value: unknown): Record<string, string | null> {
 }
 
 async function watchLaterList(userId: string): Promise<Response> {
-  const { data, error } = await admin
-    .from('watch_later')
-    .select(
-      'anime_id,title,image,type,total_episodes,genres,release_date,added_at',
-    )
-    .eq('user_id', userId)
-    .order('added_at', { ascending: false });
-  if (error) throw new ApiError(503, 'service_unavailable');
+  const [itemsResponse, tombstonesResponse] = await Promise.all([
+    admin
+      .from('watch_later')
+      .select(
+        'anime_id,title,image,type,total_episodes,genres,release_date,added_at',
+      )
+      .eq('user_id', userId)
+      .order('added_at', { ascending: false }),
+    admin
+      .from('desktop_sync_tombstones')
+      .select('record_key,deleted_at')
+      .eq('user_id', userId)
+      .eq('entity', 'watch-later'),
+  ]);
+  if (itemsResponse.error || tombstonesResponse.error) {
+    throw new ApiError(503, 'service_unavailable');
+  }
 
-  const rows = (data ?? []) as unknown as WatchLaterRow[];
+  const rows = (itemsResponse.data ?? []) as unknown as WatchLaterRow[];
   const items = rows.map((row) => ({
     animeId: row.anime_id,
     title: row.title,
@@ -455,7 +468,13 @@ async function watchLaterList(userId: string): Promise<Response> {
       : undefined,
     addedAt: Date.parse(row.added_at),
   }));
-  return response(200, { items });
+  const tombstones = (
+    (tombstonesResponse.data ?? []) as SyncTombstoneRow[]
+  ).map((row) => ({
+    recordKey: row.record_key,
+    deletedAt: Date.parse(row.deleted_at),
+  }));
+  return response(200, { items, tombstones });
 }
 
 async function watchLaterUpsert(
@@ -500,10 +519,14 @@ async function watchLaterUpsert(
   const addedAt = item.addedAt;
   if (
     addedAt !== undefined &&
-    (!Number.isFinite(addedAt) || (addedAt as number) > Date.now() + 5 * 60_000)
+    (!Number.isFinite(addedAt) ||
+      (addedAt as number) < 0 ||
+      (addedAt as number) > Date.now() + 5 * 60_000)
   ) {
     throw new ApiError(400, 'invalid_request');
   }
+  const addedAtMs = addedAt === undefined ? Date.now() : (addedAt as number);
+  const addedAtIso = new Date(addedAtMs).toISOString();
 
   const { error } = await admin.from('watch_later').upsert(
     {
@@ -519,13 +542,19 @@ async function watchLaterUpsert(
         releaseDate === undefined || releaseDate === null
           ? null
           : String(releaseDate),
-      added_at: addedAt
-        ? new Date(addedAt as number).toISOString()
-        : new Date().toISOString(),
+      added_at: addedAtIso,
     },
     { onConflict: 'user_id,anime_id' },
   );
   if (error) throw new ApiError(503, 'service_unavailable');
+  const { error: clearTombstoneError } = await admin
+    .from('desktop_sync_tombstones')
+    .delete()
+    .eq('user_id', userId)
+    .eq('entity', 'watch-later')
+    .eq('record_key', animeId)
+    .lte('deleted_at', addedAtIso);
+  if (clearTombstoneError) throw new ApiError(503, 'service_unavailable');
   return response(200, { success: true });
 }
 
@@ -535,26 +564,43 @@ async function watchLaterRemove(
 ): Promise<Response> {
   const body = asObject(value);
   const animeId = validateAnimeId(body.animeId);
+  const deletedAt = validateDeletionTimestamp(body.deletedAt);
+  const effectiveDeletedAt = await upsertSyncTombstone(
+    userId,
+    'watch-later',
+    animeId,
+    deletedAt,
+  );
   const { error } = await admin
     .from('watch_later')
     .delete()
     .eq('user_id', userId)
-    .eq('anime_id', animeId);
+    .eq('anime_id', animeId)
+    .lte('added_at', new Date(effectiveDeletedAt).toISOString());
   if (error) throw new ApiError(503, 'service_unavailable');
   return response(200, { success: true });
 }
 
 async function episodeProgressList(userId: string): Promise<Response> {
-  const { data, error } = await admin
-    .from('episode_progress')
-    .select(
-      'anime_id,episode_number,episode_id,current_time_seconds,duration_seconds,percentage,completed,updated_at',
-    )
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
-  if (error) throw new ApiError(503, 'service_unavailable');
+  const [progressResult, tombstoneResult] = await Promise.all([
+    admin
+      .from('episode_progress')
+      .select(
+        'anime_id,episode_number,episode_id,current_time_seconds,duration_seconds,percentage,completed,updated_at',
+      )
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false }),
+    admin
+      .from('desktop_sync_tombstones')
+      .select('record_key,deleted_at')
+      .eq('user_id', userId)
+      .eq('entity', 'episode-progress'),
+  ]);
+  if (progressResult.error || tombstoneResult.error) {
+    throw new ApiError(503, 'service_unavailable');
+  }
 
-  const rows = (data ?? []) as unknown as EpisodeProgressRow[];
+  const rows = (progressResult.data ?? []) as unknown as EpisodeProgressRow[];
   const records = rows.map((row) => ({
     key: `${row.anime_id}:${row.episode_number}`,
     animeId: row.anime_id,
@@ -566,7 +612,13 @@ async function episodeProgressList(userId: string): Promise<Response> {
     completed: row.completed,
     updatedAt: Date.parse(row.updated_at),
   }));
-  return response(200, { records });
+  const tombstones = ((tombstoneResult.data ?? []) as SyncTombstoneRow[]).map(
+    (row) => ({
+      recordKey: row.record_key,
+      deletedAt: Date.parse(row.deleted_at),
+    }),
+  );
+  return response(200, { records, tombstones });
 }
 
 async function episodeProgressUpsert(
@@ -592,6 +644,19 @@ async function episodeProgressUpsert(
   }
   const safeCurrentTime = Math.min(currentTime as number, duration as number);
   const percentage = (safeCurrentTime / (duration as number)) * 100;
+  const requestedUpdatedAt = item.updatedAt;
+  if (
+    requestedUpdatedAt !== undefined &&
+    (!Number.isFinite(requestedUpdatedAt) ||
+      (requestedUpdatedAt as number) > Date.now() + 5 * 60_000)
+  ) {
+    throw new ApiError(400, 'invalid_request');
+  }
+  const updatedAt =
+    requestedUpdatedAt === undefined
+      ? Date.now()
+      : (requestedUpdatedAt as number);
+  const updatedAtIso = new Date(updatedAt).toISOString();
   const { error } = await admin.from('episode_progress').upsert(
     {
       user_id: userId,
@@ -602,11 +667,19 @@ async function episodeProgressUpsert(
       duration_seconds: duration,
       percentage,
       completed: percentage >= 90,
-      updated_at: new Date().toISOString(),
+      updated_at: updatedAtIso,
     },
     { onConflict: 'user_id,anime_id,episode_number' },
   );
   if (error) throw new ApiError(503, 'service_unavailable');
+  const { error: clearTombstoneError } = await admin
+    .from('desktop_sync_tombstones')
+    .delete()
+    .eq('user_id', userId)
+    .eq('entity', 'episode-progress')
+    .eq('record_key', animeId)
+    .lte('deleted_at', updatedAtIso);
+  if (clearTombstoneError) throw new ApiError(503, 'service_unavailable');
   return response(200, {
     record: {
       key: `${animeId}:${episodeNumber}`,
@@ -617,7 +690,7 @@ async function episodeProgressUpsert(
       duration,
       percentage,
       completed: percentage >= 90,
-      updatedAt: Date.now(),
+      updatedAt,
     },
   });
 }
@@ -628,13 +701,54 @@ async function episodeProgressRemoveAnime(
 ): Promise<Response> {
   const body = asObject(value);
   const animeId = validateAnimeId(body.animeId);
+  const deletedAt = validateDeletionTimestamp(body.deletedAt);
+  const effectiveDeletedAt = await upsertSyncTombstone(
+    userId,
+    'episode-progress',
+    animeId,
+    deletedAt,
+  );
   const { error } = await admin
     .from('episode_progress')
     .delete()
     .eq('user_id', userId)
-    .eq('anime_id', animeId);
+    .eq('anime_id', animeId)
+    .lte('updated_at', new Date(effectiveDeletedAt).toISOString());
   if (error) throw new ApiError(503, 'service_unavailable');
   return response(200, { success: true });
+}
+
+function validateDeletionTimestamp(value: unknown): number {
+  if (
+    typeof value !== 'number' ||
+    !Number.isSafeInteger(value) ||
+    value <= 0 ||
+    value > Date.now() + 5 * 60_000
+  ) {
+    throw new ApiError(400, 'invalid_request');
+  }
+  return value;
+}
+
+async function upsertSyncTombstone(
+  userId: string,
+  entity: 'watch-later' | 'episode-progress',
+  recordKey: string,
+  deletedAt: number,
+): Promise<number> {
+  const { data, error } = await admin.rpc('desktop_upsert_sync_tombstone', {
+    p_user_id: userId,
+    p_entity: entity,
+    p_record_key: recordKey,
+    p_deleted_at: new Date(deletedAt).toISOString(),
+  });
+  if (error || typeof data !== 'string') {
+    throw new ApiError(503, 'service_unavailable');
+  }
+  const timestamp = Date.parse(data);
+  if (!Number.isFinite(timestamp))
+    throw new ApiError(503, 'service_unavailable');
+  return timestamp;
 }
 
 async function handle(request: Request): Promise<Response> {

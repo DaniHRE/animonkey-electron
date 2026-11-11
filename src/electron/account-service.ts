@@ -8,7 +8,10 @@ import type {
   AccountSession,
   AccountUser,
   EpisodeProgressInput,
+  EpisodeProgressSyncSnapshot,
+  RemoteSyncTombstone,
   WatchLaterRemoteItem,
+  WatchLaterSyncSnapshot,
 } from '../types/account';
 import type { EpisodeProgressRecord } from '../services/cache/local-db';
 
@@ -26,6 +29,7 @@ interface InternalSession {
 interface StoredSession {
   deviceId: string;
   refreshToken: string;
+  user?: AccountUser | null;
 }
 
 interface AuthResponse {
@@ -198,7 +202,7 @@ class DesktopAccountService {
       }
 
       this.session = {
-        user: null,
+        user: isAccountUser(saved.user) ? saved.user : null,
         deviceId: saved.deviceId,
         refreshToken: saved.refreshToken,
         accessToken: null,
@@ -206,17 +210,6 @@ class DesktopAccountService {
       };
       this.deviceId = saved.deviceId;
       await this.persistDeviceId(saved.deviceId);
-      try {
-        await this.refreshSession();
-      } catch (error) {
-        if (
-          error instanceof AccountServiceError &&
-          error.message ===
-            'Sua sessão expirou. Entre novamente para sincronizar.'
-        ) {
-          await this.clearSession();
-        }
-      }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
       await this.clearSavedSession();
@@ -232,6 +225,7 @@ class DesktopAccountService {
     const serialized = JSON.stringify({
       deviceId: this.session.deviceId,
       refreshToken: this.session.refreshToken,
+      user: this.session.user,
     } satisfies StoredSession);
     const encrypted = safeStorage.encryptString(serialized).toString('base64');
     const directory = path.dirname(this.sessionPath);
@@ -420,6 +414,15 @@ class DesktopAccountService {
       !this.session.accessToken ||
       this.session.accessExpiresAt <= Date.now() + 30_000
     ) {
+      const user = this.session.user;
+      if (user) {
+        const cachedSession = {
+          user,
+          expiresAt: new Date(this.session.accessExpiresAt).toISOString(),
+        };
+        void this.refreshSession().catch(() => undefined);
+        return cachedSession;
+      }
       try {
         if (!(await this.refreshSession())) return null;
       } catch {
@@ -448,26 +451,39 @@ class DesktopAccountService {
     await this.clearSession();
   }
 
-  async listWatchLater(): Promise<WatchLaterRemoteItem[]> {
+  async listWatchLater(): Promise<WatchLaterSyncSnapshot> {
     const body = await this.authenticatedRequest('watch-later.list');
-    return Array.isArray(body.items)
-      ? (body.items as WatchLaterRemoteItem[])
-      : [];
+    return {
+      items: Array.isArray(body.items)
+        ? (body.items as WatchLaterRemoteItem[])
+        : [],
+      tombstones: Array.isArray(body.tombstones)
+        ? (body.tombstones as RemoteSyncTombstone[])
+        : [],
+    };
   }
 
   async upsertWatchLater(item: WatchLaterRemoteItem): Promise<void> {
     await this.authenticatedRequest('watch-later.upsert', { item });
   }
 
-  async removeWatchLater(animeId: string): Promise<void> {
-    await this.authenticatedRequest('watch-later.remove', { animeId });
+  async removeWatchLater(animeId: string, deletedAt: number): Promise<void> {
+    await this.authenticatedRequest('watch-later.remove', {
+      animeId,
+      deletedAt,
+    });
   }
 
-  async listEpisodeProgress(): Promise<EpisodeProgressRecord[]> {
+  async listEpisodeProgress(): Promise<EpisodeProgressSyncSnapshot> {
     const body = await this.authenticatedRequest('episode-progress.list');
-    return Array.isArray(body.records)
-      ? (body.records as EpisodeProgressRecord[])
-      : [];
+    return {
+      records: Array.isArray(body.records)
+        ? (body.records as EpisodeProgressRecord[])
+        : [],
+      tombstones: Array.isArray(body.tombstones)
+        ? (body.tombstones as RemoteSyncTombstone[])
+        : [],
+    };
   }
 
   async upsertEpisodeProgress(
@@ -485,9 +501,13 @@ class DesktopAccountService {
     return record;
   }
 
-  async removeEpisodeProgressForAnime(animeId: string): Promise<void> {
+  async removeEpisodeProgressForAnime(
+    animeId: string,
+    deletedAt: number,
+  ): Promise<void> {
     await this.authenticatedRequest('episode-progress.remove-anime', {
       animeId,
+      deletedAt,
     });
   }
 }

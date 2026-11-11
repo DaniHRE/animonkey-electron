@@ -23,36 +23,58 @@ export function ContinueWatchingPage() {
 
   useEffect(() => {
     let active = true;
-    getRecentlyWatched()
-      .then(async (records) => {
-        const resolved = await Promise.allSettled(
-          records.map(async (progress) => {
-            const anime = await AniListCatalog.getAnime(progress.animeId);
-            return anime ? { progress, anime } : null;
-          }),
-        );
-        if (active)
-          setItems(
-            resolved.flatMap((result) =>
-              result.status === 'fulfilled' && result.value
-                ? [result.value]
-                : [],
-            ),
+    let requestId = 0;
+    const refresh = () => {
+      const currentRequest = ++requestId;
+      setLoading(true);
+      getRecentlyWatched()
+        .then(async (records) => {
+          const resolved = await Promise.allSettled(
+            records.map(async (progress) => {
+              const anime = await AniListCatalog.getAnime(progress.animeId);
+              return anime ? { progress, anime } : null;
+            }),
           );
-      })
-      .catch((cause: unknown) => {
-        if (active)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Falha ao carregar o histórico.',
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+          if (active && currentRequest === requestId) {
+            setItems(
+              resolved.flatMap((result) =>
+                result.status === 'fulfilled' && result.value
+                  ? [result.value]
+                  : [],
+              ),
+            );
+            setError(null);
+          }
+        })
+        .catch((cause: unknown) => {
+          if (active && currentRequest === requestId)
+            setError(
+              cause instanceof Error
+                ? cause.message
+                : 'Falha ao carregar o histórico.',
+            );
+        })
+        .finally(() => {
+          if (active && currentRequest === requestId) setLoading(false);
+        });
+    };
+    const refreshForScope = () => {
+      setItems([]);
+      setError(null);
+      refresh();
+    };
+    refresh();
+    window.addEventListener('animonkey:local-scope-changed', refreshForScope);
+    window.addEventListener('animonkey:account-sync-applied', refresh);
+    window.addEventListener('animonkey:local-data-changed', refresh);
     return () => {
       active = false;
+      window.removeEventListener(
+        'animonkey:local-scope-changed',
+        refreshForScope,
+      );
+      window.removeEventListener('animonkey:account-sync-applied', refresh);
+      window.removeEventListener('animonkey:local-data-changed', refresh);
     };
   }, []);
 

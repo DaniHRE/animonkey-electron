@@ -31,17 +31,35 @@ export type EpisodeProgressInput = Pick<
   'animeId' | 'episodeId' | 'episodeNumber' | 'currentTime' | 'duration'
 >;
 
+export interface RemoteSyncTombstone {
+  recordKey: string;
+  deletedAt: number;
+}
+
+export interface WatchLaterSyncSnapshot {
+  items: WatchLaterRemoteItem[];
+  tombstones: RemoteSyncTombstone[];
+}
+
+export interface EpisodeProgressSyncSnapshot {
+  records: EpisodeProgressRecord[];
+  tombstones: RemoteSyncTombstone[];
+}
+
 export interface AccountBridge {
   register(input: AccountRegistration): Promise<AccountSession>;
   login(input: AccountCredentials): Promise<AccountSession>;
   logout(): Promise<void>;
   getSession(): Promise<AccountSession | null>;
-  listWatchLater(): Promise<WatchLaterRemoteItem[]>;
+  listWatchLater(): Promise<WatchLaterSyncSnapshot>;
   upsertWatchLater(item: WatchLaterRemoteItem): Promise<void>;
-  removeWatchLater(animeId: string): Promise<void>;
-  listEpisodeProgress(): Promise<EpisodeProgressRecord[]>;
+  removeWatchLater(animeId: string, deletedAt: number): Promise<void>;
+  listEpisodeProgress(): Promise<EpisodeProgressSyncSnapshot>;
   upsertEpisodeProgress(
     input: EpisodeProgressInput,
   ): Promise<EpisodeProgressRecord>;
-  removeEpisodeProgressForAnime(animeId: string): Promise<void>;
+  removeEpisodeProgressForAnime(
+    animeId: string,
+    deletedAt: number,
+  ): Promise<void>;
 }

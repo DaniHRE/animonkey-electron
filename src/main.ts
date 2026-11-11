@@ -96,8 +96,14 @@ function registerAccountIpc(): void {
   });
   ipcMain.handle('account:watch-later:remove', (event, animeId: unknown) => {
     assertTrustedIpcSender(event);
-    if (typeof animeId !== 'string') throw new Error('Anime inválido.');
-    return accountService.removeWatchLater(animeId);
+    const input = asObject(animeId);
+    if (
+      typeof input.animeId !== 'string' ||
+      typeof input.deletedAt !== 'number'
+    ) {
+      throw new Error('Anime inválido.');
+    }
+    return accountService.removeWatchLater(input.animeId, input.deletedAt);
   });
   ipcMain.handle('account:episode-progress:list', (event) => {
     assertTrustedIpcSender(event);
@@ -111,10 +117,19 @@ function registerAccountIpc(): void {
   });
   ipcMain.handle(
     'account:episode-progress:remove-anime',
-    (event, animeId: unknown) => {
+    (event, value: unknown) => {
       assertTrustedIpcSender(event);
-      if (typeof animeId !== 'string') throw new Error('Anime inválido.');
-      return accountService.removeEpisodeProgressForAnime(animeId);
+      const input = asObject(value);
+      if (
+        typeof input.animeId !== 'string' ||
+        typeof input.deletedAt !== 'number'
+      ) {
+        throw new Error('Anime inválido.');
+      }
+      return accountService.removeEpisodeProgressForAnime(
+        input.animeId,
+        input.deletedAt,
+      );
     },
   );
 }

@@ -19,13 +19,16 @@ contextBridge.exposeInMainWorld('animonkey', {
     listWatchLater: () => ipcRenderer.invoke('account:watch-later:list'),
     upsertWatchLater: (item: WatchLaterRemoteItem) =>
       ipcRenderer.invoke('account:watch-later:upsert', item),
-    removeWatchLater: (animeId: string) =>
-      ipcRenderer.invoke('account:watch-later:remove', animeId),
+    removeWatchLater: (animeId: string, deletedAt: number) =>
+      ipcRenderer.invoke('account:watch-later:remove', { animeId, deletedAt }),
     listEpisodeProgress: () =>
       ipcRenderer.invoke('account:episode-progress:list'),
     upsertEpisodeProgress: (input: EpisodeProgressInput) =>
       ipcRenderer.invoke('account:episode-progress:upsert', input),
-    removeEpisodeProgressForAnime: (animeId: string) =>
-      ipcRenderer.invoke('account:episode-progress:remove-anime', animeId),
+    removeEpisodeProgressForAnime: (animeId: string, deletedAt: number) =>
+      ipcRenderer.invoke('account:episode-progress:remove-anime', {
+        animeId,
+        deletedAt,
+      }),
   } satisfies AccountBridge,
 });

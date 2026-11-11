@@ -18,23 +18,37 @@ export function WatchLaterProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let requestId = 0;
     const refresh = () => {
+      const currentRequest = ++requestId;
       getAllWatchLater()
         .then((storedItems) => {
-          if (active) setItems(storedItems);
+          if (active && currentRequest === requestId) setItems(storedItems);
         })
         .catch(() => {
-          if (active) setItems([]);
+          if (active && currentRequest === requestId) setItems([]);
         })
         .finally(() => {
-          if (active) setIsLoading(false);
+          if (active && currentRequest === requestId) setIsLoading(false);
         });
+    };
+    const refreshForScope = () => {
+      setItems([]);
+      setIsLoading(true);
+      refresh();
     };
     refresh();
     window.addEventListener('animonkey:local-data-imported', refresh);
+    window.addEventListener('animonkey:local-scope-changed', refreshForScope);
+    window.addEventListener('animonkey:account-sync-applied', refresh);
     return () => {
       active = false;
       window.removeEventListener('animonkey:local-data-imported', refresh);
+      window.removeEventListener(
+        'animonkey:local-scope-changed',
+        refreshForScope,
+      );
+      window.removeEventListener('animonkey:account-sync-applied', refresh);
     };
   }, []);
 

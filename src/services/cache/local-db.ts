@@ -1,12 +1,14 @@
 import type { AnimeTitle, WatchLaterItem } from '@/types/anime';
 
 const DATABASE_NAME = 'animonkey-desktop';
-const DATABASE_VERSION = 4;
+const DATABASE_VERSION = 5;
 const WATCH_LATER_STORE = 'watch-later';
 const CATALOG_CACHE_STORE = 'catalog-cache';
 const EPISODE_PROGRESS_STORE = 'episode-progress';
 const PREFERENCES_STORE = 'preferences';
+const SYNC_TOMBSTONE_STORE = 'sync-tombstones';
 const CATALOG_CACHE_STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const GUEST_SCOPE_ID = 'guest';
 
 interface CacheRecord {
   cacheKey: string;
@@ -26,6 +28,28 @@ export interface EpisodeProgressRecord {
   updatedAt: number;
 }
 
+export type SyncEntity = 'watch-later' | 'episode-progress';
+
+export interface LocalSyncTombstone {
+  entity: SyncEntity;
+  recordKey: string;
+  deletedAt: number;
+}
+
+interface ScopedRecord {
+  scopeId: string;
+}
+
+type ScopedWatchLater = WatchLaterItem & ScopedRecord;
+type ScopedEpisodeProgress = EpisodeProgressRecord & ScopedRecord;
+type StoredSyncTombstone = LocalSyncTombstone & { scopeId: string };
+
+function withoutScope<T extends ScopedRecord>(record: T): Omit<T, 'scopeId'> {
+  const value = { ...record };
+  Reflect.deleteProperty(value, 'scopeId');
+  return value as Omit<T, 'scopeId'>;
+}
+
 export interface LocalPreference<T = unknown> {
   key: string;
   value: T;
@@ -41,6 +65,22 @@ export interface LocalBackup {
 }
 
 let databasePromise: Promise<IDBDatabase> | null = null;
+let activeScopeId = GUEST_SCOPE_ID;
+
+export function setActiveLocalDataScope(scopeId: string | null): void {
+  const nextScope = scopeId ?? GUEST_SCOPE_ID;
+  if (activeScopeId === nextScope) return;
+  activeScopeId = nextScope;
+  window.dispatchEvent(new Event('animonkey:local-scope-changed'));
+}
+
+function notifyLocalDataChanged(entity?: SyncEntity): void {
+  window.dispatchEvent(
+    new CustomEvent('animonkey:local-data-changed', {
+      detail: entity ? { entity } : undefined,
+    }),
+  );
+}
 
 function openDatabase(): Promise<IDBDatabase> {
   if (databasePromise) return databasePromise;
@@ -57,10 +97,26 @@ function openDatabase(): Promise<IDBDatabase> {
       };
       resolve(database);
     };
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const database = request.result;
+      const oldVersion = event.oldVersion;
       if (!database.objectStoreNames.contains(WATCH_LATER_STORE)) {
-        database.createObjectStore(WATCH_LATER_STORE, { keyPath: 'animeId' });
+        database.createObjectStore(WATCH_LATER_STORE, {
+          keyPath: ['scopeId', 'animeId'],
+        });
+      } else if (oldVersion < 5) {
+        const legacyStore = request.transaction!.objectStore(WATCH_LATER_STORE);
+        const readLegacyRecords = legacyStore.getAll();
+        readLegacyRecords.onsuccess = () => {
+          const records = readLegacyRecords.result as WatchLaterItem[];
+          database.deleteObjectStore(WATCH_LATER_STORE);
+          const scopedStore = database.createObjectStore(WATCH_LATER_STORE, {
+            keyPath: ['scopeId', 'animeId'],
+          });
+          for (const record of records) {
+            scopedStore.put({ ...record, scopeId: GUEST_SCOPE_ID });
+          }
+        };
       }
       if (!database.objectStoreNames.contains(CATALOG_CACHE_STORE)) {
         database.createObjectStore(CATALOG_CACHE_STORE, {
@@ -74,13 +130,38 @@ function openDatabase(): Promise<IDBDatabase> {
       }
       if (!database.objectStoreNames.contains(EPISODE_PROGRESS_STORE)) {
         const progress = database.createObjectStore(EPISODE_PROGRESS_STORE, {
-          keyPath: 'key',
+          keyPath: ['scopeId', 'key'],
         });
         progress.createIndex('animeId', 'animeId', { unique: false });
         progress.createIndex('updatedAt', 'updatedAt', { unique: false });
+      } else if (oldVersion < 5) {
+        const legacyStore = request.transaction!.objectStore(
+          EPISODE_PROGRESS_STORE,
+        );
+        const readLegacyRecords = legacyStore.getAll();
+        readLegacyRecords.onsuccess = () => {
+          const records = readLegacyRecords.result as EpisodeProgressRecord[];
+          database.deleteObjectStore(EPISODE_PROGRESS_STORE);
+          const scopedStore = database.createObjectStore(
+            EPISODE_PROGRESS_STORE,
+            { keyPath: ['scopeId', 'key'] },
+          );
+          scopedStore.createIndex('animeId', 'animeId', { unique: false });
+          scopedStore.createIndex('updatedAt', 'updatedAt', {
+            unique: false,
+          });
+          for (const record of records) {
+            scopedStore.put({ ...record, scopeId: GUEST_SCOPE_ID });
+          }
+        };
       }
       if (!database.objectStoreNames.contains(PREFERENCES_STORE)) {
         database.createObjectStore(PREFERENCES_STORE, { keyPath: 'key' });
+      }
+      if (!database.objectStoreNames.contains(SYNC_TOMBSTONE_STORE)) {
+        database.createObjectStore(SYNC_TOMBSTONE_STORE, {
+          keyPath: ['scopeId', 'entity', 'recordKey'],
+        });
       }
     };
   });
@@ -101,9 +182,15 @@ export async function getEpisodeProgress(
     const request = database
       .transaction(EPISODE_PROGRESS_STORE, 'readonly')
       .objectStore(EPISODE_PROGRESS_STORE)
-      .get(`${animeId}:${episodeNumber}`);
+      .get([activeScopeId, `${animeId}:${episodeNumber}`]);
     request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result ?? null);
+    request.onsuccess = () => {
+      const record = request.result as ScopedEpisodeProgress | undefined;
+      if (!record) resolve(null);
+      else {
+        resolve(withoutScope(record));
+      }
+    };
   });
 }
 
@@ -141,11 +228,20 @@ export async function saveEpisodeProgress(record: {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(
-      EPISODE_PROGRESS_STORE,
+      [EPISODE_PROGRESS_STORE, SYNC_TOMBSTONE_STORE],
       'readwrite',
     );
-    transaction.objectStore(EPISODE_PROGRESS_STORE).put(value);
-    transaction.oncomplete = () => resolve();
+    transaction.objectStore(EPISODE_PROGRESS_STORE).put({
+      ...value,
+      scopeId: activeScopeId,
+    });
+    transaction
+      .objectStore(SYNC_TOMBSTONE_STORE)
+      .delete([activeScopeId, 'episode-progress', record.animeId]);
+    transaction.oncomplete = () => {
+      notifyLocalDataChanged('episode-progress');
+      resolve();
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
@@ -162,7 +258,12 @@ export async function getRecentlyWatched(
         .objectStore(EPISODE_PROGRESS_STORE)
         .getAll();
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
+      request.onsuccess = () =>
+        resolve(
+          (request.result as ScopedEpisodeProgress[])
+            .filter((record) => record.scopeId === activeScopeId)
+            .map(withoutScope),
+        );
     },
   );
   const latestByAnime = new Map<string, EpisodeProgressRecord>();
@@ -182,21 +283,42 @@ export async function removeAnimeFromWatching(animeId: string): Promise<void> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(
-      EPISODE_PROGRESS_STORE,
+      [EPISODE_PROGRESS_STORE, SYNC_TOMBSTONE_STORE],
       'readwrite',
     );
     const index = transaction
       .objectStore(EPISODE_PROGRESS_STORE)
       .index('animeId');
-    const request = index.openKeyCursor(IDBKeyRange.only(animeId));
+    const request = index.openCursor(IDBKeyRange.only(animeId));
+    const tombstones = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+    const tombstoneKey: IDBValidKey = [
+      activeScopeId,
+      'episode-progress',
+      animeId,
+    ];
+    const existingRequest = tombstones.get(tombstoneKey);
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as
+        StoredSyncTombstone | undefined;
+      tombstones.put({
+        scopeId: activeScopeId,
+        entity: 'episode-progress',
+        recordKey: animeId,
+        deletedAt: Math.max(Date.now(), existing?.deletedAt ?? 0),
+      } satisfies StoredSyncTombstone);
+    };
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const cursor = request.result;
       if (!cursor) return;
-      cursor.delete();
+      const record = cursor.value as ScopedEpisodeProgress;
+      if (record.scopeId === activeScopeId) cursor.delete();
       cursor.continue();
     };
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => {
+      notifyLocalDataChanged('episode-progress');
+      resolve();
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
@@ -241,7 +363,21 @@ export async function exportLocalBackup(): Promise<LocalBackup> {
         .objectStore(storeName)
         .getAll();
       request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result as T[]);
+      request.onsuccess = () => {
+        const records = request.result as (T & Partial<ScopedRecord>)[];
+        resolve(
+          records
+            .filter(
+              (record) =>
+                !('scopeId' in record) || record.scopeId === activeScopeId,
+            )
+            .map((record) =>
+              'scopeId' in record
+                ? (withoutScope(record as T & ScopedRecord) as T)
+                : (record as T),
+            ),
+        );
+      };
     });
   const [watchLater, episodeProgress, preferences] = await Promise.all([
     readStore<WatchLaterItem>(WATCH_LATER_STORE),
@@ -395,15 +531,28 @@ export async function importLocalBackup(text: string): Promise<number> {
     const progressStore = transaction.objectStore(EPISODE_PROGRESS_STORE);
     const preferenceStore = transaction.objectStore(PREFERENCES_STORE);
     for (const item of watchLater) {
-      mergeIfNewer(watchStore, item, item.animeId, 'addedAt');
+      mergeIfNewer(
+        watchStore,
+        { ...item, scopeId: activeScopeId },
+        [activeScopeId, item.animeId],
+        'addedAt',
+      );
     }
     for (const item of episodeProgress) {
-      mergeIfNewer(progressStore, item, item.key, 'updatedAt');
+      mergeIfNewer(
+        progressStore,
+        { ...item, scopeId: activeScopeId },
+        [activeScopeId, item.key],
+        'updatedAt',
+      );
     }
     for (const item of preferences as LocalPreference[]) {
       mergeIfNewer(preferenceStore, item, item.key, 'updatedAt');
     }
-    transaction.oncomplete = () => resolve(mergedCount);
+    transaction.oncomplete = () => {
+      notifyLocalDataChanged();
+      resolve(mergedCount);
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
@@ -471,9 +620,10 @@ export async function getAllWatchLater(): Promise<WatchLaterItem[]> {
     request.onerror = () => reject(request.error);
     request.onsuccess = () =>
       resolve(
-        (request.result as WatchLaterItem[]).sort(
-          (first, second) => second.addedAt - first.addedAt,
-        ),
+        (request.result as ScopedWatchLater[])
+          .filter((record) => record.scopeId === activeScopeId)
+          .map(withoutScope)
+          .sort((first, second) => second.addedAt - first.addedAt),
       );
   });
 }
@@ -481,9 +631,21 @@ export async function getAllWatchLater(): Promise<WatchLaterItem[]> {
 export async function putWatchLater(item: WatchLaterItem): Promise<void> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction(WATCH_LATER_STORE, 'readwrite');
-    transaction.objectStore(WATCH_LATER_STORE).put(item);
-    transaction.oncomplete = () => resolve();
+    const transaction = database.transaction(
+      [WATCH_LATER_STORE, SYNC_TOMBSTONE_STORE],
+      'readwrite',
+    );
+    transaction.objectStore(WATCH_LATER_STORE).put({
+      ...item,
+      scopeId: activeScopeId,
+    } satisfies ScopedWatchLater);
+    transaction
+      .objectStore(SYNC_TOMBSTONE_STORE)
+      .delete([activeScopeId, 'watch-later', item.animeId]);
+    transaction.oncomplete = () => {
+      notifyLocalDataChanged('watch-later');
+      resolve();
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });
@@ -492,8 +654,296 @@ export async function putWatchLater(item: WatchLaterItem): Promise<void> {
 export async function deleteWatchLater(animeId: string): Promise<void> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
-    const transaction = database.transaction(WATCH_LATER_STORE, 'readwrite');
-    transaction.objectStore(WATCH_LATER_STORE).delete(animeId);
+    const transaction = database.transaction(
+      [WATCH_LATER_STORE, SYNC_TOMBSTONE_STORE],
+      'readwrite',
+    );
+    const store = transaction.objectStore(WATCH_LATER_STORE);
+    const tombstones = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+    const existingRequest = tombstones.get([
+      activeScopeId,
+      'watch-later',
+      animeId,
+    ]);
+    existingRequest.onsuccess = () => {
+      const existing = existingRequest.result as
+        StoredSyncTombstone | undefined;
+      tombstones.put({
+        scopeId: activeScopeId,
+        entity: 'watch-later',
+        recordKey: animeId,
+        deletedAt: Math.max(Date.now(), existing?.deletedAt ?? 0),
+      } satisfies StoredSyncTombstone);
+    };
+    store.delete([activeScopeId, animeId]);
+    transaction.oncomplete = () => {
+      notifyLocalDataChanged('watch-later');
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function getWatchLaterSyncData(): Promise<{
+  items: WatchLaterItem[];
+  tombstones: LocalSyncTombstone[];
+}> {
+  const [items, tombstones] = await Promise.all([
+    getAllWatchLater(),
+    getSyncTombstones('watch-later'),
+  ]);
+  return { items, tombstones };
+}
+
+export async function getEpisodeProgressSyncData(): Promise<{
+  records: EpisodeProgressRecord[];
+  tombstones: LocalSyncTombstone[];
+}> {
+  const database = await openDatabase();
+  const [records, tombstones] = await Promise.all([
+    new Promise<EpisodeProgressRecord[]>((resolve, reject) => {
+      const request = database
+        .transaction(EPISODE_PROGRESS_STORE, 'readonly')
+        .objectStore(EPISODE_PROGRESS_STORE)
+        .getAll();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () =>
+        resolve(
+          (request.result as ScopedEpisodeProgress[])
+            .filter((record) => record.scopeId === activeScopeId)
+            .map(withoutScope),
+        );
+    }),
+    getSyncTombstones('episode-progress'),
+  ]);
+  return { records, tombstones };
+}
+
+export async function mergeGuestLibraryIntoActiveScope(): Promise<number> {
+  if (activeScopeId === GUEST_SCOPE_ID) return 0;
+  const database = await openDatabase();
+  const readTransaction = database.transaction(
+    [WATCH_LATER_STORE, EPISODE_PROGRESS_STORE, SYNC_TOMBSTONE_STORE],
+    'readonly',
+  );
+  const readDone = transactionDone(readTransaction);
+  const [allWatch, allProgress, allTombstones] = await Promise.all([
+    requestResult(readTransaction.objectStore(WATCH_LATER_STORE).getAll()),
+    requestResult(readTransaction.objectStore(EPISODE_PROGRESS_STORE).getAll()),
+    requestResult(readTransaction.objectStore(SYNC_TOMBSTONE_STORE).getAll()),
+  ]);
+  await readDone;
+  const transaction = database.transaction(
+    [WATCH_LATER_STORE, EPISODE_PROGRESS_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  const transactionComplete = transactionDone(transaction);
+  const watchStore = transaction.objectStore(WATCH_LATER_STORE);
+  const progressStore = transaction.objectStore(EPISODE_PROGRESS_STORE);
+  const tombstoneStore = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+  const watchById = new Map(
+    (allWatch as ScopedWatchLater[])
+      .filter((record) => record.scopeId === activeScopeId)
+      .map((record) => [record.animeId, record]),
+  );
+  const progressByKey = new Map(
+    (allProgress as ScopedEpisodeProgress[])
+      .filter((record) => record.scopeId === activeScopeId)
+      .map((record) => [record.key, record]),
+  );
+  const tombstones = allTombstones as StoredSyncTombstone[];
+  let merged = 0;
+
+  for (const guestItem of (allWatch as ScopedWatchLater[]).filter(
+    (record) => record.scopeId === GUEST_SCOPE_ID,
+  )) {
+    const existing = watchById.get(guestItem.animeId);
+    const deletedAt = tombstones.find(
+      (tombstone) =>
+        tombstone.scopeId === activeScopeId &&
+        tombstone.entity === 'watch-later' &&
+        tombstone.recordKey === guestItem.animeId,
+    )?.deletedAt;
+    if (
+      (!existing || guestItem.addedAt > existing.addedAt) &&
+      (deletedAt === undefined || guestItem.addedAt > deletedAt)
+    ) {
+      watchStore.put({ ...guestItem, scopeId: activeScopeId });
+      tombstoneStore.delete([activeScopeId, 'watch-later', guestItem.animeId]);
+      watchById.set(guestItem.animeId, guestItem);
+      merged += 1;
+    }
+  }
+
+  for (const guestRecord of (allProgress as ScopedEpisodeProgress[]).filter(
+    (record) => record.scopeId === GUEST_SCOPE_ID,
+  )) {
+    const existing = progressByKey.get(guestRecord.key);
+    const deletedAt = tombstones.find(
+      (tombstone) =>
+        tombstone.scopeId === activeScopeId &&
+        tombstone.entity === 'episode-progress' &&
+        tombstone.recordKey === guestRecord.animeId,
+    )?.deletedAt;
+    if (
+      (!existing || guestRecord.updatedAt > existing.updatedAt) &&
+      (deletedAt === undefined || guestRecord.updatedAt > deletedAt)
+    ) {
+      progressStore.put({ ...guestRecord, scopeId: activeScopeId });
+      tombstoneStore.delete([
+        activeScopeId,
+        'episode-progress',
+        guestRecord.animeId,
+      ]);
+      progressByKey.set(guestRecord.key, guestRecord);
+      merged += 1;
+    }
+  }
+
+  await transactionComplete;
+  return merged;
+}
+
+function requestResult<T>(request: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function getSyncTombstones(
+  entity: SyncEntity,
+): Promise<LocalSyncTombstone[]> {
+  const database = await openDatabase();
+  return await new Promise((resolve, reject) => {
+    const request = database
+      .transaction(SYNC_TOMBSTONE_STORE, 'readonly')
+      .objectStore(SYNC_TOMBSTONE_STORE)
+      .getAll();
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () =>
+      resolve(
+        (request.result as StoredSyncTombstone[])
+          .filter(
+            (tombstone) =>
+              tombstone.scopeId === activeScopeId &&
+              tombstone.entity === entity,
+          )
+          .map(withoutScope),
+      );
+  });
+}
+
+export async function applyRemoteWatchLater(
+  item: WatchLaterItem,
+): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [WATCH_LATER_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  transaction.objectStore(WATCH_LATER_STORE).put({
+    ...item,
+    scopeId: activeScopeId,
+  } satisfies ScopedWatchLater);
+  transaction
+    .objectStore(SYNC_TOMBSTONE_STORE)
+    .delete([activeScopeId, 'watch-later', item.animeId]);
+  await transactionDone(transaction);
+}
+
+export async function applyRemoteWatchLaterDeletion(
+  animeId: string,
+  deletedAt: number,
+): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [WATCH_LATER_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  const watchStore = transaction.objectStore(WATCH_LATER_STORE);
+  const tombstones = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+  const getTombstone = tombstones.get([activeScopeId, 'watch-later', animeId]);
+  getTombstone.onsuccess = () => {
+    const existing = getTombstone.result as StoredSyncTombstone | undefined;
+    tombstones.put({
+      scopeId: activeScopeId,
+      entity: 'watch-later',
+      recordKey: animeId,
+      deletedAt: Math.max(deletedAt, existing?.deletedAt ?? 0),
+    } satisfies StoredSyncTombstone);
+  };
+  const getItem = watchStore.get([activeScopeId, animeId]);
+  getItem.onsuccess = () => {
+    const existing = getItem.result as ScopedWatchLater | undefined;
+    if (existing && existing.addedAt <= deletedAt) {
+      watchStore.delete([activeScopeId, animeId]);
+    }
+  };
+  await transactionDone(transaction);
+}
+
+export async function applyRemoteEpisodeProgress(
+  record: EpisodeProgressRecord,
+): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [EPISODE_PROGRESS_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  transaction.objectStore(EPISODE_PROGRESS_STORE).put({
+    ...record,
+    scopeId: activeScopeId,
+  } satisfies ScopedEpisodeProgress);
+  transaction
+    .objectStore(SYNC_TOMBSTONE_STORE)
+    .delete([activeScopeId, 'episode-progress', record.animeId]);
+  await transactionDone(transaction);
+}
+
+export async function applyRemoteEpisodeProgressDeletion(
+  animeId: string,
+  deletedAt: number,
+): Promise<void> {
+  const database = await openDatabase();
+  const transaction = database.transaction(
+    [EPISODE_PROGRESS_STORE, SYNC_TOMBSTONE_STORE],
+    'readwrite',
+  );
+  const progress = transaction.objectStore(EPISODE_PROGRESS_STORE);
+  const tombstones = transaction.objectStore(SYNC_TOMBSTONE_STORE);
+  const getTombstone = tombstones.get([
+    activeScopeId,
+    'episode-progress',
+    animeId,
+  ]);
+  getTombstone.onsuccess = () => {
+    const existing = getTombstone.result as StoredSyncTombstone | undefined;
+    tombstones.put({
+      scopeId: activeScopeId,
+      entity: 'episode-progress',
+      recordKey: animeId,
+      deletedAt: Math.max(deletedAt, existing?.deletedAt ?? 0),
+    } satisfies StoredSyncTombstone);
+  };
+  const request = progress
+    .index('animeId')
+    .openCursor(IDBKeyRange.only(animeId));
+  request.onsuccess = () => {
+    const cursor = request.result;
+    if (!cursor) return;
+    const record = cursor.value as ScopedEpisodeProgress;
+    if (record.scopeId === activeScopeId && record.updatedAt <= deletedAt) {
+      cursor.delete();
+    }
+    cursor.continue();
+  };
+  await transactionDone(transaction);
+}
+
+function transactionDone(transaction: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
