@@ -10,12 +10,13 @@ import {
   House,
   ListVideo,
   Search,
-  Settings2,
   Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useAccount } from '@/context/account-state';
+import { ProfileAvatar } from '@/components/shared/profile-avatar';
 
 const navItems = [
   { label: 'Início', path: '/', icon: House, end: true },
@@ -37,6 +38,7 @@ const libraryItems = [
 export function AppShell() {
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const { session } = useAccount();
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -161,10 +163,14 @@ export function AppShell() {
             className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left opacity-70"
             title="Configurações locais"
           >
-            <span className="grid size-8 place-items-center rounded-full bg-[#49d77a]/15 text-[#49d77a]">
-              <Settings2 size={16} />
+            <ProfileAvatar
+              image={session?.user.image ?? null}
+              name={session?.user.name ?? null}
+              className="size-8 shrink-0 rounded-full object-cover text-xs"
+            />
+            <span className="max-w-32 truncate text-xs font-semibold">
+              {session?.user.name?.trim() || 'Perfil'}
             </span>
-            <span className="text-xs font-semibold">Perfil</span>
             <ChevronDown size={14} className="text-white/40" />
           </NavLink>
         </header>

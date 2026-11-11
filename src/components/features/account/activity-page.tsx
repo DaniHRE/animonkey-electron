@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, LoaderCircle, Play, Star } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
+import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import type { ActivityFeedItem, ActivityFeedPage } from '@/types/account';
 
 const PAGE_SIZE = 30;
@@ -26,20 +27,11 @@ function ActivityCard({ item }: { item: ActivityFeedItem }) {
 
   return (
     <article className="flex gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] p-4">
-      {item.actor.image ? (
-        <img
-          src={item.actor.image}
-          alt=""
-          className="size-10 shrink-0 rounded-full object-cover"
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-white/[0.07] text-sm font-bold text-white/60"
-        >
-          {(actor.charAt(0) || '?').toUpperCase()}
-        </span>
-      )}
+      <ProfileAvatar
+        image={item.actor.image}
+        name={actor}
+        className="size-10 shrink-0 rounded-full object-cover text-sm"
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 text-sm">
           <span className="font-semibold text-white/85">{actor}</span>
@@ -87,6 +79,28 @@ export function ActivityPage() {
     message: string;
   } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!userId) return;
+    setRefreshing(true);
+    try {
+      const firstPage = await window.animonkey.account.listActivity(
+        null,
+        PAGE_SIZE,
+      );
+      setPage({ ...firstPage, userId });
+      setError(null);
+    } catch {
+      setError({
+        userId,
+        message:
+          'Não foi possível carregar o feed. Verifique a conexão e tente novamente.',
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -100,17 +114,31 @@ export function ActivityPage() {
         }
       })
       .catch(() => {
-        if (active)
+        if (active) {
           setError({
             userId,
             message:
               'Não foi possível carregar o feed. Verifique a conexão e tente novamente.',
           });
+        }
       });
+    const refreshOnFocus = () => void refresh();
+    const refreshOnVisibility = () => {
+      if (document.visibilityState === 'visible') refreshOnFocus();
+    };
+    window.addEventListener('focus', refreshOnFocus);
+    window.addEventListener('animonkey:account-sync-applied', refreshOnFocus);
+    document.addEventListener('visibilitychange', refreshOnVisibility);
     return () => {
       active = false;
+      window.removeEventListener('focus', refreshOnFocus);
+      window.removeEventListener(
+        'animonkey:account-sync-applied',
+        refreshOnFocus,
+      );
+      document.removeEventListener('visibilitychange', refreshOnVisibility);
     };
-  }, [userId]);
+  }, [refresh, userId]);
 
   const loadMore = useCallback(async () => {
     if (!page?.nextCursor || page.userId !== userId || loadingMore) return;
@@ -161,10 +189,25 @@ export function ActivityPage() {
       <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
         Comunidade
       </p>
-      <h1 className="text-2xl font-bold tracking-tight">Feed de atividade</h1>
-      <p className="mt-2 mb-7 text-xs text-white/45">
-        Atividades de contas que escolheram compartilhá-las.
-      </p>
+      <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Feed de atividade
+          </h1>
+          <p className="mt-2 text-xs text-white/45">
+            Atividades de contas que escolheram compartilhá-las.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => void refresh()}
+          disabled={refreshing}
+          className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/65 hover:bg-white/[0.05] disabled:opacity-50"
+        >
+          {refreshing && <LoaderCircle size={13} className="animate-spin" />}
+          Atualizar feed
+        </button>
+      </div>
       <div className="space-y-3">
         {!currentPage && !currentError && (
           <div className="flex justify-center py-12">

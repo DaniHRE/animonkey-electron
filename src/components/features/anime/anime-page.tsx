@@ -183,101 +183,6 @@ export function AnimePage() {
                 </a>
               )}
             </div>
-            <section
-              className="mt-5 max-w-lg rounded-xl border border-white/10 bg-black/20 p-4"
-              aria-label="Minha avaliação"
-            >
-              <h2 className="mb-2 text-xs font-bold text-white/80">
-                Minha avaliação
-              </h2>
-              {userRating.isAuthenticated ? (
-                <>
-                  <div
-                    className="flex flex-wrap gap-1.5"
-                    role="group"
-                    aria-label="Nota de 1 a 10"
-                  >
-                    {Array.from({ length: 10 }, (_, index) => index + 1).map(
-                      (score) => (
-                        <button
-                          key={score}
-                          type="button"
-                          disabled={userRating.busy}
-                          aria-pressed={userRating.rating?.score === score}
-                          onClick={() => {
-                            setRatingError(null);
-                            void userRating
-                              .save(score, reviewValue)
-                              .catch(() =>
-                                setRatingError(
-                                  'Não foi possível salvar a avaliação local.',
-                                ),
-                              );
-                          }}
-                          className={`size-8 rounded-md text-xs font-bold ${userRating.rating?.score === score ? 'bg-[#49d77a] text-[#07110a]' : 'bg-white/[0.07] text-white/70 hover:bg-white/15'}`}
-                        >
-                          {score}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                  <textarea
-                    value={reviewValue}
-                    maxLength={2000}
-                    onChange={(event) => setReviewDraft(event.target.value)}
-                    placeholder="Comentário opcional (até 2000 caracteres)"
-                    className="mt-3 min-h-20 w-full resize-y rounded-lg border border-white/10 bg-black/20 p-2 text-xs text-white/80 placeholder:text-white/35"
-                  />
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={!userRating.rating || userRating.busy}
-                      onClick={() => {
-                        setRatingError(null);
-                        void userRating
-                          .save(userRating.rating!.score, reviewValue)
-                          .catch(() =>
-                            setRatingError(
-                              'Não foi possível salvar a avaliação local.',
-                            ),
-                          );
-                      }}
-                      className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-                    >
-                      Salvar comentário
-                    </button>
-                    {userRating.rating && (
-                      <button
-                        type="button"
-                        disabled={userRating.busy}
-                        onClick={() => {
-                          void userRating
-                            .clear()
-                            .then(() => setReviewDraft(''))
-                            .catch(() =>
-                              setRatingError(
-                                'Não foi possível remover a avaliação local.',
-                              ),
-                            );
-                        }}
-                        className="px-2 py-1.5 text-xs text-white/50"
-                      >
-                        Remover
-                      </button>
-                    )}
-                  </div>
-                  {ratingError && (
-                    <p role="alert" className="mt-2 text-xs text-red-300">
-                      {ratingError}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-white/45">
-                  Entre na conta nas configurações para avaliar e sincronizar.
-                </p>
-              )}
-            </section>
           </div>
         </div>
       </div>
@@ -351,6 +256,118 @@ export function AnimePage() {
           </div>
         </section>
       )}
+      <section
+        className="border-t border-white/[0.07] bg-white/[0.015] px-10 py-8"
+        aria-label="Minha avaliação"
+      >
+        <div className="mx-auto max-w-3xl rounded-2xl border border-white/[0.08] bg-[#0d0d0f] p-5 sm:p-6">
+          <div className="mb-5 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-bold">Minha avaliação</h2>
+              <p className="mt-1 text-xs text-white/45">
+                Sua nota e comentário ficam salvos na sua biblioteca.
+              </p>
+            </div>
+            {userRating.rating && (
+              <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#ffc658]/10 px-2.5 py-1 text-xs font-bold text-[#ffc658]">
+                <Star size={13} fill="currentColor" />
+                {userRating.rating.score}/10
+              </span>
+            )}
+          </div>
+          {userRating.isAuthenticated ? (
+            <>
+              <div
+                className="grid grid-cols-5 gap-2 sm:grid-cols-10"
+                role="group"
+                aria-label="Nota de 1 a 10"
+              >
+                {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                  (score) => (
+                    <button
+                      key={score}
+                      type="button"
+                      disabled={userRating.busy}
+                      aria-pressed={userRating.rating?.score === score}
+                      onClick={() => {
+                        setRatingError(null);
+                        void userRating
+                          .save(score, reviewValue)
+                          .catch(() =>
+                            setRatingError(
+                              'Não foi possível salvar a avaliação local.',
+                            ),
+                          );
+                      }}
+                      className={`h-10 rounded-lg text-sm font-bold transition ${userRating.rating?.score === score ? 'bg-[#49d77a] text-[#07110a]' : 'border border-white/[0.08] bg-white/[0.04] text-white/70 hover:border-white/20 hover:bg-white/[0.08]'}`}
+                    >
+                      {score}
+                    </button>
+                  ),
+                )}
+              </div>
+              <label className="mt-5 block text-xs font-semibold text-white/70">
+                Comentário{' '}
+                <span className="font-normal text-white/35">(opcional)</span>
+                <textarea
+                  value={reviewValue}
+                  maxLength={2000}
+                  onChange={(event) => setReviewDraft(event.target.value)}
+                  placeholder="O que achou deste anime?"
+                  className="mt-2 min-h-24 w-full resize-y rounded-xl border border-white/10 bg-black/20 p-3 text-sm font-normal text-white/80 outline-none placeholder:text-white/30 focus:border-[#49d77a]/40"
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  disabled={!userRating.rating || userRating.busy}
+                  onClick={() => {
+                    setRatingError(null);
+                    void userRating
+                      .save(userRating.rating!.score, reviewValue)
+                      .catch(() =>
+                        setRatingError(
+                          'Não foi possível salvar a avaliação local.',
+                        ),
+                      );
+                  }}
+                  className="rounded-lg bg-[#49d77a] px-4 py-2 text-xs font-bold text-[#07110a] transition hover:bg-[#6ce995] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Salvar avaliação
+                </button>
+                {userRating.rating && (
+                  <button
+                    type="button"
+                    disabled={userRating.busy}
+                    onClick={() => {
+                      void userRating
+                        .clear()
+                        .then(() => setReviewDraft(''))
+                        .catch(() =>
+                          setRatingError(
+                            'Não foi possível remover a avaliação local.',
+                          ),
+                        );
+                    }}
+                    className="px-2 py-2 text-xs font-semibold text-white/45 hover:text-white/75"
+                  >
+                    Remover avaliação
+                  </button>
+                )}
+                {ratingError && (
+                  <p role="alert" className="text-xs text-red-300">
+                    {ratingError}
+                  </p>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="rounded-lg bg-white/[0.035] p-4 text-sm text-white/50">
+              Entre na conta nas configurações para avaliar e sincronizar.
+            </p>
+          )}
+        </div>
+      </section>
     </article>
   );
 }
