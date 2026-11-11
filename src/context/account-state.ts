@@ -17,6 +17,7 @@ export interface AccountContextValue {
   logout(): Promise<void>;
   syncNow(): Promise<void>;
   importGuestLibrary(): Promise<number>;
+  updateProfile(name: string): Promise<void>;
 }
 
 export const AccountContext = createContext<AccountContextValue | null>(null);

@@ -166,6 +166,17 @@ function registerAccountIpc(): void {
       throw new Error('Anime inválido.');
     return accountService.removeAnimeRating(input.animeId, input.deletedAt);
   });
+  ipcMain.handle('account:profile:update', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    if (typeof input.name !== 'string' || input.name.length > 60)
+      throw new Error('Nome inválido.');
+    return accountService.updateProfile(input.name);
+  });
+  ipcMain.handle('account:export', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.exportAccountData();
+  });
 }
 
 function isAllowedExternalUrl(value: string): boolean {

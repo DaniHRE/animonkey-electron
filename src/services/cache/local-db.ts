@@ -59,10 +59,11 @@ export interface LocalPreference<T = unknown> {
 }
 
 export interface LocalBackup {
-  schemaVersion: 1;
+  schemaVersion: 2;
   exportedAt: string;
   watchLater: WatchLaterItem[];
   episodeProgress: EpisodeProgressRecord[];
+  ratings: AnimeRating[];
   preferences: LocalPreference[];
 }
 
@@ -387,16 +388,20 @@ export async function exportLocalBackup(): Promise<LocalBackup> {
         );
       };
     });
-  const [watchLater, episodeProgress, preferences] = await Promise.all([
-    readStore<WatchLaterItem>(WATCH_LATER_STORE),
-    readStore<EpisodeProgressRecord>(EPISODE_PROGRESS_STORE),
-    readStore<LocalPreference>(PREFERENCES_STORE),
-  ]);
+  const [watchLater, episodeProgress, ratings, preferences] = await Promise.all(
+    [
+      readStore<WatchLaterItem>(WATCH_LATER_STORE),
+      readStore<EpisodeProgressRecord>(EPISODE_PROGRESS_STORE),
+      readStore<AnimeRating>(ANIME_RATING_STORE),
+      readStore<LocalPreference>(PREFERENCES_STORE),
+    ],
+  );
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: new Date().toISOString(),
     watchLater,
     episodeProgress,
+    ratings,
     preferences,
   };
 }
@@ -470,6 +475,22 @@ function isEpisodeProgress(value: unknown): value is EpisodeProgressRecord {
   );
 }
 
+function isAnimeRating(value: unknown): value is AnimeRating {
+  return (
+    isRecord(value) &&
+    typeof value.animeId === 'string' &&
+    /^\d+$/.test(value.animeId) &&
+    typeof value.score === 'number' &&
+    Number.isInteger(value.score) &&
+    value.score >= 1 &&
+    value.score <= 10 &&
+    (value.review === null ||
+      (typeof value.review === 'string' && value.review.length <= 2000)) &&
+    typeof value.updatedAt === 'number' &&
+    Number.isFinite(value.updatedAt)
+  );
+}
+
 export async function importLocalBackup(text: string): Promise<number> {
   if (text.length > 5_000_000)
     throw new Error('O arquivo de backup excede 5 MB.');
@@ -481,7 +502,7 @@ export async function importLocalBackup(text: string): Promise<number> {
   }
   if (
     !isRecord(parsed) ||
-    parsed.schemaVersion !== 1 ||
+    ![1, 2].includes(parsed.schemaVersion as number) ||
     typeof parsed.exportedAt !== 'string' ||
     !Number.isFinite(Date.parse(parsed.exportedAt))
   ) {
@@ -489,12 +510,16 @@ export async function importLocalBackup(text: string): Promise<number> {
   }
   const watchLater = parsed.watchLater;
   const episodeProgress = parsed.episodeProgress;
+  const ratings = parsed.ratings ?? [];
   const preferences = parsed.preferences;
   if (
     !Array.isArray(watchLater) ||
     !watchLater.every(isWatchLaterItem) ||
     !Array.isArray(episodeProgress) ||
     !episodeProgress.every(isEpisodeProgress) ||
+    (parsed.schemaVersion === 2 && !Array.isArray(parsed.ratings)) ||
+    !Array.isArray(ratings) ||
+    !ratings.every(isAnimeRating) ||
     !Array.isArray(preferences) ||
     !preferences.every(
       (item) =>
@@ -513,7 +538,12 @@ export async function importLocalBackup(text: string): Promise<number> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(
-      [WATCH_LATER_STORE, EPISODE_PROGRESS_STORE, PREFERENCES_STORE],
+      [
+        WATCH_LATER_STORE,
+        EPISODE_PROGRESS_STORE,
+        ANIME_RATING_STORE,
+        PREFERENCES_STORE,
+      ],
       'readwrite',
     );
     let mergedCount = 0;
@@ -537,6 +567,7 @@ export async function importLocalBackup(text: string): Promise<number> {
     };
     const watchStore = transaction.objectStore(WATCH_LATER_STORE);
     const progressStore = transaction.objectStore(EPISODE_PROGRESS_STORE);
+    const ratingStore = transaction.objectStore(ANIME_RATING_STORE);
     const preferenceStore = transaction.objectStore(PREFERENCES_STORE);
     for (const item of watchLater) {
       mergeIfNewer(
@@ -551,6 +582,14 @@ export async function importLocalBackup(text: string): Promise<number> {
         progressStore,
         { ...item, scopeId: activeScopeId },
         [activeScopeId, item.key],
+        'updatedAt',
+      );
+    }
+    for (const item of ratings as AnimeRating[]) {
+      mergeIfNewer(
+        ratingStore,
+        { ...item, scopeId: activeScopeId },
+        [activeScopeId, item.animeId],
         'updatedAt',
       );
     }

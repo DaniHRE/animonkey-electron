@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type {
   AnimeRatingsSyncSnapshot,
+  AccountDataExport,
   AccountCredentials,
   AccountRegistration,
   AccountSession,
@@ -542,6 +543,44 @@ class DesktopAccountService {
       animeId,
       deletedAt,
     });
+  }
+
+  async updateProfile(name: string): Promise<AccountUser> {
+    const normalizedName = name.trim().slice(0, 60) || null;
+    const body = await this.authenticatedRequest('profile.update', {
+      name: normalizedName,
+    });
+    if (!isAccountUser(body.user)) {
+      throw new AccountServiceError(
+        'O serviço de conta retornou dados inválidos.',
+      );
+    }
+    if (this.session) {
+      this.session.user = body.user;
+      await this.persistSession();
+    }
+    return body.user;
+  }
+
+  async exportAccountData(): Promise<AccountDataExport> {
+    const body = await this.authenticatedRequest('account.export');
+    const user = asObject(body.user);
+    if (
+      typeof body.exportedAt !== 'string' ||
+      !isAccountUser(user) ||
+      (typeof user['displayName'] !== 'string' &&
+        user['displayName'] !== null) ||
+      typeof user['showActivity'] !== 'boolean' ||
+      !Array.isArray(body.watchLater) ||
+      !Array.isArray(body.episodeProgress) ||
+      !Array.isArray(body.ratings) ||
+      !Array.isArray(body.activity)
+    ) {
+      throw new AccountServiceError(
+        'O serviço de conta retornou dados inválidos.',
+      );
+    }
+    return body as unknown as AccountDataExport;
   }
 }
 

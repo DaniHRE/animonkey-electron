@@ -51,6 +51,15 @@ export interface AnimeRatingsSyncSnapshot {
   tombstones: RemoteSyncTombstone[];
 }
 
+export interface AccountDataExport {
+  exportedAt: string;
+  user: AccountUser & { displayName: string | null; showActivity: boolean };
+  watchLater: Record<string, unknown>[];
+  episodeProgress: Record<string, unknown>[];
+  ratings: Record<string, unknown>[];
+  activity: Record<string, unknown>[];
+}
+
 export interface AccountBridge {
   register(input: AccountRegistration): Promise<AccountSession>;
   login(input: AccountCredentials): Promise<AccountSession>;
@@ -70,4 +79,6 @@ export interface AccountBridge {
   listAnimeRatings(): Promise<AnimeRatingsSyncSnapshot>;
   upsertAnimeRating(rating: AnimeRating): Promise<AnimeRating>;
   removeAnimeRating(animeId: string, deletedAt: number): Promise<void>;
+  updateProfile(name: string): Promise<AccountUser>;
+  exportAccountData(): Promise<AccountDataExport>;
 }

@@ -39,5 +39,8 @@ contextBridge.exposeInMainWorld('animonkey', {
         animeId,
         deletedAt,
       }),
+    updateProfile: (name: string) =>
+      ipcRenderer.invoke('account:profile:update', { name }),
+    exportAccountData: () => ipcRenderer.invoke('account:export'),
   } satisfies AccountBridge,
 });

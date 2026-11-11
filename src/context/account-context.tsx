@@ -178,6 +178,15 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     window.dispatchEvent(new Event('animonkey:account-sync-applied'));
   }, [waitForSync]);
 
+  const updateProfile = useCallback(async (name: string) => {
+    const updatedUser = await window.animonkey.account.updateProfile(name);
+    const current = sessionRef.current;
+    if (!current || current.user.id !== updatedUser.id) return;
+    const updatedSession = { ...current, user: updatedUser };
+    sessionRef.current = updatedSession;
+    setSession(updatedSession);
+  }, []);
+
   const importGuestLibrary = useCallback(async () => {
     if (!sessionRef.current) return 0;
     await waitForSync();
@@ -198,6 +207,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         logout,
         syncNow,
         importGuestLibrary,
+        updateProfile,
       }}
     >
       {ready ? children : null}

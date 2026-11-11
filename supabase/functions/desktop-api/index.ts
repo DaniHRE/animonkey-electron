@@ -835,6 +835,62 @@ async function animeRatingRemove(
   return response(200, { success: true });
 }
 
+async function profileUpdate(
+  userId: string,
+  value: unknown,
+): Promise<Response> {
+  const body = asObject(value);
+  const name =
+    typeof body.name === 'string'
+      ? body.name.trim().slice(0, 60) || null
+      : null;
+  const { error } = await admin
+    .schema('next_auth')
+    .from('users')
+    .update({ name })
+    .eq('id', userId);
+  if (error) throw new ApiError(503, 'service_unavailable');
+  return response(200, { user: publicUser(await getUserById(userId)) });
+}
+
+async function accountExport(userId: string): Promise<Response> {
+  const [user, profileResult, watchLater, episodeProgress, ratings, activity] =
+    await Promise.all([
+      getUserById(userId),
+      admin
+        .from('users')
+        .select('display_name,show_activity')
+        .eq('id', userId)
+        .maybeSingle(),
+      admin.from('watch_later').select('*').eq('user_id', userId),
+      admin.from('episode_progress').select('*').eq('user_id', userId),
+      admin.from('anime_ratings').select('*').eq('user_id', userId),
+      admin.from('activity_feed').select('*').eq('user_id', userId),
+    ]);
+  if (
+    profileResult.error ||
+    !profileResult.data ||
+    watchLater.error ||
+    episodeProgress.error ||
+    ratings.error ||
+    activity.error
+  ) {
+    throw new ApiError(503, 'service_unavailable');
+  }
+  return response(200, {
+    exportedAt: new Date().toISOString(),
+    user: {
+      ...publicUser(user),
+      displayName: profileResult.data.display_name,
+      showActivity: profileResult.data.show_activity,
+    },
+    watchLater: watchLater.data ?? [],
+    episodeProgress: episodeProgress.data ?? [],
+    ratings: ratings.data ?? [],
+    activity: activity.data ?? [],
+  });
+}
+
 function validateDeletionTimestamp(value: unknown): number {
   if (
     typeof value !== 'number' ||
@@ -886,6 +942,10 @@ async function handle(request: Request): Promise<Response> {
 
   const auth = await authenticate(request);
   switch (action) {
+    case 'profile.update':
+      return await profileUpdate(auth.userId, body);
+    case 'account.export':
+      return await accountExport(auth.userId);
     case 'watch-later.list':
       return await watchLaterList(auth.userId);
     case 'watch-later.upsert':

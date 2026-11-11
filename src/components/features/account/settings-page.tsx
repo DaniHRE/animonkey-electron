@@ -17,6 +17,7 @@ export function SettingsPage() {
     logout,
     syncNow,
     importGuestLibrary,
+    updateProfile,
   } = useAccount();
   const backupInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -28,6 +29,10 @@ export function SettingsPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [profileDraft, setProfileDraft] = useState<{
+    userId: string;
+    name: string;
+  } | null>(null);
 
   const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -111,6 +116,52 @@ export function SettingsPage() {
     }
   };
 
+  const downloadAccountExport = async () => {
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    try {
+      const data = await window.animonkey.account.exportAccountData();
+      const url = URL.createObjectURL(
+        new Blob([JSON.stringify(data, null, 2)], {
+          type: 'application/json',
+        }),
+      );
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `animonkey-account-${session?.user.id.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setAccountMessage('Exportação dos dados da conta concluída.');
+    } catch {
+      setAccountError(
+        'Não foi possível exportar os dados da conta. Verifique a conexão e tente novamente.',
+      );
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAccountBusy(true);
+    setAccountError(null);
+    setAccountMessage(null);
+    try {
+      await updateProfile(
+        profileDraft?.userId === session?.user.id
+          ? (profileDraft?.name ?? '')
+          : (session?.user.name ?? ''),
+      );
+      setProfileDraft(null);
+      setAccountMessage('Nome do perfil atualizado.');
+    } catch {
+      setAccountError('Não foi possível atualizar o perfil.');
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
   const importBackup = async (event: ChangeEvent<HTMLInputElement>) => {
     const [file] = event.currentTarget.files ?? [];
     event.currentTarget.value = '';
@@ -174,6 +225,37 @@ export function SettingsPage() {
                         'Offline. Os dados locais continuam disponíveis.')
                       : 'A sincronização será retomada quando houver conexão.'}
               </p>
+              <form
+                onSubmit={(event) => void saveProfile(event)}
+                className="mt-4 flex flex-wrap items-end gap-2"
+              >
+                <label className="min-w-56 flex-1 text-xs text-white/55">
+                  Nome do perfil
+                  <input
+                    value={
+                      profileDraft?.userId === session.user.id
+                        ? (profileDraft?.name ?? '')
+                        : (session.user.name ?? '')
+                    }
+                    onChange={(event) =>
+                      setProfileDraft({
+                        userId: session.user.id,
+                        name: event.target.value,
+                      })
+                    }
+                    maxLength={60}
+                    autoComplete="name"
+                    className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-[#49d77a]/50"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={accountBusy}
+                  className="h-9 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/75 disabled:opacity-50"
+                >
+                  Salvar perfil
+                </button>
+              </form>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -190,6 +272,14 @@ export function SettingsPage() {
                   className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/75 transition hover:bg-white/[0.06] disabled:opacity-50"
                 >
                   Mesclar biblioteca local
+                </button>
+                <button
+                  type="button"
+                  disabled={accountBusy}
+                  onClick={() => void downloadAccountExport()}
+                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/75 transition hover:bg-white/[0.06] disabled:opacity-50"
+                >
+                  <Download size={13} /> Exportar dados da conta
                 </button>
                 <button
                   type="button"
@@ -300,9 +390,10 @@ export function SettingsPage() {
         <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
           <h2 className="text-sm font-bold">Backup da biblioteca</h2>
           <p className="mt-2 text-xs leading-relaxed text-white/45">
-            O arquivo inclui Assistir Depois, progresso local e preferências.
-            Ele não inclui cache do catálogo, sessão ou credenciais. A
-            importação mescla registros e não apaga os dados existentes.
+            O arquivo inclui Assistir Depois, progresso, avaliações locais e
+            preferências. Ele não inclui cache do catálogo, sessão ou
+            credenciais. A importação mescla registros e não apaga os dados
+            existentes.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <button
