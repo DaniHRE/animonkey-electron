@@ -79,8 +79,8 @@ export function AnimePage() {
 
   const image = getAnimeImage(anime);
   return (
-    <article className="overflow-hidden rounded-2xl border border-white/[0.07] bg-[#111113]">
-      <div className="relative h-[360px] overflow-hidden">
+    <article className="w-full bg-[#111113]">
+      <div className="relative min-h-[360px] overflow-hidden lg:min-h-[420px]">
         {image && (
           <img
             src={anime.banner ?? image}
@@ -90,7 +90,7 @@ export function AnimePage() {
         )}
         <div className="absolute inset-0 bg-gradient-to-r from-[#111113] via-[#111113]/75 to-[#111113]/25" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#111113] to-transparent" />
-        <div className="relative flex h-full items-end gap-8 p-10">
+        <div className="relative flex min-h-[360px] items-end gap-6 p-6 sm:gap-8 sm:p-8 lg:min-h-[420px] lg:px-12 lg:py-10">
           {image && (
             <img
               src={image}
@@ -187,7 +187,7 @@ export function AnimePage() {
         </div>
       </div>
       {anime.genres.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-10 pb-8">
+        <div className="flex flex-wrap gap-2 px-6 pb-8 sm:px-8 lg:px-12">
           {anime.genres.map((genre) => (
             <span
               key={genre}
@@ -199,7 +199,7 @@ export function AnimePage() {
         </div>
       )}
       {anime.characters.length > 0 && (
-        <section className="border-t border-white/[0.07] px-10 py-7">
+        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
           <h2 className="mb-4 text-sm font-bold">Personagens</h2>
           <div className="flex flex-wrap gap-3">
             {anime.characters.map((character) => (
@@ -230,9 +230,9 @@ export function AnimePage() {
         </section>
       )}
       {anime.recommendations.length > 0 && (
-        <section className="border-t border-white/[0.07] px-10 py-7">
+        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
           <h2 className="mb-5 text-sm font-bold">Você também pode gostar</h2>
-          <div className="grid grid-cols-6 gap-x-5 gap-y-8">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-6">
             {anime.recommendations.map((recommendation) => (
               <AnimeCard key={recommendation.id} anime={recommendation} />
             ))}
@@ -240,7 +240,7 @@ export function AnimePage() {
         </section>
       )}
       {anime.relations.length > 0 && (
-        <section className="border-t border-white/[0.07] px-10 py-7">
+        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
           <h2 className="mb-3 text-sm font-bold">Obras relacionadas</h2>
           <div className="flex flex-wrap gap-2">
             {anime.relations.map((relation) => (
@@ -257,7 +257,7 @@ export function AnimePage() {
         </section>
       )}
       <section
-        className="border-t border-white/[0.07] bg-white/[0.015] px-10 py-8"
+        className="border-t border-white/[0.07] bg-white/[0.015] px-6 py-8 sm:px-8 lg:px-12"
         aria-label="Minha avaliação"
       >
         <div className="mx-auto max-w-3xl rounded-2xl border border-white/[0.08] bg-[#0d0d0f] p-5 sm:p-6">

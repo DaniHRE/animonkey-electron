@@ -187,6 +187,16 @@ Regras da fronteira Electron:
 
 **Saída:** pacotes assinados ou limitações de assinatura explícitas, matriz de plataformas aprovada e plano de release/rollback.
 
+### Fase 8 — Paridade visual e QA lado a lado
+
+- Aplicar este gate a todas as páginas migradas; comparar a referência do app web com o Electron no mesmo tamanho de janela e estado de conteúdo.
+- Exigir paridade visual total nas páginas de informações do anime e player: hierarquia, banner/poster, tipografia, espaçamentos, botões, tabs/listas, proporções do vídeo, seletores de episódio/servidor, captions e estados loading/erro/vazio.
+- Confirmar que as rotas ocupam a área útil completa entre sidebar e topbar, sem max-width/margem global que comprima o conteúdo; componentes internos podem manter gutters próprios. Páginas de detalhe não devem ganhar moldura externa sem existir na referência.
+- Testar imagens remotas na build empacotada. A CSP deve permitir somente origens públicas necessárias e derivar a origem Supabase da URL pública configurada; verificar renderização de avatar, posters e thumbs.
+- Registrar rota, viewport, estado comparado, diferenças encontradas e evidência visual; corrigir diferenças antes de marcar cada rota como paridade completa.
+
+**Saída:** matriz visual por rota com evidência lado a lado; player e informações do anime aprovados em paridade visual total no app empacotado.
+
 ## Critérios de estabilidade e acompanhamento
 
 - Usar estados rastreáveis `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `COMPLETED` e `CANCELLED`. `COMPLETED` exige critérios de aceite atendidos e validações executadas; se uma validação necessária não puder ser feita, registrar a limitação e manter a etapa incompleta.

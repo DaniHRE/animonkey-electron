@@ -10,7 +10,7 @@ import { useEpisodeProgress } from '@/hooks/use-episode-progress';
 import { useSaveEpisodeProgress } from '@/hooks/use-save-episode-progress';
 import { usePlaybackSessionStore } from '@/stores/playback-session-store';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
-import type { AnimeInfo } from '@/types/anime';
+import type { AnimeInfo, AnimeResult } from '@/types/anime';
 import type {
   AnimeEpisode,
   EpisodeServer,
@@ -241,14 +241,14 @@ export function WatchPage() {
   const streamError = sourceState.key === requestKey ? sourceState.error : null;
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-5">
+    <div className="w-full space-y-5 px-4 py-6 sm:px-6 lg:px-8">
       <Link
         to={`/anime/${anime.id}`}
         className="inline-flex items-center gap-2 text-xs font-semibold text-white/50 hover:text-white"
       >
         <ArrowLeft size={14} /> Voltar aos detalhes
       </Link>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-4">
           <PlayerErrorBoundary
             key={`${currentEpisodeId}:${activeServerId}`}
@@ -359,60 +359,125 @@ export function WatchPage() {
             </div>
           </section>
         </div>
-        <aside className="max-h-[75vh] overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-          <h2 className="sticky top-0 z-10 bg-[#0d0d0f] px-2 py-3 text-xs font-bold">
-            Episódios <span className="text-white/35">{episodes.length}</span>
-          </h2>
-          {loadingEpisodes ? (
-            <div className="space-y-2 p-2">
-              {Array.from({ length: 8 }, (_, index) => (
-                <div
-                  key={index}
-                  className="h-14 animate-pulse rounded-lg bg-white/[0.04]"
-                />
-              ))}
-            </div>
-          ) : episodes.length ? (
-            <div className="space-y-1">
-              {episodes.map((episode) => (
-                <button
-                  key={episode.id}
-                  type="button"
-                  aria-current={
-                    episode.id === currentEpisodeId ? 'true' : undefined
-                  }
-                  onClick={() => selectEpisode(episode.id)}
-                  className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${episode.id === currentEpisodeId ? 'bg-[#49d77a]/10 text-[#70e793]' : 'text-white/60 hover:bg-white/[0.05]'}`}
-                >
-                  {episode.image ? (
-                    <img
-                      src={episode.image}
-                      alt=""
-                      className="h-12 w-20 rounded-md object-cover"
-                    />
-                  ) : (
-                    <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold">
-                      {episode.number}
+        <div className="self-start space-y-6 xl:sticky xl:top-24">
+          <aside className="max-h-[75vh] overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+            <h2 className="sticky top-0 z-10 bg-[#0d0d0f] px-2 py-3 text-xs font-bold">
+              Episódios <span className="text-white/35">{episodes.length}</span>
+            </h2>
+            {loadingEpisodes ? (
+              <div className="space-y-2 p-2">
+                {Array.from({ length: 8 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-14 animate-pulse rounded-lg bg-white/[0.04]"
+                  />
+                ))}
+              </div>
+            ) : episodes.length ? (
+              <div className="space-y-1">
+                {episodes.map((episode) => (
+                  <button
+                    key={episode.id}
+                    type="button"
+                    aria-current={
+                      episode.id === currentEpisodeId ? 'true' : undefined
+                    }
+                    onClick={() => selectEpisode(episode.id)}
+                    className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${episode.id === currentEpisodeId ? 'bg-[#49d77a]/10 text-[#70e793]' : 'text-white/60 hover:bg-white/[0.05]'}`}
+                  >
+                    {episode.image ? (
+                      <img
+                        src={episode.image}
+                        alt=""
+                        className="h-12 w-20 rounded-md object-cover"
+                      />
+                    ) : (
+                      <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold">
+                        {episode.number}
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block text-[11px] font-bold">
+                        Episódio {episode.number}
+                      </span>
+                      <span className="mt-1 block truncate text-[10px] text-white/35">
+                        {episode.title ?? 'Anime'}
+                      </span>
                     </span>
-                  )}
-                  <span className="min-w-0">
-                    <span className="block text-[11px] font-bold">
-                      Episódio {episode.number}
-                    </span>
-                    <span className="mt-1 block truncate text-[10px] text-white/35">
-                      {episode.title ?? 'Anime'}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="p-3 text-xs leading-relaxed text-white/40">
-              {episodeState.error ?? 'Nenhum episódio disponível pela Anivexa.'}
-            </p>
-          )}
-        </aside>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="p-3 text-xs leading-relaxed text-white/40">
+                {episodeState.error ??
+                  'Nenhum episódio disponível pela Anivexa.'}
+              </p>
+            )}
+          </aside>
+          <WatchRelatedList
+            title="Animes relacionados"
+            items={anime.relations}
+          />
+          <WatchRelatedList
+            title="Recomendações"
+            items={anime.recommendations}
+            label="Recomendado"
+          />
+        </div>
       </div>
     </div>
+  );
+}
+
+function WatchRelatedList({
+  title,
+  items,
+  label,
+}: {
+  title: string;
+  items: Array<AnimeResult & { relationType?: string }>;
+  label?: string;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center gap-3">
+        <span className="h-5 w-1 rounded-full bg-[#49d77a]" />
+        <h2 className="text-sm font-bold text-white">{title}</h2>
+      </div>
+      <div className="divide-y divide-white/[0.05] rounded-xl border border-white/[0.07] bg-white/[0.02] px-2 py-1">
+        {items.map((item) => (
+          <Link
+            key={item.id}
+            to={`/anime/${item.id}`}
+            className="group flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-white/[0.04]"
+          >
+            <div className="size-16 shrink-0 overflow-hidden rounded-md border border-white/10 bg-white/[0.04]">
+              {item.image ? (
+                <img
+                  src={item.image}
+                  alt=""
+                  loading="lazy"
+                  className="size-full object-cover transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <span className="grid size-full place-items-center text-xs text-white/30">
+                  ?
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="line-clamp-2 text-sm font-medium text-white/85 group-hover:text-white">
+                {resolveAnimeTitle(item.title)}
+              </p>
+              <p className="mt-1 truncate text-[10px] font-semibold tracking-wide text-white/40 uppercase">
+                {label ?? item.relationType ?? 'Relacionado'}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }

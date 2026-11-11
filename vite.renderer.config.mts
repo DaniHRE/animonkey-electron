@@ -29,6 +29,26 @@ export default defineConfig(({ mode }) => {
     );
   }
   const origin = parsedEndpoint?.origin ?? "'none'";
+  const desktopApiUrl =
+    process.env.VITE_DESKTOP_API_URL || env.VITE_DESKTOP_API_URL || '';
+  const parsedDesktopApiUrl = desktopApiUrl ? new URL(desktopApiUrl) : null;
+  if (
+    parsedDesktopApiUrl &&
+    (parsedDesktopApiUrl.username || parsedDesktopApiUrl.password)
+  ) {
+    throw new Error('A URL da API desktop não pode conter credenciais.');
+  }
+  const localDesktopHttp =
+    parsedDesktopApiUrl?.protocol === 'http:' &&
+    ['localhost', '127.0.0.1', '[::1]'].includes(parsedDesktopApiUrl.hostname);
+  if (
+    parsedDesktopApiUrl &&
+    parsedDesktopApiUrl.protocol !== 'https:' &&
+    !(mode === 'development' && localDesktopHttp)
+  ) {
+    throw new Error('A URL da API desktop deve usar HTTPS.');
+  }
+  const supabaseOrigin = parsedDesktopApiUrl?.origin ?? "'none'";
   return {
     base: './',
     worker: { format: 'es' },
@@ -37,7 +57,9 @@ export default defineConfig(({ mode }) => {
       {
         name: 'animonkey-csp',
         transformIndexHtml(html) {
-          return html.replace('__ANIVEXA_ORIGIN__', origin);
+          return html
+            .replace('__ANIVEXA_ORIGIN__', origin)
+            .replace('__SUPABASE_ORIGIN__', supabaseOrigin);
         },
       },
     ],

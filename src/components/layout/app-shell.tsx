@@ -178,7 +178,7 @@ export function AppShell() {
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto min-h-[calc(100vh-76px)] max-w-[1600px] px-10 py-9 outline-none"
+          className="min-h-[calc(100vh-76px)] w-full p-0 outline-none"
         >
           <Outlet />
         </main>
