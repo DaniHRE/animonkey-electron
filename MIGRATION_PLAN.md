@@ -156,6 +156,7 @@ Regras da fronteira Electron:
 ### Fase 5 — Conta, autenticação e sincronização
 
 - Antes da UI, decidir o backend final. A recomendação é manter temporariamente os endpoints Next em serviço HTTPS independente do ciclo de vida desktop e depois extrair auth/API para backend próprio.
+- Auditoria do código atual do repositório web em 11/11/2026 encontrou divergência de segurança: `auth.ts` compara a senha informada diretamente com `password_hash`, e `/api/auth/register` grava a senha sem hash, embora `docs/nextauth-setup.md` descreva `bcrypt-ts`. Não portar esse fluxo para o Electron; corrigir autenticação no servidor e confirmar uma API HTTPS nativa segura antes.
 - Redesenhar autenticação nativa para OAuth/deep-link ou fluxo web seguro conforme o backend suportar. NextAuth Credentials/cookies e adapter atuais não são automaticamente compatíveis com renderer Electron.
 - Nunca incluir chaves service-role/JWT de Supabase ou segredo de NextAuth no desktop; não permitir que renderer escolha user_id. Fazer operações privilegiadas e validação de ownership no servidor, mantendo RLS.
 - Migrar conta, configurações, avatar, export, watch-later remoto, progresso, ratings, privacidade e feed; preservar retry e mensagens de falha sem bloquear o modo offline.

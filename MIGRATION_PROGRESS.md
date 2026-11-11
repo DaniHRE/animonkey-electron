@@ -2,16 +2,16 @@
 
 Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualizado em 11/11/2026.
 
-| Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                                       |
-| --------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — Repositório e baseline        | `COMPLETED`   | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                   |
-| 1 — Fundação UI e compatibilidade | `IN_PROGRESS` | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                |
-| 2 — Domínio e dados públicos      | `IN_PROGRESS` | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                              |
-| 3 — Player e streaming            | `COMPLETED`   | Vidstack é o player único; engine, resolver, controller, Zustand, captions e fallback foram validados no smoke do pacote confirmado pelo usuário em 11/11/2026. `TD-PLAYER-001` permanece adiado.                               |
-| 4 — Persistência offline          | `COMPLETED`   | Usuário confirmou backup inválido rejeitado, importação válida mesclada, retenção e upgrade do IndexedDB v3→v4. Cache AniList preserva fallback por 30 dias após o TTL e falhas de gravação de cache não interrompem consultas. |
-| 5 — Conta e sync                  | `NOT_STARTED` | Próximo: definir backend HTTPS compatível e desenho de autenticação desktop antes de criar UI; nenhum fluxo de conta foi portado.                                                                                               |
-| 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                                             |
-| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                        |
+| Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                         |
+| --------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 — Repositório e baseline        | `COMPLETED`   | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                     |
+| 1 — Fundação UI e compatibilidade | `IN_PROGRESS` | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                  |
+| 2 — Domínio e dados públicos      | `IN_PROGRESS` | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                |
+| 3 — Player e streaming            | `COMPLETED`   | Vidstack é o player único; engine, resolver, controller, Zustand, captions e fallback foram validados no smoke do pacote confirmado pelo usuário em 11/11/2026. `TD-PLAYER-001` permanece adiado.                 |
+| 4 — Persistência offline          | `COMPLETED`   | Usuário confirmou importação válida/mesclagem, rejeição do backup inválido e retenção após upgrade do IndexedDB v3→v4. Cache vencido é limpo após 30 dias de fallback; gravação de cache é opcional para AniList. |
+| 5 — Conta e sync                  | `NOT_STARTED` | Auditoria da referência web encontrou senha armazenada/comparada sem hash apesar da documentação dizer bcrypt; não portar. Primeiro corrigir autenticação no servidor e decidir API HTTPS segura para desktop.    |
+| 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                               |
+| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                          |
 
 ## Trilha de modernização de player e arquitetura
 
@@ -55,9 +55,9 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Próximos passos
 
-1. Avaliar no repositório web os endpoints de sessão, auth e sync que podem permanecer em HTTPS; confirmar branch, status e remote antes da inspeção.
-2. Definir fronteira desktop de login/OAuth, sessão, ownership e armazenamento seguro de tokens antes de portar UI ou código de sync.
-3. Depois da decisão de backend, migrar as fatias de conta/sync que não exigem segredos privados no cliente.
+1. Manter conta/sync sem implementação até corrigir a autenticação de senha no servidor web e validar o fluxo seguro.
+2. Definir a fronteira HTTPS do login desktop, sessão, ownership e armazenamento de tokens antes de criar UI ou código de sync.
+3. Depois da decisão de backend, migrar as fatias de conta/sync compatíveis com o funcionamento offline e sem segredos privados no cliente.
 4. Confirmar endpoint HTTPS Anivexa para release e avaliar IPC tipado somente se surgir capacidade privilegiada concreta.
 5. Watch Together e complementos ficam adiados (`NOT_STARTED`); seguir para distribuição conforme inventário.
 
@@ -98,3 +98,6 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - Commit local que registrou o smoke do player: `10217bc docs: mark player validation complete`.
 
 - 11/11/2026 — usuário confirmou os testes da fase offline: importação válida/mesclagem, rejeição do backup inválido e retenção após upgrade do IndexedDB v3→v4. Fase 4 concluída. Cache mantém fallback recente; erros ao gravar cache não bloqueiam catálogo. Próxima fase: decidir backend remoto de conta/sync. Commit local da implementação de expiração: `565f411 feat: prune stale catalog cache after schema upgrade`.
+
+- 11/11/2026 — usuário confirmou testes da fase offline, inclusive importação/mesclagem e retenção após upgrade v3→v4; fase 4 concluída. Commit da migração e limpeza do cache: `565f411 feat: prune stale catalog cache after schema upgrade`; registro de conclusão: `1bbb0be docs: complete offline persistence milestone`.
+- 11/11/2026 — auditoria read-only do repositório web: branch main, working tree limpo, remote DaniHRE/animonkey. O código de Credentials grava a senha crua como password_hash no endpoint de registro e compara em texto puro no authorize; a documentação cita bcrypt-ts, mas o código atual não o usa. Não houve alteração no repositório web. Conta/sync permanece NOT_STARTED até haver autenticação segura e um fluxo HTTPS compatível com desktop.
