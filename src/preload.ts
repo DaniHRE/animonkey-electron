@@ -3,6 +3,7 @@ import type {
   AccountBridge,
   AccountCredentials,
   AccountRegistration,
+  ActivityFeedCursor,
   EpisodeProgressInput,
   WatchLaterRemoteItem,
 } from './types/account';
@@ -42,5 +43,18 @@ contextBridge.exposeInMainWorld('animonkey', {
     updateProfile: (name: string) =>
       ipcRenderer.invoke('account:profile:update', { name }),
     exportAccountData: () => ipcRenderer.invoke('account:export'),
+    uploadAvatar: (contentType: string, base64: string) =>
+      ipcRenderer.invoke('account:avatar:upload', { contentType, base64 }),
+    removeAvatar: () => ipcRenderer.invoke('account:avatar:remove'),
+    getActivityPrivacy: () => ipcRenderer.invoke('account:privacy:get'),
+    setActivityPrivacy: (showActivity: boolean) =>
+      ipcRenderer.invoke('account:privacy:set', { showActivity }),
+    listActivity: (cursor: ActivityFeedCursor | null, limit: number) =>
+      ipcRenderer.invoke('account:activity:list', { cursor, limit }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      ipcRenderer.invoke('account:password:change', {
+        currentPassword,
+        newPassword,
+      }),
   } satisfies AccountBridge,
 });

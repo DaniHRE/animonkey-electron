@@ -9,6 +9,9 @@ import type {
   AccountRegistration,
   AccountSession,
   AccountUser,
+  ActivityFeedCursor,
+  ActivityFeedItem,
+  ActivityFeedPage,
   EpisodeProgressInput,
   EpisodeProgressSyncSnapshot,
   RemoteSyncTombstone,
@@ -92,6 +95,9 @@ function getFriendlyError(
   if (status === 401 && action === 'login') {
     return 'E-mail ou senha inválidos.';
   }
+  if (code === 'invalid_current_password') return 'Senha atual incorreta.';
+  if (code === 'password_not_available')
+    return 'Esta conta não possui senha configurada.';
   if (status === 401)
     return 'Sua sessão expirou. Entre novamente para sincronizar.';
   if (code === 'invalid_password') {
@@ -581,6 +587,82 @@ class DesktopAccountService {
       );
     }
     return body as unknown as AccountDataExport;
+  }
+
+  private async applyUpdatedAccountUser(value: unknown): Promise<AccountUser> {
+    const body = asObject(value);
+    if (!body || !isAccountUser(body.user)) {
+      throw new AccountServiceError(
+        'O serviço de conta retornou dados inválidos.',
+      );
+    }
+    if (this.session) {
+      this.session.user = body.user;
+      await this.persistSession();
+    }
+    return body.user;
+  }
+
+  async uploadAvatar(
+    contentType: string,
+    base64: string,
+  ): Promise<AccountUser> {
+    const body = await this.authenticatedRequest('avatar.upload', {
+      contentType,
+      base64,
+    });
+    return await this.applyUpdatedAccountUser(body);
+  }
+
+  async removeAvatar(): Promise<AccountUser> {
+    const body = await this.authenticatedRequest('avatar.remove');
+    return await this.applyUpdatedAccountUser(body);
+  }
+
+  async getActivityPrivacy(): Promise<boolean> {
+    const body = await this.authenticatedRequest('activity-privacy.get');
+    if (!body || typeof body.showActivity !== 'boolean') {
+      throw new AccountServiceError(
+        'O serviço de conta retornou dados inválidos.',
+      );
+    }
+    return body.showActivity;
+  }
+
+  async setActivityPrivacy(showActivity: boolean): Promise<void> {
+    await this.authenticatedRequest('activity-privacy.set', { showActivity });
+  }
+
+  async listActivity(
+    cursor: ActivityFeedCursor | null,
+    limit: number,
+  ): Promise<ActivityFeedPage> {
+    const body = await this.authenticatedRequest('activity.list', {
+      cursor,
+      limit,
+    });
+    if (!Array.isArray(body.items)) {
+      throw new AccountServiceError(
+        'O serviço de feed retornou dados inválidos.',
+      );
+    }
+    return {
+      items: body.items as ActivityFeedItem[],
+      nextCursor:
+        body.nextCursor && typeof body.nextCursor === 'object'
+          ? (body.nextCursor as ActivityFeedCursor)
+          : null,
+    };
+  }
+
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    await this.authenticatedRequest('password.change', {
+      currentPassword,
+      newPassword,
+    });
   }
 }
 

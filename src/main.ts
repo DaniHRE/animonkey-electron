@@ -11,6 +11,7 @@ import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
 import type {
   AccountCredentials,
+  ActivityFeedCursor,
   AccountRegistration,
   EpisodeProgressInput,
   WatchLaterRemoteItem,
@@ -176,6 +177,81 @@ function registerAccountIpc(): void {
   ipcMain.handle('account:export', (event) => {
     assertTrustedIpcSender(event);
     return accountService.exportAccountData();
+  });
+  ipcMain.handle('account:avatar:upload', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    if (
+      typeof input.contentType !== 'string' ||
+      !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(
+        input.contentType,
+      ) ||
+      typeof input.base64 !== 'string' ||
+      input.base64.length > 2_800_000 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(input.base64)
+    )
+      throw new Error('Arquivo de avatar inválido.');
+    return accountService.uploadAvatar(input.contentType, input.base64);
+  });
+  ipcMain.handle('account:avatar:remove', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.removeAvatar();
+  });
+  ipcMain.handle('account:privacy:get', (event) => {
+    assertTrustedIpcSender(event);
+    return accountService.getActivityPrivacy();
+  });
+  ipcMain.handle('account:privacy:set', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    if (typeof input.showActivity !== 'boolean')
+      throw new Error('Preferência inválida.');
+    return accountService.setActivityPrivacy(input.showActivity);
+  });
+  ipcMain.handle('account:activity:list', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    let cursor: ActivityFeedCursor | null = null;
+    if (input.cursor !== null && input.cursor !== undefined) {
+      const value = asObject(input.cursor);
+      if (
+        typeof value.createdAt !== 'string' ||
+        !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(
+          value.createdAt,
+        ) ||
+        !Number.isFinite(Date.parse(value.createdAt)) ||
+        value.createdAt.length > 40 ||
+        typeof value.id !== 'string' ||
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          value.id,
+        )
+      )
+        throw new Error('Cursor do feed inválido.');
+      cursor = { createdAt: value.createdAt, id: value.id };
+    }
+    if (
+      typeof input.limit !== 'number' ||
+      !Number.isSafeInteger(input.limit) ||
+      input.limit < 1 ||
+      input.limit > 30
+    )
+      throw new Error('Parâmetros do feed inválidos.');
+    return accountService.listActivity(cursor, input.limit);
+  });
+  ipcMain.handle('account:password:change', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    const input = asObject(value);
+    const currentPassword = input.currentPassword;
+    const newPassword = input.newPassword;
+    if (
+      typeof currentPassword !== 'string' ||
+      new TextEncoder().encode(currentPassword).byteLength > 72 ||
+      typeof newPassword !== 'string' ||
+      newPassword.length < 8 ||
+      new TextEncoder().encode(newPassword).byteLength > 72
+    )
+      throw new Error('A nova senha precisa ter entre 8 e 72 bytes.');
+    return accountService.changePassword(currentPassword, newPassword);
   });
 }
 

@@ -60,6 +60,29 @@ export interface AccountDataExport {
   activity: Record<string, unknown>[];
 }
 
+export type ActivityType =
+  'started_watching' | 'episode_completed' | 'rated_anime';
+
+export interface ActivityFeedItem {
+  id: string;
+  userId: string;
+  type: ActivityType;
+  animeId: string;
+  payload: { score?: number; episode_number?: number };
+  createdAt: number;
+  actor: { id: string; name: string | null; image: string | null };
+}
+
+export interface ActivityFeedPage {
+  items: ActivityFeedItem[];
+  nextCursor: ActivityFeedCursor | null;
+}
+
+export interface ActivityFeedCursor {
+  createdAt: string;
+  id: string;
+}
+
 export interface AccountBridge {
   register(input: AccountRegistration): Promise<AccountSession>;
   login(input: AccountCredentials): Promise<AccountSession>;
@@ -81,4 +104,13 @@ export interface AccountBridge {
   removeAnimeRating(animeId: string, deletedAt: number): Promise<void>;
   updateProfile(name: string): Promise<AccountUser>;
   exportAccountData(): Promise<AccountDataExport>;
+  uploadAvatar(contentType: string, base64: string): Promise<AccountUser>;
+  removeAvatar(): Promise<AccountUser>;
+  getActivityPrivacy(): Promise<boolean>;
+  setActivityPrivacy(showActivity: boolean): Promise<void>;
+  listActivity(
+    cursor: ActivityFeedCursor | null,
+    limit: number,
+  ): Promise<ActivityFeedPage>;
+  changePassword(currentPassword: string, newPassword: string): Promise<void>;
 }

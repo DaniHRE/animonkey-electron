@@ -3,7 +3,8 @@ import { compare, hash } from 'bcrypt-ts';
 
 const ACCESS_TTL_MS = 10 * 60 * 1000;
 const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const MAX_BODY_BYTES = 64 * 1024;
+const MAX_BODY_BYTES = 4 * 1024 * 1024;
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const encoder = new TextEncoder();
 
 type JsonObject = Record<string, unknown>;
@@ -39,6 +40,20 @@ type AnimeRatingRow = {
   score: number;
   review: string | null;
   updated_at: string;
+};
+type ActivityRow = {
+  id: string;
+  user_id: string;
+  type: 'started_watching' | 'episode_completed' | 'rated_anime';
+  anime_id: string;
+  payload: Record<string, unknown> | null;
+  created_at: string;
+  actor: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    show_activity: boolean;
+  };
 };
 type SyncTombstoneRow = {
   record_key: string;
@@ -891,6 +906,245 @@ async function accountExport(userId: string): Promise<Response> {
   });
 }
 
+async function avatarList(userId: string, except?: string): Promise<string[]> {
+  const { data, error } = await admin.storage.from('avatars').list(userId, {
+    limit: 1000,
+    search: 'avatar-',
+  });
+  if (error) throw new ApiError(503, 'service_unavailable');
+  return (data ?? [])
+    .map((file) => file.name)
+    .filter(
+      (name) =>
+        name !== except &&
+        /^avatar-[a-z0-9-]+\.(jpg|png|webp|gif)$/i.test(name),
+    )
+    .map((name) => `${userId}/${name}`);
+}
+
+function isAvatarSignature(bytes: Uint8Array, contentType: string): boolean {
+  if (contentType === 'image/jpeg')
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (contentType === 'image/png')
+    return (
+      bytes[0] === 0x89 && String.fromCharCode(...bytes.slice(1, 4)) === 'PNG'
+    );
+  if (contentType === 'image/webp')
+    return (
+      String.fromCharCode(...bytes.slice(0, 4)) === 'RIFF' &&
+      String.fromCharCode(...bytes.slice(8, 12)) === 'WEBP'
+    );
+  if (contentType === 'image/gif') {
+    const signature = String.fromCharCode(...bytes.slice(0, 6));
+    return signature === 'GIF87a' || signature === 'GIF89a';
+  }
+  return false;
+}
+
+async function avatarUpload(userId: string, value: unknown): Promise<Response> {
+  const body = asObject(value);
+  const extensions: Record<string, string> = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+    'image/gif': 'gif',
+  };
+  if (
+    typeof body.contentType !== 'string' ||
+    !extensions[body.contentType] ||
+    typeof body.base64 !== 'string' ||
+    body.base64.length > 2_800_000 ||
+    !/^[A-Za-z0-9+/]+={0,2}$/.test(body.base64)
+  ) {
+    throw new ApiError(400, 'invalid_request');
+  }
+  let bytes: Uint8Array;
+  try {
+    const binary = atob(body.base64);
+    bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  } catch {
+    throw new ApiError(400, 'invalid_request');
+  }
+  if (
+    bytes.byteLength === 0 ||
+    bytes.byteLength > MAX_AVATAR_BYTES ||
+    !isAvatarSignature(bytes, body.contentType)
+  ) {
+    throw new ApiError(415, 'invalid_avatar');
+  }
+
+  const path = `${userId}/avatar-${crypto.randomUUID()}.${extensions[body.contentType]}`;
+  const { error: uploadError } = await admin.storage
+    .from('avatars')
+    .upload(path, bytes, {
+      contentType: body.contentType,
+      cacheControl: '3600',
+      upsert: false,
+    });
+  if (uploadError) throw new ApiError(503, 'service_unavailable');
+  const publicUrl = admin.storage.from('avatars').getPublicUrl(path)
+    .data.publicUrl;
+  const { error: profileError } = await admin
+    .schema('next_auth')
+    .from('users')
+    .update({ image: publicUrl })
+    .eq('id', userId);
+  if (profileError) {
+    await admin.storage.from('avatars').remove([path]);
+    throw new ApiError(503, 'service_unavailable');
+  }
+  const oldPaths = await avatarList(userId, path.split('/').at(-1));
+  if (oldPaths.length > 0) await admin.storage.from('avatars').remove(oldPaths);
+  return response(200, { user: publicUser(await getUserById(userId)) });
+}
+
+async function avatarRemove(userId: string): Promise<Response> {
+  const { error } = await admin
+    .schema('next_auth')
+    .from('users')
+    .update({ image: null })
+    .eq('id', userId);
+  if (error) throw new ApiError(503, 'service_unavailable');
+  const paths = await avatarList(userId);
+  if (paths.length > 0) await admin.storage.from('avatars').remove(paths);
+  return response(200, { user: publicUser(await getUserById(userId)) });
+}
+
+async function activityPrivacyGet(userId: string): Promise<Response> {
+  const { data, error } = await admin
+    .from('users')
+    .select('show_activity')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error || !data) throw new ApiError(503, 'service_unavailable');
+  return response(200, { showActivity: data.show_activity === true });
+}
+
+async function activityPrivacySet(
+  userId: string,
+  value: unknown,
+): Promise<Response> {
+  const body = asObject(value);
+  if (typeof body.showActivity !== 'boolean')
+    throw new ApiError(400, 'invalid_request');
+  const { error } = await admin
+    .from('users')
+    .update({ show_activity: body.showActivity })
+    .eq('id', userId);
+  if (error) throw new ApiError(503, 'service_unavailable');
+  return response(200, { showActivity: body.showActivity });
+}
+
+async function activityList(userId: string, value: unknown): Promise<Response> {
+  const body = asObject(value);
+  const limit = body.limit;
+  if (
+    !Number.isSafeInteger(limit) ||
+    (limit as number) < 1 ||
+    (limit as number) > 30
+  )
+    throw new ApiError(400, 'invalid_request');
+  const cursor = body.cursor;
+  let query = admin
+    .from('activity_feed')
+    .select(
+      'id,user_id,type,anime_id,payload,created_at,actor:users!inner(id,name,image,show_activity)',
+    )
+    .eq('actor.show_activity', true)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit as number);
+  if (cursor !== null && cursor !== undefined) {
+    const parsed = asObject(cursor);
+    const createdAt = parsed.createdAt;
+    const id = parsed.id;
+    if (
+      typeof createdAt !== 'string' ||
+      createdAt.length > 40 ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(
+        createdAt,
+      ) ||
+      !Number.isFinite(Date.parse(createdAt)) ||
+      typeof id !== 'string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        id,
+      )
+    )
+      throw new ApiError(400, 'invalid_request');
+    query = query.or(
+      `created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`,
+    );
+  }
+  const { data, error } = await query;
+  if (error) throw new ApiError(503, 'service_unavailable');
+  const rows = (data ?? []) as unknown as ActivityRow[];
+  const items = rows.map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    type: row.type,
+    animeId: row.anime_id,
+    payload: {
+      ...(typeof row.payload?.score === 'number'
+        ? { score: row.payload.score }
+        : {}),
+      ...(typeof row.payload?.episode_number === 'number'
+        ? { episode_number: row.payload.episode_number }
+        : {}),
+    },
+    createdAt: Date.parse(row.created_at),
+    actor: { id: row.actor.id, name: row.actor.name, image: row.actor.image },
+  }));
+  const last = rows.at(-1);
+  return response(200, {
+    items,
+    nextCursor:
+      rows.length === limit && last
+        ? { createdAt: last.created_at, id: last.id }
+        : null,
+  });
+}
+
+async function passwordChange(
+  userId: string,
+  value: unknown,
+): Promise<Response> {
+  const body = asObject(value);
+  const currentPassword = body.currentPassword;
+  const newPassword = body.newPassword;
+  if (
+    typeof currentPassword !== 'string' ||
+    encoder.encode(currentPassword).byteLength > 72 ||
+    typeof newPassword !== 'string' ||
+    newPassword.length < 8 ||
+    encoder.encode(newPassword).byteLength > 72
+  )
+    throw new ApiError(400, 'invalid_password');
+
+  const { data, error } = await admin
+    .schema('next_auth')
+    .from('users')
+    .select('email,password_hash')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error || !data) throw new ApiError(404, 'user_not_found');
+  if (!data.password_hash) throw new ApiError(400, 'password_not_available');
+  const rateIdentity = `password-change:${data.email ?? userId}`;
+  await consumeLoginAttempt(rateIdentity);
+  const valid = await compare(currentPassword, data.password_hash).catch(
+    () => false,
+  );
+  if (!valid) throw new ApiError(401, 'invalid_current_password');
+  const passwordHash = await hash(newPassword, 10);
+  const { error: updateError } = await admin
+    .schema('next_auth')
+    .from('users')
+    .update({ password_hash: passwordHash })
+    .eq('id', userId);
+  if (updateError) throw new ApiError(503, 'service_unavailable');
+  await clearLoginAttempt(rateIdentity);
+  return response(200, { success: true });
+}
+
 function validateDeletionTimestamp(value: unknown): number {
   if (
     typeof value !== 'number' ||
@@ -942,6 +1196,18 @@ async function handle(request: Request): Promise<Response> {
 
   const auth = await authenticate(request);
   switch (action) {
+    case 'avatar.upload':
+      return await avatarUpload(auth.userId, body);
+    case 'avatar.remove':
+      return await avatarRemove(auth.userId);
+    case 'activity-privacy.get':
+      return await activityPrivacyGet(auth.userId);
+    case 'activity-privacy.set':
+      return await activityPrivacySet(auth.userId, body);
+    case 'activity.list':
+      return await activityList(auth.userId, body);
+    case 'password.change':
+      return await passwordChange(auth.userId, body);
     case 'profile.update':
       return await profileUpdate(auth.userId, body);
     case 'account.export':

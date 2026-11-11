@@ -3,6 +3,7 @@ import { AnimePage } from '@/components/features/anime/anime-page';
 import { WatchLaterPage } from '@/components/features/account/watch-later-page';
 import { ContinueWatchingPage } from '@/components/features/account/continue-watching-page';
 import { SettingsPage } from '@/components/features/account/settings-page';
+import { ActivityPage } from '@/components/features/account/activity-page';
 import { CatalogPage } from '@/components/features/catalog/catalog-page';
 import { HomePage } from '@/components/features/home/home-page';
 import { SchedulePage } from '@/components/features/schedule/schedule-page';
@@ -32,6 +33,7 @@ export function AppRoot() {
                   element={<ContinueWatchingPage />}
                 />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="activity" element={<ActivityPage />} />
                 <Route path="trending" element={<CatalogPage />} />
                 <Route path="updates" element={<CatalogPage />} />
                 <Route path="recent" element={<CatalogPage />} />

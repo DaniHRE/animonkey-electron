@@ -1,6 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Cloud, Download, LogOut, RefreshCw, Upload } from 'lucide-react';
+import {
+  Cloud,
+  Download,
+  LogOut,
+  RefreshCw,
+  Trash2,
+  Upload,
+} from 'lucide-react';
 import { useAccount } from '@/context/account-state';
 import {
   exportLocalBackup,
@@ -20,6 +27,7 @@ export function SettingsPage() {
     updateProfile,
   } = useAccount();
   const backupInput = useRef<HTMLInputElement>(null);
+  const avatarInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [accountMode, setAccountMode] = useState<'login' | 'register'>('login');
@@ -28,11 +36,35 @@ export function SettingsPage() {
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [profileDraft, setProfileDraft] = useState<{
     userId: string;
     name: string;
   } | null>(null);
+  const [privacy, setPrivacy] = useState<{
+    userId: string;
+    value: boolean;
+  } | null>(null);
+  const activityPrivacy =
+    privacy?.userId === session?.user.id ? (privacy?.value ?? null) : null;
+  const sessionUserId = session?.user.id ?? null;
+
+  useEffect(() => {
+    if (!sessionUserId) return;
+    let active = true;
+    void window.animonkey.account
+      .getActivityPrivacy()
+      .then((value) => {
+        if (active) setPrivacy({ userId: sessionUserId, value });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [sessionUserId]);
 
   const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -162,6 +194,102 @@ export function SettingsPage() {
     }
   };
 
+  const uploadAvatar = async (event: ChangeEvent<HTMLInputElement>) => {
+    const [file] = event.currentTarget.files ?? [];
+    event.currentTarget.value = '';
+    if (!file) return;
+    setAccountError(null);
+    if (
+      !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(
+        file.type,
+      )
+    ) {
+      setAccountError('Use uma imagem JPG, PNG, WEBP ou GIF.');
+      return;
+    }
+    if (file.size === 0 || file.size > 2 * 1024 * 1024) {
+      setAccountError('A imagem precisa ter até 2 MB.');
+      return;
+    }
+    setAccountBusy(true);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      let binary = '';
+      for (let index = 0; index < bytes.length; index += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+      }
+      await window.animonkey.account.uploadAvatar(file.type, btoa(binary));
+      setAccountMessage('Foto do perfil atualizada.');
+    } catch {
+      setAccountError(
+        'Não foi possível enviar a imagem. Verifique o arquivo e a conexão.',
+      );
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      await window.animonkey.account.removeAvatar();
+      setAccountMessage('Foto do perfil removida.');
+    } catch {
+      setAccountError('Não foi possível remover a foto do perfil.');
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const toggleActivityPrivacy = async (showActivity: boolean) => {
+    if (!session) return;
+    setAccountBusy(true);
+    setAccountError(null);
+    try {
+      await window.animonkey.account.setActivityPrivacy(showActivity);
+      setPrivacy({ userId: session.user.id, value: showActivity });
+      setAccountMessage(
+        showActivity
+          ? 'Sua atividade está visível no feed.'
+          : 'Sua atividade está privada.',
+      );
+    } catch {
+      setAccountError('Não foi possível salvar a preferência de privacidade.');
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  const changePassword = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setAccountError(null);
+    setAccountMessage(null);
+    if (newPassword !== confirmPassword) {
+      setAccountError('A confirmação da nova senha não coincide.');
+      return;
+    }
+    setAccountBusy(true);
+    try {
+      await window.animonkey.account.changePassword(
+        currentPassword,
+        newPassword,
+      );
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setAccountMessage('Senha atualizada.');
+    } catch (cause) {
+      setAccountError(
+        cause instanceof Error
+          ? cause.message
+          : 'Não foi possível atualizar a senha.',
+      );
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
   const importBackup = async (event: ChangeEvent<HTMLInputElement>) => {
     const [file] = event.currentTarget.files ?? [];
     event.currentTarget.value = '';
@@ -254,6 +382,135 @@ export function SettingsPage() {
                   className="h-9 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/75 disabled:opacity-50"
                 >
                   Salvar perfil
+                </button>
+              </form>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {session.user.image ? (
+                  <img
+                    src={session.user.image}
+                    alt="Foto do perfil"
+                    className="size-14 rounded-full border border-white/10 object-cover"
+                  />
+                ) : (
+                  <div
+                    aria-hidden="true"
+                    className="grid size-14 place-items-center rounded-full bg-white/[0.07] text-lg font-bold text-white/60"
+                  >
+                    {(session.user.name?.trim().charAt(0) || '?').toUpperCase()}
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    ref={avatarInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    onChange={(event) => void uploadAvatar(event)}
+                    className="sr-only"
+                    aria-label="Selecionar nova foto de perfil"
+                  />
+                  <button
+                    type="button"
+                    disabled={accountBusy}
+                    onClick={() => avatarInput.current?.click()}
+                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/75 disabled:opacity-50"
+                  >
+                    <Upload size={13} /> Enviar foto (até 2 MB)
+                  </button>
+                  {session.user.image && (
+                    <button
+                      type="button"
+                      disabled={accountBusy}
+                      onClick={() => void removeAvatar()}
+                      className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs text-white/60 disabled:opacity-50"
+                    >
+                      <Trash2 size={13} /> Remover foto
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/[0.07] pt-4">
+                <div>
+                  <h3 className="text-xs font-semibold text-white/80">
+                    Privacidade da atividade
+                  </h3>
+                  <p className="mt-1 max-w-lg text-[11px] text-white/40">
+                    Quando ativada, atividades de episódios e avaliações podem
+                    aparecer no feed.
+                  </p>
+                </div>
+                <label className="flex shrink-0 items-center gap-2 text-xs text-white/65">
+                  <input
+                    type="checkbox"
+                    checked={activityPrivacy ?? false}
+                    disabled={activityPrivacy === null || accountBusy}
+                    onChange={(event) =>
+                      void toggleActivityPrivacy(event.target.checked)
+                    }
+                    className="accent-[#49d77a]"
+                  />
+                  Compartilhar
+                </label>
+              </div>
+              <form
+                onSubmit={(event) => void changePassword(event)}
+                className="mt-5 space-y-3 border-t border-white/[0.07] pt-4"
+              >
+                <div>
+                  <h3 className="text-xs font-semibold text-white/80">
+                    Alterar senha
+                  </h3>
+                  <p className="mt-1 text-[11px] text-white/40">
+                    A senha atual é verificada no servidor; a nova é armazenada
+                    com bcrypt.
+                  </p>
+                </div>
+                <label className="block text-xs text-white/55">
+                  Senha atual
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                    className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-[#49d77a]/50"
+                  />
+                </label>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-xs text-white/55">
+                    Nova senha
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      minLength={8}
+                      maxLength={72}
+                      autoComplete="new-password"
+                      required
+                      className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-[#49d77a]/50"
+                    />
+                  </label>
+                  <label className="block text-xs text-white/55">
+                    Confirmar nova senha
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(event) =>
+                        setConfirmPassword(event.target.value)
+                      }
+                      minLength={8}
+                      maxLength={72}
+                      autoComplete="new-password"
+                      required
+                      className="mt-1.5 h-9 w-full rounded-lg border border-white/10 bg-black/20 px-3 text-sm text-white outline-none focus:border-[#49d77a]/50"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={accountBusy}
+                  className="h-9 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/75 disabled:opacity-50"
+                >
+                  Atualizar senha
                 </button>
               </form>
               <div className="mt-4 flex flex-wrap gap-2">

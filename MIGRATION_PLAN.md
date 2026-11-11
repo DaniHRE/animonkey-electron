@@ -163,10 +163,12 @@ Regras da fronteira Electron:
 - A biblioteca local usa IndexedDB v6 com `scopeId` nas chaves compostas de Assistir Depois, progresso e avaliações. Registros v4 existentes são migrados ao perfil `guest`; a criação do store de ratings é aditiva no upgrade v5→v6. Alternar conta limpa e recarrega a vista para o perfil daquela conta. Mesclar dados guest à conta exige ação explícita.
 - O reconcile cobre `watch_later`, `episode_progress` e `anime_ratings`, resolve conflitos pelo timestamp LWW e envia remoções por tombstones. Ratings aceitam nota inteira 1–10 e comentário opcional até 2000 caracteres, com gravação offline-first; gravações de progresso do player são agrupadas por debounce com flush máximo de 30 segundos.
 - O perfil desktop permite alterar o nome autenticado por operação server-side associada à sessão; exportação de conta inclui perfil e dados próprios de biblioteca, progresso, avaliações e atividade, sem tokens/sessões. O backup local v2 também inclui ratings e continua aceitando arquivos v1.
+- Troca de senha verifica a senha atual com bcrypt-ts, limita a nova a 8–72 bytes e compartilha o rate limit server-side. Avatar aceita JPG/PNG/WEBP/GIF até 2 MiB, valida assinatura, grava somente no prefixo do usuário e atualiza a sessão após upload/remoção.
+- Privacidade `show_activity` é opt-in; o feed paginado usa cursor composto por timestamp/ID e retorna somente autores com compartilhamento ativo. Os eventos continuam sendo emitidos pelos triggers já instalados para progresso de episódio e ratings.
 - Nunca incluir chaves secret/service-role, JWT secret ou segredo de NextAuth no desktop. O cliente recebe somente URL da Edge Function e publishable key; a função usa credencial server-side do ambiente Supabase. Operações privilegiadas e ownership ficam no servidor; manter RLS.
-- Migrar avatar, privacidade e feed; perfil básico e export de conta/local foram implementados. Validar nome e exports com conta real antes de fechar esta parte.
+- Perfil, senha, avatar, export e privacidade/feed estão implementados no Electron; validar contratos no smoke autenticado e manter fora do pacote tokens/segredos e identidade fornecida pelo renderer.
 
-**Saída:** fluxos de usuário anônimo e autenticado, sessão expirada, revogação/logout, políticas RLS, reconcile e atualização do site funcionam sem credencial privada no pacote. Backend/contrato IPC e smoke de rotação, replay, logout e sync estão implementados; completar UI, reconcile offline-first, expiração/reinício e troca de conta antes de concluir.
+**Saída:** fluxos de usuário anônimo e autenticado, sessão expirada, revogação/logout, políticas RLS, reconcile e atualização do site funcionam sem credencial privada no pacote. Troca de senha, perfil, avatar, export, privacidade, feed e sync foram publicados no `desktop-api`; smoke remoto descartável confirmou operações e limpeza integral dos registros temporários.
 
 ### Fase 6 — Watch together e recursos complementares
 

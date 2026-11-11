@@ -187,6 +187,30 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setSession(updatedSession);
   }, []);
 
+  const updateAvatar = useCallback(
+    async (contentType: string, base64: string) => {
+      const updatedUser = await window.animonkey.account.uploadAvatar(
+        contentType,
+        base64,
+      );
+      const current = sessionRef.current;
+      if (!current || current.user.id !== updatedUser.id) return;
+      const updatedSession = { ...current, user: updatedUser };
+      sessionRef.current = updatedSession;
+      setSession(updatedSession);
+    },
+    [],
+  );
+
+  const removeAvatar = useCallback(async () => {
+    const updatedUser = await window.animonkey.account.removeAvatar();
+    const current = sessionRef.current;
+    if (!current || current.user.id !== updatedUser.id) return;
+    const updatedSession = { ...current, user: updatedUser };
+    sessionRef.current = updatedSession;
+    setSession(updatedSession);
+  }, []);
+
   const importGuestLibrary = useCallback(async () => {
     if (!sessionRef.current) return 0;
     await waitForSync();
@@ -208,6 +232,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         syncNow,
         importGuestLibrary,
         updateProfile,
+        uploadAvatar: updateAvatar,
+        removeAvatar,
       }}
     >
       {ready ? children : null}

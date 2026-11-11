@@ -1,5 +1,6 @@
 import {
   Bookmark,
+  Activity,
   CalendarDays,
   ChevronDown,
   Clapperboard,
@@ -22,6 +23,7 @@ const navItems = [
   { label: 'Em alta', path: '/trending', icon: Flame },
   { label: 'Lançamentos', path: '/updates', icon: Sparkles },
   { label: 'Agenda', path: '/schedule', icon: CalendarDays },
+  { label: 'Feed', path: '/activity', icon: Activity },
 ];
 
 const libraryItems = [

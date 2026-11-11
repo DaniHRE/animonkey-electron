@@ -18,6 +18,8 @@ export interface AccountContextValue {
   syncNow(): Promise<void>;
   importGuestLibrary(): Promise<number>;
   updateProfile(name: string): Promise<void>;
+  uploadAvatar(contentType: string, base64: string): Promise<void>;
+  removeAvatar(): Promise<void>;
 }
 
 export const AccountContext = createContext<AccountContextValue | null>(null);
