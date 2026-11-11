@@ -1,4 +1,4 @@
-import type { WatchLaterItem } from '@/types/anime';
+import type { AnimeTitle, WatchLaterItem } from '@/types/anime';
 
 const DATABASE_NAME = 'animonkey-desktop';
 const DATABASE_VERSION = 3;
@@ -255,12 +255,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isAnimeTitle(value: unknown): value is AnimeTitle {
+  return (
+    isRecord(value) &&
+    ['english', 'romaji', 'native'].every(
+      (key) =>
+        value[key] === undefined ||
+        value[key] === null ||
+        typeof value[key] === 'string',
+    )
+  );
+}
+
 function isWatchLaterItem(value: unknown): value is WatchLaterItem {
   return (
     isRecord(value) &&
     typeof value.animeId === 'string' &&
     /^\d+$/.test(value.animeId) &&
-    isRecord(value.title) &&
+    isAnimeTitle(value.title) &&
+    ['image', 'type'].every(
+      (key) => value[key] === undefined || typeof value[key] === 'string',
+    ) &&
+    (value.totalEpisodes === undefined ||
+      (typeof value.totalEpisodes === 'number' &&
+        Number.isSafeInteger(value.totalEpisodes) &&
+        value.totalEpisodes >= 0)) &&
+    (value.releaseDate === undefined ||
+      (typeof value.releaseDate === 'number' &&
+        Number.isFinite(value.releaseDate))) &&
     Array.isArray(value.genres) &&
     value.genres.every((genre) => typeof genre === 'string') &&
     typeof value.addedAt === 'number' &&
@@ -307,7 +329,12 @@ export async function importLocalBackup(text: string): Promise<number> {
   } catch {
     throw new Error('O arquivo selecionado não contém JSON válido.');
   }
-  if (!isRecord(parsed) || parsed.schemaVersion !== 1) {
+  if (
+    !isRecord(parsed) ||
+    parsed.schemaVersion !== 1 ||
+    typeof parsed.exportedAt !== 'string' ||
+    !Number.isFinite(Date.parse(parsed.exportedAt))
+  ) {
     throw new Error('A versão deste backup não é compatível.');
   }
   const watchLater = parsed.watchLater;

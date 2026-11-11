@@ -147,6 +147,7 @@ Regras da fronteira Electron:
 - Reusar IndexedDB no renderer quando viável; verificar segurança de origem/storage no Electron, migrações de schema, quota, limpeza e recuperação.
 - Preservar `watch-later`, histórico, continue-watching, preferências e cache público; não conflitar stores de dados privados com cache de catálogo.
 - Implementar export/backup local e política de migração dos dados web: não assumir que IndexedDB do Chromium do site é visível ao app desktop; oferecer importação explícita se desejado.
+- Tratar o conteúdo do backup importado como entrada não confiável e validar o esquema e os campos aninhados antes de iniciar qualquer gravação; mesclar em uma transação para evitar importação parcial.
 - Manter os princípios offline-first e LWW para dados do usuário e validar troca de conta sem vazamento de dados entre perfis.
 
 **Saída:** dados sobrevivem restart/upgrade; operações offline, reconcile, conflito, troca de conta e recuperação de falha são verificáveis.
