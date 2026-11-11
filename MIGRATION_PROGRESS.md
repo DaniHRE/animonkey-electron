@@ -43,6 +43,7 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - `pnpm lint` — aprovado sem avisos.
 - `pnpm format:check` — aprovado.
 - `git diff --check` — aprovado.
+- 11/11/2026 — Ratings offline-first: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados. Migration `desktop_anime_ratings` aplicada; constraint confirmada e Edge Function `desktop-api` v5 ativa. Fluxo de rating com uma conta real ainda precisa de smoke do usuário.
 - `pnpm package` — aprovado para Windows x64 após fechar o processo que bloqueava a DLL do pacote; bundler reporta avisos `use client` de dependências React, sem falha.
 - Smoke visual: home, imagens AniList e rotas foram exibidas; o item salvo em Assistir Depois permaneceu após reiniciar o app.
 - Smoke do pacote atualizado: tela inicial/catalogo AniList e Configurações locais renderizaram; exportação de backup mostrou confirmação. O diálogo foi cancelado para não sobrescrever um arquivo de mesmo nome na pasta Downloads.
@@ -55,12 +56,14 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Próximos passos
 
-1. Migrar ratings, perfil/export, privacidade e feed, preservando o escopo de conta e o comportamento offline-first.
-2. Validar a paridade final dos fluxos de conta e sync integrados aos novos domínios.
-3. Confirmar endpoint HTTPS Anivexa para release. Watch Together e complementos ficam adiados (`NOT_STARTED`); seguir para distribuição conforme inventário.
+1. Validar com conta real criação, edição, remoção e reconciliação offline de ratings.
+2. Migrar perfil/export, privacidade e feed, preservando o escopo de conta e o comportamento offline-first.
+3. Validar a paridade final dos fluxos de conta e sync integrados aos novos domínios.
+4. Confirmar endpoint HTTPS Anivexa para release. Watch Together e complementos ficam adiados (`NOT_STARTED`); seguir para distribuição conforme inventário.
 
 ## Commits por etapa
 
+- `ec5a4f9 feat: sync anime ratings offline` — store IndexedDB v6, UI de avaliação, reconcile com tombstones e Edge Function v5; typecheck, lint, formatação e `git diff --check` aprovados.
 - `b49d82e feat: migrate catalog and player workflows to Electron` — base de catálogo/player e erros voltados ao usuário; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados.
 - `e091ae9 docs: record migration smoke status` — smoke em desenvolvimento documentado; catálogo, detalhes e configurações locais renderizaram. A reprodução audiovisual ficou sem confirmação.
 - `6f65a62 docs: require approval for computer control` — regra explícita para não usar controle visual sem solicitação e aprovação do usuário.
