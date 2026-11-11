@@ -2,16 +2,16 @@
 
 Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualizado em 11/11/2026.
 
-| Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                                                                            |
-| --------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — Repositório e baseline        | `COMPLETED`   | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                                                        |
-| 1 — Fundação UI e compatibilidade | `IN_PROGRESS` | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                                                     |
-| 2 — Domínio e dados públicos      | `IN_PROGRESS` | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                                                                   |
-| 3 — Player e streaming            | `COMPLETED`   | Vidstack é o player único; engine, resolver, controller, Zustand, captions e fallback foram validados no smoke do pacote confirmado pelo usuário em 11/11/2026. `TD-PLAYER-001` permanece adiado.                                                                    |
-| 4 — Persistência offline          | `IN_PROGRESS` | IndexedDB v4 mantém backup/importação e adiciona índice de expiração; cache vencido continua disponível como fallback por 30 dias e entradas mais antigas são limpas na gravação seguinte. Smoke de backup confirmado; validar upgrade v3→v4 e recuperação de quota. |
-| 5 — Conta e sync                  | `NOT_STARTED` | Definir integração HTTPS compatível com NextAuth/Supabase sem credenciais privadas no app.                                                                                                                                                                           |
-| 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                                                                                  |
-| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                                                             |
+| Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                                       |
+| --------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 — Repositório e baseline        | `COMPLETED`   | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                   |
+| 1 — Fundação UI e compatibilidade | `IN_PROGRESS` | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                |
+| 2 — Domínio e dados públicos      | `IN_PROGRESS` | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                              |
+| 3 — Player e streaming            | `COMPLETED`   | Vidstack é o player único; engine, resolver, controller, Zustand, captions e fallback foram validados no smoke do pacote confirmado pelo usuário em 11/11/2026. `TD-PLAYER-001` permanece adiado.                               |
+| 4 — Persistência offline          | `COMPLETED`   | Usuário confirmou backup inválido rejeitado, importação válida mesclada, retenção e upgrade do IndexedDB v3→v4. Cache AniList preserva fallback por 30 dias após o TTL e falhas de gravação de cache não interrompem consultas. |
+| 5 — Conta e sync                  | `NOT_STARTED` | Próximo: definir backend HTTPS compatível e desenho de autenticação desktop antes de criar UI; nenhum fluxo de conta foi portado.                                                                                               |
+| 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                                             |
+| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                        |
 
 ## Trilha de modernização de player e arquitetura
 
@@ -55,11 +55,11 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Próximos passos
 
-1. Validar a migração de IndexedDB v3 para v4, confirmando que stores e registros existentes são preservados e que entradas de cache antigas são removidas gradualmente.
-2. Revisar recuperação de quota e falhas de armazenamento; o cache continua opcional e falhas de gravação não interrompem consultas AniList.
-3. Fechar a fase offline após smoke do upgrade v3→v4; não tocar em `TD-PLAYER-001`.
+1. Avaliar no repositório web os endpoints de sessão, auth e sync que podem permanecer em HTTPS; confirmar branch, status e remote antes da inspeção.
+2. Definir fronteira desktop de login/OAuth, sessão, ownership e armazenamento seguro de tokens antes de portar UI ou código de sync.
+3. Depois da decisão de backend, migrar as fatias de conta/sync que não exigem segredos privados no cliente.
 4. Confirmar endpoint HTTPS Anivexa para release e avaliar IPC tipado somente se surgir capacidade privilegiada concreta.
-5. Seguir para autenticação/sync e distribuição conforme inventário. Watch Together e complementos ficam adiados (`NOT_STARTED`).
+5. Watch Together e complementos ficam adiados (`NOT_STARTED`); seguir para distribuição conforme inventário.
 
 ## Commits por etapa
 
@@ -96,3 +96,5 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - 11/11/2026 — catálogo offline: cache vencido permanecia sem limite. IndexedDB agora sobe do schema v3 para v4, cria índice `expiresAt` mesmo no store existente e elimina durante gravações os registros vencidos há mais de 30 dias, preservando o fallback recente. Typecheck, lint, formato e package Windows x64 passam; testar upgrade v3→v4 com dados reais antes de concluir a fase.
 - Commit local do hardening de backup: `0e9603e fix: validate imported local backup records`.
 - Commit local que registrou o smoke do player: `10217bc docs: mark player validation complete`.
+
+- 11/11/2026 — usuário confirmou os testes da fase offline: importação válida/mesclagem, rejeição do backup inválido e retenção após upgrade do IndexedDB v3→v4. Fase 4 concluída. Cache mantém fallback recente; erros ao gravar cache não bloqueiam catálogo. Próxima fase: decidir backend remoto de conta/sync. Commit local da implementação de expiração: `565f411 feat: prune stale catalog cache after schema upgrade`.
