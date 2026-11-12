@@ -90,13 +90,25 @@ export function HomePage() {
               aria-hidden="true"
               className="absolute inset-0 size-full scale-110 object-cover opacity-45 blur-2xl"
             />
-            <img
-              key={featured?.id}
-              src={banner}
-              alt=""
-              fetchPriority="high"
-              className={`home-banner-image absolute inset-0 size-full ${featured?.banner ? 'object-contain object-center' : 'object-cover object-[center_28%]'}`}
-            />
+            {featured?.banner ? (
+              <div className="absolute inset-y-0 right-0 flex w-full items-center justify-end px-4 sm:w-[88%] sm:px-8 lg:px-12">
+                <img
+                  key={featured.id}
+                  src={featured.banner}
+                  alt=""
+                  fetchPriority="high"
+                  className="home-banner-image max-h-[74%] w-full object-contain object-right drop-shadow-[0_24px_64px_rgba(0,0,0,0.72)]"
+                />
+              </div>
+            ) : (
+              <img
+                key={featured?.id}
+                src={banner}
+                alt=""
+                fetchPriority="high"
+                className="home-banner-image absolute inset-0 size-full object-cover object-[center_28%] drop-shadow-[0_24px_64px_rgba(0,0,0,0.72)]"
+              />
+            )}
           </div>
         )}
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_68%_42%,transparent_8%,rgba(0,0,0,0.12)_52%,rgba(0,0,0,0.62)_100%)]" />
