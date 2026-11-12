@@ -81,18 +81,29 @@ export function HomePage() {
 
   return (
     <div>
-      <section className="relative isolate -mt-[76px] h-[85vh] min-h-[560px] max-h-[920px] overflow-hidden border-b border-white/[0.05] bg-[#141416]">
+      <section className="relative isolate -mt-[76px] h-[85vh] min-h-[560px] max-h-[920px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]">
         {banner && (
-          <img
-            src={banner}
-            alt=""
-            className="absolute inset-0 -z-20 size-full object-cover object-center opacity-70 transition-opacity duration-500"
-          />
+          <div className="absolute inset-0 -z-20 overflow-hidden bg-[#09090a]">
+            <img
+              src={banner}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 size-full scale-110 object-cover opacity-45 blur-2xl"
+            />
+            <img
+              key={featured?.id}
+              src={banner}
+              alt=""
+              fetchPriority="high"
+              className={`home-banner-image absolute inset-0 size-full ${featured?.banner ? 'object-contain object-center' : 'object-cover object-[center_28%]'}`}
+            />
+          </div>
         )}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-black/90 via-black/60 to-transparent" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_68%_42%,transparent_8%,rgba(0,0,0,0.12)_52%,rgba(0,0,0,0.62)_100%)]" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#080809]/95 via-[#080809]/75 via-40% to-[#080809]/10" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#080809] via-transparent via-45% to-[#080809]/30" />
         <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col justify-center px-6 pb-2 2xl:px-10">
-          <div className="max-w-2xl space-y-4 sm:space-y-5">
+          <div className="max-w-2xl space-y-4 sm:space-y-5 [text-shadow:0_2px_18px_rgba(0,0,0,0.75)]">
             <div className="flex flex-wrap items-center gap-2">
               {(featured?.genres ?? []).slice(0, 3).map((genre) => (
                 <span
