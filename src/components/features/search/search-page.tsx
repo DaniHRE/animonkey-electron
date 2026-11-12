@@ -1,4 +1,12 @@
-import { ArrowLeft, ArrowRight, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimeCard } from '@/components/shared/anime-card';
@@ -108,8 +116,148 @@ const multiKeys = new Set([
   'idsMalNotIn',
 ]);
 const inputClass =
-  'h-9 min-w-32 rounded-lg border border-white/10 bg-[#151517] px-3 text-xs text-white/80 outline-none focus:border-[#49d77a]/60';
-const labelClass = 'grid gap-1 text-[10px] font-semibold text-white/45';
+  'h-10 min-w-32 rounded-xl border border-white/[0.09] bg-[#171719] px-3 text-[13px] text-white/80 outline-none transition placeholder:text-white/25 hover:border-white/[0.16] focus:border-[#49d77a]/55 focus:ring-2 focus:ring-[#49d77a]/10';
+const labelClass = 'grid min-w-0 gap-2 text-[11px] font-semibold text-white/50';
+
+interface MultiPickerProps {
+  label: string;
+  selected: string[];
+  options: Array<[string, string]>;
+  onChange: (values: string[]) => void;
+}
+
+function MultiPicker({ label, selected, options, onChange }: MultiPickerProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const visibleOptions = options
+    .filter(([, name]) => name.toLowerCase().includes(search.toLowerCase()))
+    .slice(0, 100);
+  const selectedNames = selected.map(
+    (value) => options.find(([option]) => option === value)?.[1] ?? value,
+  );
+
+  const toggle = (value: string) => {
+    onChange(
+      selected.includes(value)
+        ? selected.filter((item) => item !== value)
+        : [...selected, value],
+    );
+  };
+
+  return (
+    <div className="relative min-w-0">
+      <span className="mb-2 block text-[11px] font-semibold text-white/50">
+        {label}
+      </span>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className={`flex h-10 w-full min-w-36 items-center justify-between gap-3 rounded-xl border px-3 text-left text-[13px] transition ${open ? 'border-[#49d77a]/50 bg-[#1b1d1b]' : 'border-white/[0.09] bg-[#171719] hover:border-white/[0.17]'}`}
+      >
+        <span className="truncate text-white/75">
+          {selected.length
+            ? `${selectedNames.slice(0, 2).join(', ')}${selected.length > 2 ? ` +${selected.length - 2}` : ''}`
+            : 'Qualquer'}
+        </span>
+        <ChevronDown
+          size={15}
+          className={`shrink-0 text-white/35 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {selected.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {selected.slice(0, 3).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => toggle(value)}
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#49d77a]/20 bg-[#49d77a]/[0.08] px-2 py-1 text-[10px] text-[#a5f0bc] transition hover:border-[#49d77a]/45"
+            >
+              <span className="truncate">
+                {options.find(([option]) => option === value)?.[1] ?? value}
+              </span>
+              <X size={11} className="shrink-0" />
+            </button>
+          ))}
+          {selected.length > 3 && (
+            <span className="self-center text-[10px] text-white/35">
+              +{selected.length - 3}
+            </span>
+          )}
+        </div>
+      )}
+      {open && (
+        <>
+          <button
+            type="button"
+            aria-label="Fechar opções"
+            className="fixed inset-0 z-30 cursor-default"
+            onClick={() => setOpen(false)}
+          />
+          <div className="absolute top-full z-40 mt-2 w-[min(19rem,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#18181a] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.6)]">
+            <div className="relative mb-2">
+              <Search
+                size={14}
+                className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-white/30"
+              />
+              <input
+                autoFocus
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={`Buscar ${label.toLowerCase()}...`}
+                className="h-9 w-full rounded-xl border border-white/[0.08] bg-black/20 pr-3 pl-9 text-xs text-white outline-none placeholder:text-white/30 focus:border-[#49d77a]/40"
+              />
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              {visibleOptions.map(([value, name]) => {
+                const active = selected.includes(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="checkbox"
+                    aria-checked={active}
+                    onClick={() => toggle(value)}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-white/70 transition hover:bg-white/[0.06]"
+                  >
+                    <span
+                      className={`grid size-4 shrink-0 place-items-center rounded border ${active ? 'border-[#49d77a] bg-[#49d77a] text-[#101412]' : 'border-white/20 text-transparent'}`}
+                    >
+                      <Check size={11} strokeWidth={3} />
+                    </span>
+                    <span className="truncate">{name}</span>
+                  </button>
+                );
+              })}
+              {visibleOptions.length === 0 && (
+                <p className="px-3 py-6 text-center text-xs text-white/35">
+                  Nenhuma opção encontrada.
+                </p>
+              )}
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-white/[0.07] px-1 pt-2">
+              <button
+                type="button"
+                onClick={() => onChange([])}
+                className="px-2 py-1.5 text-[10px] font-medium text-white/40 transition hover:text-white"
+              >
+                Limpar seleção
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg bg-[#49d77a] px-3 py-1.5 text-[10px] font-bold text-[#101412] transition hover:bg-[#65e48e]"
+              >
+                Concluir
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function listParam(value: string | null): string[] {
   return (value ?? '')
@@ -254,32 +402,12 @@ export function SearchPage() {
     key: string,
     values: Array<[string, string]>,
   ) => (
-    <label className={labelClass}>
-      {title}
-      <select
-        multiple
-        value={selected(key)}
-        onChange={(event) =>
-          updateMulti(
-            key,
-            Array.from(
-              event.currentTarget.selectedOptions,
-              (option) => option.value,
-            ),
-          )
-        }
-        className={`${inputClass} h-24 min-w-40 py-1`}
-      >
-        {values.map(([value, label]) => (
-          <option key={value} value={value}>
-            {label}
-          </option>
-        ))}
-      </select>
-      <span className="font-normal text-white/25">
-        Ctrl/⌘ + clique para selecionar vários
-      </span>
-    </label>
+    <MultiPicker
+      label={title}
+      selected={selected(key)}
+      options={values}
+      onChange={(value) => updateMulti(key, value)}
+    />
   );
   const renderText = (title: string, key: string, placeholder = '') => (
     <label className={labelClass}>
@@ -319,6 +447,9 @@ export function SearchPage() {
   const categories = [...new Set(options.tags.map((tag) => tag.category))]
     .sort()
     .map((category) => [category, category] as [string, string]);
+  const activeFilterCount = [...params.keys()].filter(
+    (key) => !['q', 'page', 'sort'].includes(key),
+  ).length;
 
   return (
     <section>
@@ -334,28 +465,52 @@ export function SearchPage() {
           ficam salvos na URL.
         </p>
       </div>
-      <div className="mb-7 rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
-        <div className="mb-4 flex flex-wrap items-end gap-3">
-          <div className="mb-1 flex items-center gap-2 text-xs font-semibold text-white/55">
-            <SlidersHorizontal size={14} /> Filtros principais
+      <div className="mb-8 overflow-visible rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_55%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.18)] sm:p-5">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-white/90">
+              <span className="grid size-8 place-items-center rounded-xl border border-[#49d77a]/20 bg-[#49d77a]/[0.08] text-[#72e995]">
+                <SlidersHorizontal size={15} />
+              </span>
+              Refine sua busca
+            </div>
+            <p className="mt-1 text-xs text-white/40">
+              Encontre o anime certo combinando os filtros do AniList.
+            </p>
           </div>
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium text-white/45 transition hover:bg-white/[0.05] hover:text-white/80"
+            >
+              <X size={13} /> Limpar {activeFilterCount} filtros
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1.5fr)_minmax(155px,1fr)_minmax(155px,1fr)_minmax(150px,1fr)]">
           <label className={labelClass}>
             Título
-            <input
-              className={`${inputClass} min-w-52`}
-              value={query}
-              placeholder="Nome do anime"
-              onChange={(event) => update('q', event.target.value)}
-            />
+            <span className="relative">
+              <Search
+                size={15}
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-white/30"
+              />
+              <input
+                className={`${inputClass} w-full pl-9`}
+                value={query}
+                placeholder="Buscar anime..."
+                onChange={(event) => update('q', event.target.value)}
+              />
+            </span>
           </label>
-          {renderMulti('Status incluídos', 'statusIn', statuses)}
-          {renderMulti('Status excluídos', 'statusNotIn', statuses)}
-          {renderMulti('Formatos incluídos', 'formatIn', formats)}
-          {renderMulti('Formatos excluídos', 'formatNotIn', formats)}
+          {renderMulti('Status', 'statusIn', statuses)}
+          {renderMulti('Formato', 'formatIn', formats)}
           <label className={labelClass}>
             Ordenar por
             <select
-              className={inputClass}
+              className={`${inputClass} w-full`}
               value={
                 params.get('sort') ?? (query ? 'SEARCH_MATCH' : 'TRENDING_DESC')
               }
@@ -368,140 +523,192 @@ export function SearchPage() {
               ))}
             </select>
           </label>
-          <label className={labelClass}>
-            Conteúdo adulto
-            <select
-              className={inputClass}
-              value={params.get('adultMode') ?? 'include'}
-              onChange={(event) => update('adultMode', event.target.value)}
-            >
-              <option value="include">Incluir</option>
-              <option value="exclude">Excluir</option>
-              <option value="only">Somente adulto</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="h-9 px-2 text-xs font-semibold text-[#70e793] hover:text-white"
-          >
-            Limpar filtros
-          </button>
         </div>
-        <details className="border-t border-white/[0.07] pt-3">
-          <summary className="cursor-pointer select-none text-xs font-semibold text-white/65">
-            Mais filtros AniList
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-[11px] font-medium text-white/40">
+              Conteúdo:
+            </span>
+            {[
+              ['include', 'Todos'],
+              ['exclude', 'Sem adulto'],
+              ['only', 'Adulto'],
+            ].map(([value, label]) => {
+              const active = (params.get('adultMode') ?? 'include') === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => update('adultMode', value)}
+                  className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${active ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.11] text-[#91ecad]' : 'border-white/[0.08] text-white/45 hover:border-white/20 hover:text-white/75'}`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-[10px] text-white/30">
+            Os filtros selecionados ficam salvos na URL
+          </span>
+        </div>
+
+        <details className="group mt-4 border-t border-white/[0.07] pt-1">
+          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl px-2 py-3 transition hover:bg-white/[0.025] [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2 text-xs font-semibold text-white/65">
+              <SlidersHorizontal size={14} className="text-[#69df8d]" />
+              Filtros avançados
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] text-white/55">
+                  {activeFilterCount} ativos
+                </span>
+              )}
+            </span>
+            <ChevronDown
+              size={15}
+              className="text-white/35 transition-transform group-open:rotate-180"
+            />
           </summary>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            <label className={labelClass}>
-              Temporada
-              <select
-                className={inputClass}
-                value={params.get('season') ?? ''}
-                onChange={(event) => update('season', event.target.value)}
-              >
-                <option value="">Qualquer</option>
-                {seasons.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {renderNumber(
-              'Ano da temporada',
-              'seasonYear',
-              1940,
-              new Date().getFullYear() + 5,
-            )}
-            {renderText('Data inicial (YYYYMMDD)', 'startDateLike', '20250101')}
-            {renderNumber('Data de início exata (YYYYMMDD)', 'startDate')}
-            {renderNumber('Início após (YYYYMMDD)', 'startDateGreater')}
-            {renderNumber('Início antes (YYYYMMDD)', 'startDateLesser')}
-            {renderNumber('Fim após (YYYYMMDD)', 'endDateGreater')}
-            {renderNumber('Fim antes (YYYYMMDD)', 'endDateLesser')}
-            {renderNumber('Data de fim exata (YYYYMMDD)', 'endDate')}
-            {renderNumber('Episódios: mínimo', 'episodesGreater', 0)}
-            {renderNumber('Episódios: máximo', 'episodesLesser', 0)}
-            {renderNumber('Duração (min): mínimo', 'durationGreater', 0)}
-            {renderNumber('Duração (min): máximo', 'durationLesser', 0)}
-            {renderNumber(
-              'Nota AniList: mínimo (0–100)',
-              'averageScoreGreater',
-              0,
-              100,
-            )}
-            {renderNumber(
-              'Nota AniList: máximo (0–100)',
-              'averageScoreLesser',
-              0,
-              100,
-            )}
-            {renderNumber('Popularidade: mínimo', 'popularityGreater', 0)}
-            {renderNumber('Popularidade: máximo', 'popularityLesser', 0)}
-            {renderText(
-              'País de origem (ISO 3166-1 alpha-2)',
-              'countryOfOrigin',
-              'JP',
-            )}
-            {renderText(
-              'Excluir países (ISO, vírgula)',
-              'countryOfOriginNotIn',
-              'JP,CN',
-            )}
-            <label className={labelClass}>
-              Obra licenciada
-              <select
-                className={inputClass}
-                value={params.get('isLicensed') ?? ''}
-                onChange={(event) => update('isLicensed', event.target.value)}
-              >
-                <option value="">Qualquer</option>
-                <option value="true">Sim</option>
-                <option value="false">Não</option>
-              </select>
-            </label>
-            <label className={labelClass}>
-              Obra original de
-              <select
-                className={inputClass}
-                value={params.get('source') ?? ''}
-                onChange={(event) => update('source', event.target.value)}
-              >
-                <option value="">Qualquer</option>
-                {sources.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {renderText('Licenciado por (nome)', 'licensedBy')}
-            {renderText('Licenciado por (IDs, vírgula)', 'licensedByIdIn')}
-            {renderMulti('Gêneros incluídos', 'genreIn', genreOptions)}
-            {renderMulti('Gêneros excluídos', 'genreNotIn', genreOptions)}
-            {renderMulti('Tags incluídas', 'tagIn', tagOptions)}
-            {renderMulti('Tags excluídas', 'tagNotIn', tagOptions)}
-            {renderMulti(
-              'Categorias de tags incluídas',
-              'tagCategoryIn',
-              categories,
-            )}
-            {renderMulti(
-              'Categorias de tags excluídas',
-              'tagCategoryNotIn',
-              categories,
-            )}
-            {renderNumber(
-              'Rank mínimo das tags (0–100)',
-              'minimumTagRank',
-              0,
-              100,
-            )}
-            {renderText('IDs AniList incluídos (vírgula)', 'idsIn')}
-            {renderText('IDs AniList excluídos (vírgula)', 'idsNotIn')}
-            {renderText('IDs MyAnimeList incluídos', 'idsMalIn')}
-            {renderText('IDs MyAnimeList excluídos', 'idsMalNotIn')}
+          <div className="grid gap-3 pt-2 lg:grid-cols-2">
+            <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+                Temporada e lançamento
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <label className={labelClass}>
+                  Temporada
+                  <select
+                    className={`${inputClass} w-full`}
+                    value={params.get('season') ?? ''}
+                    onChange={(event) => update('season', event.target.value)}
+                  >
+                    <option value="">Qualquer</option>
+                    {seasons.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {renderNumber(
+                  'Ano',
+                  'seasonYear',
+                  1940,
+                  new Date().getFullYear() + 5,
+                )}
+                {renderText(
+                  'Data inicial (YYYYMMDD)',
+                  'startDateLike',
+                  '20250101',
+                )}
+                {renderNumber('Início exato', 'startDate')}
+                {renderNumber('Início após', 'startDateGreater')}
+                {renderNumber('Início antes', 'startDateLesser')}
+                {renderNumber('Fim exato', 'endDate')}
+                {renderNumber('Fim após', 'endDateGreater')}
+                {renderNumber('Fim antes', 'endDateLesser')}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+                Formato da série
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {renderMulti('Excluir formatos', 'formatNotIn', formats)}
+                {renderMulti('Excluir status', 'statusNotIn', statuses)}
+                {renderNumber('Episódios: mínimo', 'episodesGreater', 0)}
+                {renderNumber('Episódios: máximo', 'episodesLesser', 0)}
+                {renderNumber('Duração (min): mínimo', 'durationGreater', 0)}
+                {renderNumber('Duração (min): máximo', 'durationLesser', 0)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+                Nota e popularidade
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {renderNumber(
+                  'Nota mínima (0–100)',
+                  'averageScoreGreater',
+                  0,
+                  100,
+                )}
+                {renderNumber(
+                  'Nota máxima (0–100)',
+                  'averageScoreLesser',
+                  0,
+                  100,
+                )}
+                {renderNumber('Popularidade mínima', 'popularityGreater', 0)}
+                {renderNumber('Popularidade máxima', 'popularityLesser', 0)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+                Gêneros e tags
+              </h2>
+              <div className="grid grid-cols-2 gap-3">
+                {renderMulti('Incluir gêneros', 'genreIn', genreOptions)}
+                {renderMulti('Excluir gêneros', 'genreNotIn', genreOptions)}
+                {renderMulti('Incluir tags', 'tagIn', tagOptions)}
+                {renderMulti('Excluir tags', 'tagNotIn', tagOptions)}
+                {renderMulti('Incluir categorias', 'tagCategoryIn', categories)}
+                {renderMulti(
+                  'Excluir categorias',
+                  'tagCategoryNotIn',
+                  categories,
+                )}
+                {renderNumber('Rank mínimo da tag', 'minimumTagRank', 0, 100)}
+              </div>
+            </div>
+            <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4 lg:col-span-2">
+              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+                Origem e identificadores
+              </h2>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {renderText('País (código ISO)', 'countryOfOrigin', 'JP')}
+                {renderText(
+                  'Excluir países (códigos)',
+                  'countryOfOriginNotIn',
+                  'JP,CN',
+                )}
+                <label className={labelClass}>
+                  Fonte original
+                  <select
+                    className={`${inputClass} w-full`}
+                    value={params.get('source') ?? ''}
+                    onChange={(event) => update('source', event.target.value)}
+                  >
+                    <option value="">Qualquer</option>
+                    {sources.map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={labelClass}>
+                  Licenciada
+                  <select
+                    className={`${inputClass} w-full`}
+                    value={params.get('isLicensed') ?? ''}
+                    onChange={(event) =>
+                      update('isLicensed', event.target.value)
+                    }
+                  >
+                    <option value="">Qualquer</option>
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                  </select>
+                </label>
+                {renderText('Licenciada por', 'licensedBy')}
+                {renderText('IDs de licenciadores', 'licensedByIdIn')}
+                {renderText('IDs AniList incluídos', 'idsIn')}
+                {renderText('IDs AniList excluídos', 'idsNotIn')}
+                {renderText('IDs MyAnimeList incluídos', 'idsMalIn')}
+                {renderText('IDs MyAnimeList excluídos', 'idsMalNotIn')}
+              </div>
+            </div>
           </div>
         </details>
       </div>
