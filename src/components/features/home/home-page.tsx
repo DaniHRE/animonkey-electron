@@ -83,37 +83,18 @@ export function HomePage() {
     <div>
       <section className="relative isolate -mt-[76px] h-[85vh] min-h-[560px] max-h-[920px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]">
         {banner && (
-          <div className="absolute inset-0 -z-20 overflow-hidden bg-[#09090a]">
-            <img
-              src={banner}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 size-full scale-110 object-cover opacity-45 blur-2xl"
-            />
-            {featured?.banner ? (
-              <div className="absolute inset-y-0 right-0 flex w-full items-center justify-end px-4 sm:w-[88%] sm:px-8 lg:px-12">
-                <img
-                  key={featured.id}
-                  src={featured.banner}
-                  alt=""
-                  fetchPriority="high"
-                  className="home-banner-image max-h-[74%] w-full object-contain object-right drop-shadow-[0_24px_64px_rgba(0,0,0,0.72)]"
-                />
-              </div>
-            ) : (
-              <img
-                key={featured?.id}
-                src={banner}
-                alt=""
-                fetchPriority="high"
-                className="home-banner-image absolute inset-0 size-full object-cover object-[center_28%] drop-shadow-[0_24px_64px_rgba(0,0,0,0.72)]"
-              />
-            )}
-          </div>
+          <img
+            key={featured?.id}
+            src={banner}
+            alt=""
+            aria-hidden="true"
+            fetchPriority="high"
+            className={`home-banner-image absolute inset-0 -z-20 size-full object-cover ${featured?.banner ? 'object-[center_42%]' : 'object-[center_28%]'}`}
+          />
         )}
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_68%_42%,transparent_8%,rgba(0,0,0,0.12)_52%,rgba(0,0,0,0.62)_100%)]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#080809]/95 via-[#080809]/75 via-40% to-[#080809]/10" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#080809] via-transparent via-45% to-[#080809]/30" />
+        <div className="pointer-events-none absolute inset-0 -z-10 shadow-[inset_0_0_150px_rgba(0,0,0,0.36)]" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#080809]/92 via-[#080809]/62 via-42% to-[#080809]/5" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#080809] via-[#080809]/35 via-40% to-[#080809]/20" />
         <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col justify-center px-6 pb-2 2xl:px-10">
           <div className="max-w-2xl space-y-4 sm:space-y-5 [text-shadow:0_2px_18px_rgba(0,0,0,0.75)]">
             <div className="flex flex-wrap items-center gap-2">
