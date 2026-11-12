@@ -16,8 +16,10 @@ import type {
   EpisodeServer,
   EpisodeSources,
 } from '@/types/player';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 
 export function WatchPage() {
+  const { titleLanguage } = useTitleLanguage();
   const { id = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const requestedEpisodeId = params.get('ep') ?? '';
@@ -230,7 +232,7 @@ export function WatchPage() {
         {animeState.error ?? 'Anime não encontrado.'}
       </div>
     );
-  const title = resolveAnimeTitle(anime.title);
+  const title = resolveAnimeTitle(anime.title, titleLanguage);
   const poster = getAnimeImage(anime);
   const loadingEpisodes = episodeState.id !== anime.id;
   const loadingServers =
@@ -417,11 +419,13 @@ export function WatchPage() {
           <WatchRelatedList
             title="Animes relacionados"
             items={anime.relations}
+            titleLanguage={titleLanguage}
           />
           <WatchRelatedList
             title="Recomendações"
             items={anime.recommendations}
             label="Recomendado"
+            titleLanguage={titleLanguage}
           />
         </div>
       </div>
@@ -433,10 +437,12 @@ function WatchRelatedList({
   title,
   items,
   label,
+  titleLanguage,
 }: {
   title: string;
   items: Array<AnimeResult & { relationType?: string }>;
   label?: string;
+  titleLanguage: 'en' | 'jp';
 }) {
   if (items.length === 0) return null;
 
@@ -469,7 +475,7 @@ function WatchRelatedList({
             </div>
             <div className="min-w-0 flex-1">
               <p className="line-clamp-2 text-sm font-medium text-white/85 group-hover:text-white">
-                {resolveAnimeTitle(item.title)}
+                {resolveAnimeTitle(item.title, titleLanguage)}
               </p>
               <p className="mt-1 truncate text-[10px] font-semibold tracking-wide text-white/40 uppercase">
                 {label ?? item.relationType ?? 'Relacionado'}

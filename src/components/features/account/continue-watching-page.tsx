@@ -10,6 +10,7 @@ import {
 import type { AnimeInfo } from '@/types/anime';
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
 import { resolveAnimeTitle } from '@/lib/anime';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 
 interface ContinueItem {
   progress: EpisodeProgressRecord;
@@ -17,6 +18,7 @@ interface ContinueItem {
 }
 
 export function ContinueWatchingPage() {
+  const { titleLanguage } = useTitleLanguage();
   const [items, setItems] = useState<ContinueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +129,7 @@ export function ContinueWatchingPage() {
                 </Link>
                 <button
                   type="button"
-                  aria-label={`Remover ${resolveAnimeTitle(anime.title)} do histórico`}
+                  aria-label={`Remover ${resolveAnimeTitle(anime.title, titleLanguage)} do histórico`}
                   onClick={() => void dismiss(anime.id)}
                   className="rounded p-1 text-white/35 hover:bg-white/10 hover:text-white"
                 >

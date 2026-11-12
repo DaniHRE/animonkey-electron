@@ -11,12 +11,14 @@ import {
   ListVideo,
   Search,
   Sparkles,
+  Languages,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAccount } from '@/context/account-state';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 
 const navItems = [
   { label: 'Início', path: '/', icon: House, end: true },
@@ -37,8 +39,35 @@ const libraryItems = [
 
 export function AppShell() {
   const [search, setSearch] = useState('');
+  const [searchVisible, setSearchVisible] = useState(true);
+  const searchFormRef = useRef<HTMLFormElement>(null);
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const { session } = useAccount();
+  const { titleLanguage, toggleTitleLanguage } = useTitleLanguage();
+
+  useEffect(() => {
+    let previousY = window.scrollY;
+    const updateSearchVisibility = () => {
+      const currentY = window.scrollY;
+      if (Math.abs(currentY - previousY) < 8) return;
+
+      const searchIsFocused = searchFormRef.current?.contains(
+        document.activeElement,
+      );
+      if (currentY < 48 || currentY < previousY || searchIsFocused) {
+        setSearchVisible(true);
+      } else if (currentY > 120) {
+        setSearchVisible(false);
+      }
+      previousY = currentY;
+    };
+
+    window.addEventListener('scroll', updateSearchVisibility, {
+      passive: true,
+    });
+    return () => window.removeEventListener('scroll', updateSearchVisibility);
+  }, []);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,42 +166,68 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/[0.06] bg-[#0b0b0c]/90 px-10 backdrop-blur-xl">
-          <form
-            onSubmit={submitSearch}
-            className="relative w-full max-w-[520px]"
-          >
-            <Search
-              size={17}
-              className="absolute top-1/2 left-4 -translate-y-1/2 text-white/35"
-            />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Busque por anime, gênero ou temporada..."
-              aria-label="Buscar animes"
-              className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.035] pr-16 pl-11 text-[13px] text-white outline-none transition placeholder:text-white/30 focus:border-[#49d77a]/45 focus:bg-white/[0.05]"
-            />
-            <kbd className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-1 text-[9px] text-white/30">
-              ENTER
-            </kbd>
-          </form>
+        <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/[0.06] bg-[#0b0b0c]/85 px-10 backdrop-blur-xl">
+          {pathname !== '/search' && (
+            <form
+              ref={searchFormRef}
+              onSubmit={submitSearch}
+              aria-hidden={!searchVisible}
+              className={`absolute top-1/2 left-1/2 z-10 w-[min(520px,calc(100%-430px))] -translate-x-1/2 transition-[opacity,transform] duration-200 ${searchVisible ? '-translate-y-1/2 opacity-100' : '-translate-y-[140%] pointer-events-none opacity-0'}`}
+            >
+              <Search
+                size={17}
+                className="absolute top-1/2 left-4 -translate-y-1/2 text-white/35"
+              />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Busque por anime, gênero ou temporada..."
+                aria-label="Buscar animes"
+                tabIndex={searchVisible ? 0 : -1}
+                className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.035] pr-16 pl-11 text-[13px] text-white outline-none transition placeholder:text-white/30 focus:border-[#49d77a]/45 focus:bg-white/[0.05]"
+              />
+              <kbd className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-1 text-[9px] text-white/30">
+                ENTER
+              </kbd>
+            </form>
+          )}
 
-          <NavLink
-            to="/settings"
-            className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left opacity-70"
-            title="Configurações locais"
-          >
-            <ProfileAvatar
-              image={session?.user.image ?? null}
-              name={session?.user.name ?? null}
-              className="size-8 shrink-0 rounded-full object-cover text-xs"
-            />
-            <span className="max-w-32 truncate text-xs font-semibold">
-              {session?.user.name?.trim() || 'Perfil'}
-            </span>
-            <ChevronDown size={14} className="text-white/40" />
-          </NavLink>
+          <div className="ml-auto flex items-center gap-4">
+            <div
+              className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] p-1"
+              aria-label="Idioma dos títulos"
+            >
+              <Languages size={14} className="ml-1 text-white/35" />
+              {(['en', 'jp'] as const).map((language) => (
+                <button
+                  key={language}
+                  type="button"
+                  onClick={() => {
+                    if (titleLanguage !== language) toggleTitleLanguage();
+                  }}
+                  aria-pressed={titleLanguage === language}
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${titleLanguage === language ? 'bg-[#2caf57] text-[#0d0d0d]' : 'text-white/45 hover:text-white'}`}
+                >
+                  {language.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <NavLink
+              to="/settings"
+              className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left"
+              title="Configurações locais"
+            >
+              <ProfileAvatar
+                image={session?.user.image ?? null}
+                name={session?.user.name ?? null}
+                className="size-8 shrink-0 rounded-full object-cover text-xs"
+              />
+              <span className="max-w-32 truncate text-xs font-semibold">
+                {session?.user.name?.trim() || 'Perfil'}
+              </span>
+              <ChevronDown size={14} className="text-white/40" />
+            </NavLink>
+          </div>
         </header>
 
         <main

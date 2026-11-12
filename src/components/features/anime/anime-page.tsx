@@ -16,10 +16,12 @@ import { useWatchLater } from '@/hooks/use-watch-later';
 import { useAnimeRating } from '@/hooks/use-anime-rating';
 import { AnivexaCatalog } from '@/services/anivexa.service';
 import type { AnimeEpisode } from '@/types/player';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 
 type DetailTab = 'episodes' | 'characters' | 'relations';
 
 export function AnimePage() {
+  const { titleLanguage } = useTitleLanguage();
   const { id = '' } = useParams();
   const [state, setState] = useState<{
     id: string;
@@ -137,7 +139,7 @@ export function AnimePage() {
               <ArrowLeft size={14} /> Voltar ao catálogo
             </Link>
             <h1 className="text-3xl leading-tight font-extrabold tracking-tight">
-              {resolveAnimeTitle(anime.title)}
+              {resolveAnimeTitle(anime.title, titleLanguage)}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-white/55">
               {anime.rating !== undefined && (
@@ -337,7 +339,7 @@ export function AnimePage() {
                 className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-white/60 transition hover:border-[#49d77a]/40 hover:text-white"
               >
                 {relation.relationType.replaceAll('_', ' ')} ·{' '}
-                {resolveAnimeTitle(relation.title)}
+                {resolveAnimeTitle(relation.title, titleLanguage)}
               </Link>
             ))}
             {!anime.relations.length && (

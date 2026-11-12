@@ -4,6 +4,7 @@ import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
 import type { AnimeResult, WatchLaterItem } from '@/types/anime';
 import { Link } from 'react-router-dom';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 
 function toAnime(item: WatchLaterItem): AnimeResult {
   return {
@@ -20,6 +21,7 @@ function toAnime(item: WatchLaterItem): AnimeResult {
 }
 
 export function WatchLaterPage() {
+  const { titleLanguage } = useTitleLanguage();
   const { items, isLoading, remove } = useWatchLater();
   const [error, setError] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export function WatchLaterPage() {
                     {image ? (
                       <img
                         src={image}
-                        alt={resolveAnimeTitle(item.title)}
+                        alt={resolveAnimeTitle(item.title, titleLanguage)}
                         loading="lazy"
                         className="size-full object-cover transition duration-500 group-hover:scale-[1.045]"
                       />
@@ -74,7 +76,7 @@ export function WatchLaterPage() {
                     )}
                   </div>
                   <h2 className="mt-3 line-clamp-2 text-[12px] leading-[1.45] font-semibold text-white/85">
-                    {resolveAnimeTitle(item.title)}
+                    {resolveAnimeTitle(item.title, titleLanguage)}
                   </h2>
                   <p className="mt-1.5 text-[10px] text-white/35">
                     {[
@@ -91,7 +93,7 @@ export function WatchLaterPage() {
                 <button
                   type="button"
                   onClick={() => void removeItem(item.animeId)}
-                  aria-label={`Remover ${resolveAnimeTitle(item.title)} da lista`}
+                  aria-label={`Remover ${resolveAnimeTitle(item.title, titleLanguage)} da lista`}
                   className="absolute top-2 right-2 grid size-8 place-items-center rounded-lg border border-white/10 bg-black/65 text-white/80 opacity-0 backdrop-blur transition hover:text-red-300 group-hover:opacity-100 focus-visible:opacity-100"
                 >
                   <Trash2 size={14} />

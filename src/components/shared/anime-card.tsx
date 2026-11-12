@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 import type { AnimeResult } from '@/types/anime';
 
 interface AnimeCardProps {
@@ -12,6 +13,7 @@ interface AnimeCardProps {
 
 export function AnimeCard({ anime, rank }: AnimeCardProps) {
   const image = getAnimeImage(anime);
+  const { titleLanguage } = useTitleLanguage();
   const { isInList, toggle } = useWatchLater();
   const [error, setError] = useState(false);
   const saved = isInList(anime.id);
@@ -32,7 +34,7 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
           {image ? (
             <img
               src={image}
-              alt={resolveAnimeTitle(anime.title)}
+              alt={resolveAnimeTitle(anime.title, titleLanguage)}
               loading="lazy"
               className="size-full object-cover transition duration-500 group-hover:scale-[1.045]"
             />
@@ -75,7 +77,7 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
 
       <Link to={`/anime/${anime.id}`} className="block px-0.5 pt-3">
         <h3 className="line-clamp-2 text-[12px] leading-[1.45] font-semibold text-white/85 transition group-hover:text-[#70e793]">
-          {resolveAnimeTitle(anime.title)}
+          {resolveAnimeTitle(anime.title, titleLanguage)}
         </h3>
         <p className="mt-1.5 text-[10px] font-medium tracking-wide text-white/35">
           {[

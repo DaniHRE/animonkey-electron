@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeResult } from '@/types/anime';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_ZONE = 'America/Sao_Paulo';
@@ -22,6 +23,7 @@ function getSãoPauloToday(): Date {
 }
 
 export function SchedulePage() {
+  const { titleLanguage } = useTitleLanguage();
   const today = useMemo(() => getSãoPauloToday(), []);
   const startOfWeek = useMemo(() => {
     const offset = (today.getUTCDay() + 6) % 7;
@@ -146,7 +148,7 @@ export function SchedulePage() {
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-semibold text-white/85">
-                    {resolveAnimeTitle(anime.title)}
+                    {resolveAnimeTitle(anime.title, titleLanguage)}
                   </span>
                   <span className="mt-1 block text-[10px] text-white/40">
                     Episódio {anime.airingEpisode}

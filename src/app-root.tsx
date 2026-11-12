@@ -13,38 +13,41 @@ import { AppShell } from '@/components/layout/app-shell';
 import { AppErrorBoundary } from '@/components/shared/app-error-boundary';
 import { WatchLaterProvider } from '@/context/watch-later-context';
 import { AccountProvider } from '@/context/account-context';
+import { TitleLanguageProvider } from '@/context/title-language-provider';
 
 export function AppRoot() {
   return (
     <AppErrorBoundary>
-      <AccountProvider>
-        <WatchLaterProvider>
-          <HashRouter>
-            <Routes>
-              <Route element={<AppShell />}>
-                <Route index element={<HomePage />} />
-                <Route path="search" element={<SearchPage />} />
-                <Route path="anime/:id" element={<AnimePage />} />
-                <Route path="watch/:id" element={<WatchPage />} />
-                <Route path="schedule" element={<SchedulePage />} />
-                <Route path="watch-later" element={<WatchLaterPage />} />
-                <Route
-                  path="continue-watching"
-                  element={<ContinueWatchingPage />}
-                />
-                <Route path="settings" element={<SettingsPage />} />
-                <Route path="activity" element={<ActivityPage />} />
-                <Route path="trending" element={<CatalogPage />} />
-                <Route path="updates" element={<CatalogPage />} />
-                <Route path="recent" element={<CatalogPage />} />
-                <Route path="popular" element={<CatalogPage />} />
-                <Route path="completed" element={<CatalogPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </HashRouter>
-        </WatchLaterProvider>
-      </AccountProvider>
+      <TitleLanguageProvider>
+        <AccountProvider>
+          <WatchLaterProvider>
+            <HashRouter>
+              <Routes>
+                <Route element={<AppShell />}>
+                  <Route index element={<HomePage />} />
+                  <Route path="search" element={<SearchPage />} />
+                  <Route path="anime/:id" element={<AnimePage />} />
+                  <Route path="watch/:id" element={<WatchPage />} />
+                  <Route path="schedule" element={<SchedulePage />} />
+                  <Route path="watch-later" element={<WatchLaterPage />} />
+                  <Route
+                    path="continue-watching"
+                    element={<ContinueWatchingPage />}
+                  />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="activity" element={<ActivityPage />} />
+                  <Route path="trending" element={<CatalogPage />} />
+                  <Route path="updates" element={<CatalogPage />} />
+                  <Route path="recent" element={<CatalogPage />} />
+                  <Route path="popular" element={<CatalogPage />} />
+                  <Route path="completed" element={<CatalogPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+              </Routes>
+            </HashRouter>
+          </WatchLaterProvider>
+        </AccountProvider>
+      </TitleLanguageProvider>
     </AppErrorBoundary>
   );
 }
