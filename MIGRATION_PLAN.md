@@ -227,6 +227,8 @@ Regras da fronteira Electron:
 
 **Refino do banner da Home em 11/11/2026:** a arte panorâmica preenche o hero usando `object-cover`, preservando a proporção e cortando uniformemente as laterais necessárias; `object-position` prioriza a região central. Poster de fallback usa foco elevado. Gradientes direcionais e sombra interna mantêm a leitura do texto. A validação visual no runtime ainda deve conferir diferentes banners e o fallback de poster.
 
+**Conferência nativa da Home em 11/11/2026:** janela Electron 1920×1032, rota `/`, captura após o refino mostrou imagem cobrindo o hero sem a faixa estreita vista anteriormente; título, descrição e ações permanecem legíveis. Esta é uma conferência isolada do Electron, não comparação com o site legado. A Agenda é a próxima rota da rodada; a interação nativa pediu refresh do estado antes de mudar de tela e ficou pendente.
+
 **Próxima revisão visual:** avaliação geral página por página de todas as rotas migradas, conforme pedido do usuário em 11/11/2026. A avaliação anterior foi apenas uma inspeção diagnóstica de anime/player e não substitui essa rodada. O step de captions e marcadores intro/outro também está pendente de validação com timestamps/fontes reais.
 
 **Saída:** matriz visual por rota com evidência lado a lado; player e informações do anime aprovados em paridade visual total no app empacotado.
