@@ -328,9 +328,9 @@ function HomeTabs({
   items: AnimeResult[];
 }) {
   const tabs = [
-    { id: 'completed', label: 'Completos', href: '/completed' },
-    { id: 'new', label: 'Novos Lançamentos', href: '/updates' },
-    { id: 'recent', label: 'Recém Adicionados', href: '/recent' },
+    { id: 'completed', label: 'Completos' },
+    { id: 'new', label: 'Novos Lançamentos' },
+    { id: 'recent', label: 'Recém Adicionados' },
   ] as const;
   return (
     <section>

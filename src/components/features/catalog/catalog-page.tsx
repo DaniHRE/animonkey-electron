@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Flame, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Navigate, useParams, useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
 import { AniListCatalog } from '@/services/anilist.service';
@@ -20,31 +20,13 @@ const collections = {
     sort: ['START_DATE_DESC', 'POPULARITY_DESC'],
     status: 'RELEASING' as const,
   },
-  recent: {
-    eyebrow: 'Novidades no catálogo',
-    title: 'Adicionados recentemente',
-    description: 'Títulos adicionados mais recentemente ao AniList.',
-    sort: ['ID_DESC'],
-  },
-  popular: {
-    eyebrow: 'Mais assistidos',
-    title: 'Populares',
-    description: 'Animes populares entre os membros do AniList.',
-    sort: ['POPULARITY_DESC'],
-  },
-  completed: {
-    eyebrow: 'Para maratonar',
-    title: 'Concluídos',
-    description: 'Séries finalizadas, organizadas por data de conclusão.',
-    sort: ['END_DATE_DESC', 'POPULARITY_DESC'],
-    status: 'FINISHED' as const,
-  },
 } as const;
 
 type CollectionKey = keyof typeof collections;
 
 export function CatalogPage() {
-  const { collection = 'trending' } = useParams();
+  const { pathname } = useLocation();
+  const collection = pathname.replace(/^\/+/, '') || 'trending';
   const [params, setParams] = useSearchParams();
   const requestedPage = Number(params.get('page') ?? 1);
   const page =

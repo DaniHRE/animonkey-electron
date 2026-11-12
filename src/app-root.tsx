@@ -38,9 +38,6 @@ export function AppRoot() {
                   <Route path="activity" element={<ActivityPage />} />
                   <Route path="trending" element={<CatalogPage />} />
                   <Route path="updates" element={<CatalogPage />} />
-                  <Route path="recent" element={<CatalogPage />} />
-                  <Route path="popular" element={<CatalogPage />} />
-                  <Route path="completed" element={<CatalogPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Route>
               </Routes>

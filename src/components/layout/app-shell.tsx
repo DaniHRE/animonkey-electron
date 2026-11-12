@@ -8,7 +8,6 @@ import {
   Flame,
   History,
   House,
-  ListVideo,
   Search,
   Sparkles,
   Languages,
@@ -32,9 +31,6 @@ const navItems = [
 const libraryItems = [
   { label: 'Continuar assistindo', icon: History, path: '/continue-watching' },
   { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
-  { label: 'Adicionados recentemente', icon: ListVideo, path: '/recent' },
-  { label: 'Mais populares', icon: Flame, path: '/popular' },
-  { label: 'Concluídos', icon: Clapperboard, path: '/completed' },
 ];
 
 export function AppShell() {
