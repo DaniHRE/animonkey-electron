@@ -96,6 +96,15 @@
   box-sizing: border-box;
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 body {
   min-width: 900px;
   min-height: 100vh;

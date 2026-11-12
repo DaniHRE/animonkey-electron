@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimeCard } from '@/components/shared/anime-card';
+import { HorizontalCarousel } from '@/components/shared/horizontal-carousel';
 import {
   ContinueWatchingSection,
   WatchLaterSection,
@@ -299,13 +300,16 @@ function AnimeRail({ title, eyebrow, items, link, icon }: AnimeRailProps) {
           Ver todos <ArrowRight size={14} />
         </Link>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-3">
+      <HorizontalCarousel label={title}>
         {items.map((anime) => (
-          <div key={anime.id} className="w-36 shrink-0 sm:w-40 xl:w-44">
+          <div
+            key={anime.id}
+            className="w-36 shrink-0 snap-start sm:w-40 xl:w-44"
+          >
             <AnimeCard anime={anime} />
           </div>
         ))}
-      </div>
+      </HorizontalCarousel>
     </section>
   );
 }
@@ -352,11 +356,13 @@ function HomeTabs({
           ))}
         </nav>
       </div>
-      <div className="flex gap-4 overflow-x-auto pb-3">
+      <HorizontalCarousel
+        label={tabs.find((tab) => tab.id === activeTab)?.label ?? 'Catálogo'}
+      >
         {items.slice(0, 20).map((anime, index) => (
           <div
             key={`${activeTab}-${anime.id}`}
-            className="w-36 shrink-0 sm:w-40 xl:w-44"
+            className="w-36 shrink-0 snap-start sm:w-40 xl:w-44"
           >
             <AnimeCard
               anime={anime}
@@ -364,7 +370,7 @@ function HomeTabs({
             />
           </div>
         ))}
-      </div>
+      </HorizontalCarousel>
     </section>
   );
 }

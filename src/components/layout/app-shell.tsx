@@ -45,6 +45,10 @@ export function AppShell() {
   const navigate = useNavigate();
   const { session } = useAccount();
   const { titleLanguage, toggleTitleLanguage } = useTitleLanguage();
+  const useContentFrame =
+    pathname !== '/' &&
+    !pathname.startsWith('/anime/') &&
+    !pathname.startsWith('/watch/');
 
   useEffect(() => {
     let previousY = window.scrollY;
@@ -235,7 +239,13 @@ export function AppShell() {
           tabIndex={-1}
           className="min-h-[calc(100vh-76px)] w-full p-0 outline-none"
         >
-          <Outlet />
+          {useContentFrame ? (
+            <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 2xl:px-10">
+              <Outlet />
+            </div>
+          ) : (
+            <Outlet />
+          )}
         </main>
       </div>
     </div>

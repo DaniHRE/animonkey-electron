@@ -2,6 +2,7 @@ import { Play, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { resolveAnimeTitle } from '@/lib/anime';
+import { HorizontalCarousel } from '@/components/shared/horizontal-carousel';
 import { AniListCatalog } from '@/services/anilist.service';
 import {
   getRecentlyWatched,
@@ -66,7 +67,7 @@ export function ContinueWatchingSection() {
   return (
     <section className="min-w-0 overflow-hidden">
       <HomeSectionHeading title="Continuar Assistindo" />
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <HorizontalCarousel label="Continuar assistindo" className="-mx-0.5">
         {items.map(({ progress, anime }) => {
           const title = anime
             ? resolveAnimeTitle(anime.title, titleLanguage)
@@ -74,7 +75,7 @@ export function ContinueWatchingSection() {
           return (
             <article
               key={progress.key}
-              className="group relative w-36 shrink-0"
+              className="group relative w-36 shrink-0 snap-start"
             >
               <Link
                 to={`/watch/${progress.animeId}?ep=${encodeURIComponent(progress.episodeId)}`}
@@ -126,7 +127,7 @@ export function ContinueWatchingSection() {
             </article>
           );
         })}
-      </div>
+      </HorizontalCarousel>
     </section>
   );
 }
@@ -139,7 +140,7 @@ export function WatchLaterSection() {
   return (
     <section className="min-w-0 overflow-hidden">
       <HomeSectionHeading title="Assistir Depois" />
-      <div className="flex gap-3 overflow-x-auto pb-2">
+      <HorizontalCarousel label="Assistir depois" className="-mx-0.5">
         {items.slice(0, 10).map((item) => (
           <WatchLaterCard
             key={item.animeId}
@@ -150,7 +151,7 @@ export function WatchLaterSection() {
             }}
           />
         ))}
-      </div>
+      </HorizontalCarousel>
     </section>
   );
 }
@@ -166,7 +167,7 @@ function WatchLaterCard({
 }) {
   const title = resolveAnimeTitle(item.title, titleLanguage);
   return (
-    <article className="group relative w-36 shrink-0">
+    <article className="group relative w-36 shrink-0 snap-start">
       <Link to={`/anime/${item.animeId}`} className="block">
         <div className="aspect-[0.71] overflow-hidden rounded-lg border border-white/10 bg-white/[0.03]">
           {item.image && (
