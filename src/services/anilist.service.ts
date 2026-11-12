@@ -2,6 +2,7 @@ import type {
   AnimeResult,
   AnimeInfo,
   AnimeSearchFilters,
+  AnimeSearchOptions,
   AnimeSearchResponse,
   AnimeTitle,
 } from '@/types/anime';
@@ -10,8 +11,8 @@ import { getCatalogCache, putCatalogCache } from '@/services/cache/local-db';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const CARD_FIELDS = `id type isAdult title { english romaji native } coverImage { extraLarge large } bannerImage description(asHtml: false) genres averageScore seasonYear format status episodes`;
-const PAGE_QUERY = `query ($page: Int, $perPage: Int, $search: String, $sort: [MediaSort], $status: MediaStatus, $type: MediaType, $genreIn: [String], $format: MediaFormat, $isAdult: Boolean) { Page(page: $page, perPage: $perPage) { pageInfo { currentPage hasNextPage lastPage total } media(type: $type, search: $search, sort: $sort, status: $status, genre_in: $genreIn, format: $format, isAdult: $isAdult) { ${CARD_FIELDS} } } }`;
+const CARD_FIELDS = `id type isAdult title { english romaji native } coverImage { extraLarge large } bannerImage description(asHtml: false) genres averageScore popularity trending favourites updatedAt seasonYear format status episodes duration startDate { year month day } endDate { year month day }`;
+const PAGE_QUERY = `query ($page: Int, $perPage: Int, $search: String, $sort: [MediaSort], $type: MediaType, $isAdult: Boolean, $status_in: [MediaStatus], $status_not_in: [MediaStatus], $format_in: [MediaFormat], $format_not_in: [MediaFormat], $season: MediaSeason, $seasonYear: Int, $startDate: FuzzyDateInt, $startDate_like: String, $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt, $endDate: FuzzyDateInt, $endDate_greater: FuzzyDateInt, $endDate_lesser: FuzzyDateInt, $episodes_greater: Int, $episodes_lesser: Int, $duration_greater: Int, $duration_lesser: Int, $averageScore_greater: Int, $averageScore_lesser: Int, $popularity_greater: Int, $popularity_lesser: Int, $countryOfOrigin: CountryCode, $countryOfOrigin_not_in: [CountryCode], $source: MediaSource, $isLicensed: Boolean, $licensedBy: String, $licensedById_in: [Int], $genre_in: [String], $genre_not_in: [String], $tag_in: [String], $tag_not_in: [String], $tagCategory_in: [String], $tagCategory_not_in: [String], $minimumTagRank: Int, $id_in: [Int], $id_not_in: [Int], $idMal_in: [Int], $idMal_not_in: [Int]) { Page(page: $page, perPage: $perPage) { pageInfo { currentPage hasNextPage lastPage total } media(type: $type, search: $search, sort: $sort, isAdult: $isAdult, status_in: $status_in, status_not_in: $status_not_in, format_in: $format_in, format_not_in: $format_not_in, season: $season, seasonYear: $seasonYear, startDate: $startDate, startDate_like: $startDate_like, startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser, endDate: $endDate, endDate_greater: $endDate_greater, endDate_lesser: $endDate_lesser, episodes_greater: $episodes_greater, episodes_lesser: $episodes_lesser, duration_greater: $duration_greater, duration_lesser: $duration_lesser, averageScore_greater: $averageScore_greater, averageScore_lesser: $averageScore_lesser, popularity_greater: $popularity_greater, popularity_lesser: $popularity_lesser, countryOfOrigin: $countryOfOrigin, countryOfOrigin_not_in: $countryOfOrigin_not_in, source: $source, isLicensed: $isLicensed, licensedBy: $licensedBy, licensedById_in: $licensedById_in, genre_in: $genre_in, genre_not_in: $genre_not_in, tag_in: $tag_in, tag_not_in: $tag_not_in, tagCategory_in: $tagCategory_in, tagCategory_not_in: $tagCategory_not_in, minimumTagRank: $minimumTagRank, id_in: $id_in, id_not_in: $id_not_in, idMal_in: $idMal_in, idMal_not_in: $idMal_not_in) { ${CARD_FIELDS} } } }`;
 
 interface AniListMedia {
   id: number;
@@ -23,11 +24,25 @@ interface AniListMedia {
   description?: string | null;
   genres?: string[];
   averageScore?: number | null;
+  popularity?: number | null;
+  trending?: number | null;
+  favourites?: number | null;
+  updatedAt?: number | null;
   seasonYear?: number | null;
   format?: string | null;
   status?: string | null;
   episodes?: number | null;
   duration?: number | null;
+  startDate?: {
+    year?: number | null;
+    month?: number | null;
+    day?: number | null;
+  } | null;
+  endDate?: {
+    year?: number | null;
+    month?: number | null;
+    day?: number | null;
+  } | null;
   trailer?: {
     id?: string | null;
     site?: string | null;
@@ -71,7 +86,17 @@ interface AniListPage {
 }
 
 interface AniListResponse {
-  data?: { Page?: AniListPage; Media?: AniListMedia };
+  data?: {
+    Page?: AniListPage;
+    Media?: AniListMedia;
+    GenreCollection?: string[];
+    MediaTagCollection?: Array<{
+      id: number;
+      name: string;
+      category: string;
+      isAdult: boolean;
+    }>;
+  };
   errors?: Array<{ message?: string }>;
 }
 
@@ -177,12 +202,47 @@ async function searchByAdultFlag(
       page,
       perPage: 10,
       search: keyword || undefined,
-      sort: keyword ? ['SEARCH_MATCH'] : ['TRENDING_DESC'],
+      sort: [filters?.sort ?? (keyword ? 'SEARCH_MATCH' : 'TRENDING_DESC')],
       type: 'ANIME',
       isAdult,
-      status: filters?.status,
-      genreIn: filters?.genre ? [filters.genre] : undefined,
-      format: filters?.format,
+      status_in: filters?.statusIn,
+      status_not_in: filters?.statusNotIn,
+      format_in: filters?.formatIn,
+      format_not_in: filters?.formatNotIn,
+      season: filters?.season,
+      seasonYear: filters?.seasonYear,
+      startDate_like: filters?.startDateLike,
+      startDate: filters?.startDate,
+      startDate_greater: filters?.startDateGreater,
+      startDate_lesser: filters?.startDateLesser,
+      endDate_greater: filters?.endDateGreater,
+      endDate_lesser: filters?.endDateLesser,
+      endDate: filters?.endDate,
+      episodes_greater: filters?.episodesGreater,
+      episodes_lesser: filters?.episodesLesser,
+      duration_greater: filters?.durationGreater,
+      duration_lesser: filters?.durationLesser,
+      averageScore_greater: filters?.averageScoreGreater,
+      averageScore_lesser: filters?.averageScoreLesser,
+      popularity_greater: filters?.popularityGreater,
+      popularity_lesser: filters?.popularityLesser,
+      countryOfOrigin: filters?.countryOfOrigin,
+      countryOfOrigin_not_in: filters?.countryOfOriginNotIn,
+      source: filters?.source,
+      isLicensed: filters?.isLicensed,
+      licensedBy: filters?.licensedBy,
+      licensedById_in: filters?.licensedByIdIn,
+      genre_in: filters?.genreIn,
+      genre_not_in: filters?.genreNotIn,
+      tag_in: filters?.tagIn,
+      tag_not_in: filters?.tagNotIn,
+      tagCategory_in: filters?.tagCategoryIn,
+      tagCategory_not_in: filters?.tagCategoryNotIn,
+      minimumTagRank: filters?.minimumTagRank,
+      id_in: filters?.idsIn,
+      id_not_in: filters?.idsNotIn,
+      idMal_in: filters?.idsMalIn,
+      idMal_not_in: filters?.idsMalNotIn,
     },
     signal,
   );
@@ -199,16 +259,76 @@ export const AniListCatalog = {
     const normalizedKeyword = keyword.trim();
     const cacheKey = `search:${JSON.stringify([normalizedKeyword, page, filters])}`;
     return withCatalogCache(cacheKey, SIX_HOURS, signal, async () => {
-      const [regular, adult] = await Promise.all([
-        searchByAdultFlag(normalizedKeyword, page, false, signal, filters),
-        searchByAdultFlag(normalizedKeyword, page, true, signal, filters),
-      ]);
+      const adultMode = filters?.adultMode ?? 'include';
+      const requests =
+        adultMode === 'include' ? [false, true] : [adultMode === 'only'];
+      const pages = await Promise.all(
+        requests.map((isAdult) =>
+          searchByAdultFlag(normalizedKeyword, page, isAdult, signal, filters),
+        ),
+      );
+      const regular = adultMode === 'only' ? undefined : pages[0];
+      const adult =
+        adultMode === 'include'
+          ? pages[1]
+          : adultMode === 'only'
+            ? pages[0]
+            : undefined;
       const regularResults = regular?.media ?? [];
       const adultResults = adult?.media ?? [];
       const combined: AniListMedia[] = [];
-      for (let index = 0; index < 10; index += 1) {
-        if (regularResults[index]) combined.push(regularResults[index]);
-        if (adultResults[index]) combined.push(adultResults[index]);
+      combined.push(...regularResults, ...adultResults);
+      const sort =
+        filters?.sort ?? (normalizedKeyword ? 'SEARCH_MATCH' : 'TRENDING_DESC');
+      const sortField = sort.replace(/_DESC$/, '');
+      const descending = sort.endsWith('_DESC') || sort === 'SEARCH_MATCH';
+      const valueFor = (media: AniListMedia): number | string => {
+        if (sortField === 'SCORE') return media.averageScore ?? 0;
+        if (sortField === 'POPULARITY') return media.popularity ?? 0;
+        if (sortField === 'TRENDING') return media.trending ?? 0;
+        if (sortField === 'FAVOURITES') return media.favourites ?? 0;
+        if (sortField === 'ID') return media.id;
+        if (sortField === 'EPISODES') return media.episodes ?? 0;
+        if (sortField === 'DURATION') return media.duration ?? 0;
+        if (sortField === 'TITLE_ENGLISH') return media.title?.english ?? '';
+        if (sortField === 'TITLE_NATIVE') return media.title?.native ?? '';
+        if (sortField === 'TITLE_ROMAJI') return media.title?.romaji ?? '';
+        if (sortField === 'START_DATE' || sortField === 'END_DATE') {
+          const date =
+            sortField === 'START_DATE' ? media.startDate : media.endDate;
+          return (
+            (date?.year ?? 0) * 10000 +
+            (date?.month ?? 0) * 100 +
+            (date?.day ?? 0)
+          );
+        }
+        if (sortField === 'FORMAT') return media.format ?? '';
+        if (sortField === 'STATUS') return media.status ?? '';
+        if (sortField === 'TYPE') return media.type ?? '';
+        if (sortField === 'UPDATED_AT') return media.updatedAt ?? 0;
+        return media.id;
+      };
+      if (sort !== 'SEARCH_MATCH')
+        combined.sort((a, b) => {
+          const left = valueFor(a);
+          const right = valueFor(b);
+          const compare =
+            typeof left === 'string' && typeof right === 'string'
+              ? left.localeCompare(right)
+              : Number(left) - Number(right);
+          return descending ? -compare : compare;
+        });
+      else {
+        const ranked: AniListMedia[] = [];
+        for (
+          let index = 0;
+          index < Math.max(regularResults.length, adultResults.length);
+          index += 1
+        ) {
+          if (regularResults[index]) ranked.push(regularResults[index]);
+          if (adultResults[index]) ranked.push(adultResults[index]);
+        }
+        combined.splice(0, combined.length, ...ranked);
       }
 
       return {
@@ -224,6 +344,22 @@ export const AniListCatalog = {
           (regular?.pageInfo?.total ?? regularResults.length) +
           (adult?.pageInfo?.total ?? adultResults.length),
         results: combined.map(mapMedia),
+      };
+    });
+  },
+
+  async searchOptions(signal?: AbortSignal): Promise<AnimeSearchOptions> {
+    return withCatalogCache('search:options', ONE_DAY, signal, async () => {
+      const response = await request(
+        'query { GenreCollection MediaTagCollection { id name category isAdult } }',
+        {},
+        signal,
+      );
+      return {
+        genres: response.data?.GenreCollection ?? [],
+        tags: (response.data?.MediaTagCollection ?? []).filter(
+          (tag) => !tag.isAdult,
+        ),
       };
     });
   },
@@ -258,7 +394,14 @@ export const AniListCatalog = {
       async () => {
         const response = await request(
           PAGE_QUERY,
-          { page, perPage: 24, sort, status, type: 'ANIME', isAdult: false },
+          {
+            page,
+            perPage: 24,
+            sort,
+            status_in: status ? [status] : undefined,
+            type: 'ANIME',
+            isAdult: false,
+          },
           signal,
         );
         const data = response.data?.Page;
