@@ -1,4 +1,5 @@
 import {
+  ArrowUpRight,
   Bookmark,
   BookmarkCheck,
   CalendarClock,
@@ -480,7 +481,7 @@ export function AnimePage() {
             {detailTab === 'relations' && (
               <div
                 role="tabpanel"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3"
               >
                 {anime.relations.map((relation) => {
                   const relationTitle = resolveAnimeTitle(
@@ -496,23 +497,32 @@ export function AnimePage() {
                     <Link
                       key={`${relation.id}-${relation.relationType}`}
                       to={`/anime/${relation.id}`}
-                      className="group flex min-w-0 items-center gap-3 rounded-lg bg-white/[0.035] p-2 transition-colors hover:bg-white/[0.07]"
+                      className="group overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719] transition duration-200 hover:border-white/[0.16] hover:bg-[#1c1c1f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a]"
                     >
-                      {relation.image ? (
-                        <img
-                          src={relation.image}
-                          alt=""
-                          loading="lazy"
-                          className="h-16 w-11 shrink-0 rounded object-cover"
-                        />
-                      ) : (
-                        <span className="h-16 w-11 shrink-0 rounded bg-white/[0.06]" />
-                      )}
-                      <span className="min-w-0">
-                        <span className="block text-[9px] font-bold tracking-wide text-white/45 uppercase">
-                          {relationLabel}
+                      <span className="relative block aspect-[16/8.5] overflow-hidden bg-white/[0.04]">
+                        {relation.image ? (
+                          <img
+                            src={relation.image}
+                            alt=""
+                            loading="lazy"
+                            className="size-full object-cover transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
+                          />
+                        ) : (
+                          <span className="grid size-full place-items-center text-white/20">
+                            <Clapperboard size={28} aria-hidden="true" />
+                          </span>
+                        )}
+                        <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
+                        <span className="absolute top-3 left-3 inline-flex max-w-[calc(100%-3.5rem)] items-center gap-1.5 truncate rounded-md border border-white/15 bg-black/75 px-2.5 py-1.5 text-[10px] font-bold tracking-wide text-white shadow-lg">
+                          <Network size={12} aria-hidden="true" />
+                          <span className="truncate">{relationLabel}</span>
                         </span>
-                        <span className="mt-1 block line-clamp-2 text-xs font-semibold text-white/85 group-hover:text-white">
+                        <span className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full border border-white/20 bg-black/45 text-white/80 transition group-hover:border-white/40 group-hover:bg-black/70 group-hover:text-white">
+                          <ArrowUpRight size={16} aria-hidden="true" />
+                        </span>
+                      </span>
+                      <span className="flex min-h-[88px] items-center gap-3 px-4 py-3">
+                        <span className="line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-white/85 transition group-hover:text-white">
                           {relationTitle}
                         </span>
                       </span>

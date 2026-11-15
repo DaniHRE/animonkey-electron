@@ -1,5 +1,12 @@
 # Progresso da migração
 
+## Refinamento dos cartões de relações em 15/11/2026
+
+- Comparado o card anterior de `../animonkey/components/features/anime/anime-page-client.tsx` com a aba Relações Electron. Os cards agora têm imagem 16:9 com mais presença, etiqueta de temporada/relação sobre a imagem, título com espaço próprio, fallback sem imagem, hover/foco visíveis e layout de uma coluna em viewport estreito.
+- Mantidos os dados e links existentes; não há chamadas ou regras novas de catálogo. A direção preserva o tema escuro e o rótulo inglês (`Season N · Direct Sequel`) introduzido na etapa anterior.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Conferência renderizada em runtime ainda pendente.
+- Etapa anterior de labels/divisor: `3ca9eb2` (`fix: label anime sequel relations`).
+
 ## Temporadas e divisor na página Anime em 15/11/2026
 
 - Comparação direta de `../animonkey/components/features/anime/anime-page-client.tsx` (aba Relations e `getSeasonPartBadge`) com `src/components/features/anime/anime-page.tsx`. A versão anterior detecta `Season N` e `Nth Season` no título relacionado; Electron agora combina essa indicação com a relação AniList, por exemplo `Season 2 · Direct Sequel`, em vez de exibir somente `SEQUEL`.
