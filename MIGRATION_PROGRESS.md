@@ -1,5 +1,12 @@
 # Progresso da migração
 
+## Temporadas e divisor na página Anime em 15/11/2026
+
+- Comparação direta de `../animonkey/components/features/anime/anime-page-client.tsx` (aba Relations e `getSeasonPartBadge`) com `src/components/features/anime/anime-page.tsx`. A versão anterior detecta `Season N` e `Nth Season` no título relacionado; Electron agora combina essa indicação com a relação AniList, por exemplo `Season 2 · Direct Sequel`, em vez de exibir somente `SEQUEL`.
+- O separador horizontal entre o hero e tabs/listas permanece full-width na área de conteúdo e ganhou contraste sutil (`border-white/10`) para corresponder à régua visível da referência; o conteúdo das abas segue no max-width/gutters padrão.
+- Etapa anterior que adicionou a regra de consulta direta ao legado: `fa2bad8` (`feat: port legacy episode filters and anime color`). Validação desta etapa e hash serão anotados após o commit.
+- Comparação estática do código concluída; revisão visual pareada de relações ainda pendente.
+
 ## Comparação direta da UI Anime e filtros de episódios em 15/11/2026
 
 - Regra operacional adicionada a `AGENTS.md`: antes de qualquer port de UI, comparar os componentes, hooks, services, tipos e estilos exatos do repo `../animonkey`; captura de tela é evidência complementar, não substitui o código. Referências consultadas nesta etapa: `../animonkey/components/features/anime/anime-detail-hero.tsx`, `../animonkey/services/anilist/index.ts`, `../animonkey/components/features/anime/episode-list.tsx` e `../animonkey/components/features/anime/watch-episode-list.tsx`.

@@ -398,7 +398,7 @@ export function AnimePage() {
             ))}
           </div>
         )}
-        <section className="border-t border-white/[0.07]">
+        <section className="border-t border-white/10">
           <div className="mx-auto w-full max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8">
             <div
               role="tablist"
@@ -482,32 +482,43 @@ export function AnimePage() {
                 role="tabpanel"
                 className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
               >
-                {anime.relations.map((relation) => (
-                  <Link
-                    key={`${relation.id}-${relation.relationType}`}
-                    to={`/anime/${relation.id}`}
-                    className="group flex min-w-0 items-center gap-3 rounded-lg bg-white/[0.035] p-2 transition-colors hover:bg-white/[0.07]"
-                  >
-                    {relation.image ? (
-                      <img
-                        src={relation.image}
-                        alt=""
-                        loading="lazy"
-                        className="h-16 w-11 shrink-0 rounded object-cover"
-                      />
-                    ) : (
-                      <span className="h-16 w-11 shrink-0 rounded bg-white/[0.06]" />
-                    )}
-                    <span className="min-w-0">
-                      <span className="block text-[9px] font-bold tracking-wide text-white/45 uppercase">
-                        {relation.relationType.replaceAll('_', ' ')}
+                {anime.relations.map((relation) => {
+                  const relationTitle = resolveAnimeTitle(
+                    relation.title,
+                    titleLanguage,
+                  );
+                  const relationLabel = getRelationLabel(
+                    relation.relationType,
+                    relationTitle,
+                  );
+
+                  return (
+                    <Link
+                      key={`${relation.id}-${relation.relationType}`}
+                      to={`/anime/${relation.id}`}
+                      className="group flex min-w-0 items-center gap-3 rounded-lg bg-white/[0.035] p-2 transition-colors hover:bg-white/[0.07]"
+                    >
+                      {relation.image ? (
+                        <img
+                          src={relation.image}
+                          alt=""
+                          loading="lazy"
+                          className="h-16 w-11 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="h-16 w-11 shrink-0 rounded bg-white/[0.06]" />
+                      )}
+                      <span className="min-w-0">
+                        <span className="block text-[9px] font-bold tracking-wide text-white/45 uppercase">
+                          {relationLabel}
+                        </span>
+                        <span className="mt-1 block line-clamp-2 text-xs font-semibold text-white/85 group-hover:text-white">
+                          {relationTitle}
+                        </span>
                       </span>
-                      <span className="mt-1 block line-clamp-2 text-xs font-semibold text-white/85 group-hover:text-white">
-                        {resolveAnimeTitle(relation.title, titleLanguage)}
-                      </span>
-                    </span>
-                  </Link>
-                ))}
+                    </Link>
+                  );
+                })}
                 {!anime.relations.length && (
                   <div className="col-span-full flex min-h-48 flex-col items-center justify-center px-6 text-center">
                     <span className="mb-4 grid size-12 place-items-center rounded-full bg-white/[0.05] text-white/45">
@@ -744,4 +755,23 @@ export function AnimePage() {
       )}
     </article>
   );
+}
+
+function getRelationLabel(relationType: string, title: string): string {
+  const seasonMatch = title.match(
+    /(?:season\s+(\d+)(?:\s*part\s+(\d+))?|(?:(\d+)(?:st|nd|rd|th)\s+season)(?:\s*part\s+(\d+))?)/i,
+  );
+  const season = seasonMatch
+    ? `Season ${seasonMatch[1] ?? seasonMatch[3]}${(seasonMatch[2] ?? seasonMatch[4]) ? ` Part ${seasonMatch[2] ?? seasonMatch[4]}` : ''}`
+    : null;
+  const readableType =
+    relationType === 'SEQUEL'
+      ? 'Direct Sequel'
+      : relationType
+          .toLowerCase()
+          .split('_')
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+          .join(' ');
+
+  return season ? `${season} · ${readableType}` : readableType;
 }
