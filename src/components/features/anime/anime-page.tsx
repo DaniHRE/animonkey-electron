@@ -158,7 +158,7 @@ export function AnimePage() {
           } as React.CSSProperties
         }
       >
-        <div className="relative min-h-[360px] overflow-hidden lg:min-h-[420px]">
+        <div className="relative -mt-[76px] min-h-[436px] overflow-hidden pt-[76px] lg:min-h-[496px]">
           {anime.banner && (
             <img
               src={anime.banner}
@@ -167,7 +167,7 @@ export function AnimePage() {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-r from-[#111113]/90 via-[#111113]/55 to-[#111113]/15" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#111113]/90 via-[#111113]/35 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/45 to-transparent" />
           <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] items-end gap-4 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:min-h-[420px] lg:px-8 lg:py-10">
             {image && (
               <button

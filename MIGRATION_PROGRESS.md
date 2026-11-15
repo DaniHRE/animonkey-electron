@@ -5,6 +5,12 @@
 - Reduzida a densidade das camadas escuras do hero e elevada a presença da arte do banner em `src/components/features/anime/anime-page.tsx`; o gradiente ainda mantém contraste no lado do texto.
 - Verificações e hash do commit serão anotados após validação.
 
+## Transição do banner e sobreposição da topbar em 15/11/2026
+
+- O hero agora começa 76 px acima da área de conteúdo, atrás da parte inferior da topbar translúcida; `pt-[76px]` preserva a posição original do poster/textos e as alturas ajustadas preservam o fim do hero.
+- A máscara inferior termina na cor sólida do site (`#111113`) e usa parada intermediária para um fade contínuo, sem costura visível antes do restante da página.
+- Verificações e hash do commit serão anotados após validação.
+
 ## Refinamento dos cartões de relações em 15/11/2026
 
 - Comparado o card anterior de `../animonkey/components/features/anime/anime-page-client.tsx` com a aba Relações Electron. Os cards agora têm imagem 16:9 com mais presença, etiqueta de temporada/relação sobre a imagem, título com espaço próprio, fallback sem imagem, hover/foco visíveis e layout de uma coluna em viewport estreito.
