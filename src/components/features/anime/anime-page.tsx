@@ -10,6 +10,8 @@ import {
   Play,
   Share2,
   Star,
+  UserRound,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -437,44 +439,50 @@ export function AnimePage() {
             {detailTab === 'characters' && (
               <div
                 role="tabpanel"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5"
               >
                 {anime.characters.map((character) => (
                   <article
                     key={character.id}
-                    className="group overflow-hidden rounded-xl bg-white/[0.035] transition-colors hover:bg-white/[0.06]"
+                    className="group relative isolate aspect-[4/5] overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719]"
                   >
-                    <div className="relative h-36 overflow-hidden bg-[#1b1b20] sm:h-44">
+                    <div className="absolute inset-0 overflow-hidden">
                       {character.image ? (
                         <img
                           src={character.image}
                           alt=""
                           loading="lazy"
-                          className="size-full object-cover object-top transition duration-300 group-hover:scale-[1.03]"
+                          className="size-full object-cover object-top transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
                         />
                       ) : (
-                        <div className="grid size-full place-items-center text-3xl font-bold text-white/25">
-                          {character.name.slice(0, 1)}
+                        <div className="grid size-full place-items-center text-white/30">
+                          <UserRound size={42} strokeWidth={1.25} />
                         </div>
                       )}
-                      <span className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
                     </div>
-                    <div className="flex items-center justify-between gap-2 px-3 py-3">
-                      <p className="min-w-0 truncate text-xs font-semibold text-white/90 sm:text-sm">
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-black/10" />
+                    <span className="absolute top-3 left-3 rounded-md border border-white/15 bg-black/70 px-2 py-1 text-[9px] font-bold tracking-wide text-white/85 uppercase">
+                      {character.role === 'MAIN' ? 'Principal' : 'Coadjuvante'}
+                    </span>
+                    <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
+                      <p className="line-clamp-2 text-sm font-bold leading-snug text-white sm:text-base">
                         {character.name}
                       </p>
-                      <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-1 text-[9px] font-semibold text-white/55">
-                        {character.role === 'MAIN'
-                          ? 'Principal'
-                          : 'Coadjuvante'}
-                      </span>
                     </div>
                   </article>
                 ))}
                 {!anime.characters.length && (
-                  <p className="col-span-full py-8 text-center text-sm text-white/50">
-                    Sem personagens listados.
-                  </p>
+                  <div className="col-span-full flex min-h-48 flex-col items-center justify-center gap-3 px-6 text-center">
+                    <UsersRound
+                      size={28}
+                      strokeWidth={1.5}
+                      className="text-white/30"
+                      aria-hidden="true"
+                    />
+                    <p className="text-sm text-white/50">
+                      Sem personagens listados.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -497,9 +505,9 @@ export function AnimePage() {
                     <Link
                       key={`${relation.id}-${relation.relationType}`}
                       to={`/anime/${relation.id}`}
-                      className="group overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719] transition duration-200 hover:border-white/[0.16] hover:bg-[#1c1c1f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a]"
+                      className="group relative block aspect-[4/3] overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719] transition duration-200 hover:border-white/[0.16] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a]"
                     >
-                      <span className="relative block aspect-[16/8.5] overflow-hidden bg-white/[0.04]">
+                      <span className="absolute inset-0 overflow-hidden bg-white/[0.04]">
                         {relation.image ? (
                           <img
                             src={relation.image}
@@ -512,17 +520,17 @@ export function AnimePage() {
                             <Clapperboard size={28} aria-hidden="true" />
                           </span>
                         )}
-                        <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
+                        <span className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-black/20" />
                         <span className="absolute top-3 left-3 inline-flex max-w-[calc(100%-3.5rem)] items-center gap-1.5 truncate rounded-md border border-white/15 bg-black/75 px-2.5 py-1.5 text-[10px] font-bold tracking-wide text-white shadow-lg">
                           <Network size={12} aria-hidden="true" />
                           <span className="truncate">{relationLabel}</span>
                         </span>
-                        <span className="absolute right-3 bottom-3 grid size-8 place-items-center rounded-full border border-white/20 bg-black/45 text-white/80 transition group-hover:border-white/40 group-hover:bg-black/70 group-hover:text-white">
+                        <span className="absolute top-3 right-3 grid size-9 place-items-center rounded-full border border-white/20 bg-black/45 text-white/80 transition group-hover:border-white/40 group-hover:bg-black/70 group-hover:text-white">
                           <ArrowUpRight size={16} aria-hidden="true" />
                         </span>
                       </span>
-                      <span className="flex min-h-[88px] items-center gap-3 px-4 py-3">
-                        <span className="line-clamp-2 min-w-0 text-sm font-semibold leading-snug text-white/85 transition group-hover:text-white">
+                      <span className="absolute inset-x-0 bottom-0 px-4 pt-16 pb-4">
+                        <span className="line-clamp-2 text-base font-bold leading-snug text-white transition group-hover:text-white sm:text-lg">
                           {relationTitle}
                         </span>
                       </span>

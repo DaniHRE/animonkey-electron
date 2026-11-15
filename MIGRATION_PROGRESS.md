@@ -1,5 +1,12 @@
 # Progresso da migração
 
+## Refino visual de Personagens e Relações em 15/11/2026
+
+- Consultados `../animonkey/components/features/anime/character-grid.tsx`, `anime-page-client.tsx`, o contrato `AnimeCharacter` e o mapeamento AniList existente. Personagens agora usam retratos verticais, identificação de papel, nome sobre gradiente e fallback de avatar; vazio ganhou estado visual próprio.
+- Relações agora seguem cards de capa imersivos, com tipo/temporada no alto, nome legível na base e affordance de navegação; rótulos, links e dados existentes foram preservados.
+- Hook detector Impeccable estava habilitado e escaneou o arquivo após ambas as edições, sem problemas determinísticos. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` serão registrados após validação.
+- Etapa anterior: `7cf0667` (`feat: refine anime relation cards`).
+
 ## Topbar recolhível por direção da rolagem em 15/11/2026
 
 - A topbar completa do `AppShell` agora desliza para cima ao rolar para baixo (após 120 px) e volta ao rolar para cima ou ao chegar perto do topo. Foco mantido dentro da barra a mantém visível; enquanto oculta, fica inerte para navegação por teclado.
