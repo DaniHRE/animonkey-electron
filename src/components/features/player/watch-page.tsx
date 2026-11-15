@@ -387,17 +387,9 @@ export function WatchPage() {
                     onClick={() => selectEpisode(episode.id)}
                     className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${episode.id === currentEpisodeId ? 'bg-[#49d77a]/10 text-[#70e793]' : 'text-white/60 hover:bg-white/[0.05]'}`}
                   >
-                    {episode.image ? (
-                      <img
-                        src={episode.image}
-                        alt=""
-                        className="h-12 w-20 rounded-md object-cover"
-                      />
-                    ) : (
-                      <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold">
-                        {episode.number}
-                      </span>
-                    )}
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold">
+                      {episode.number}
+                    </span>
                     <span className="min-w-0">
                       <span className="block text-[11px] font-bold">
                         Episódio {episode.number}

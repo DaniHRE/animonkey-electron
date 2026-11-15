@@ -264,17 +264,9 @@ export function AnimePage() {
                 to={`/watch/${anime.id}?ep=${encodeURIComponent(episode.id)}`}
                 className="flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.025] p-3 transition hover:bg-white/[0.06]"
               >
-                {episode.image ? (
-                  <img
-                    src={episode.image}
-                    alt=""
-                    className="h-12 w-20 rounded-md object-cover"
-                  />
-                ) : (
-                  <span className="grid h-12 w-20 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold text-white/60">
-                    {episode.number}
-                  </span>
-                )}
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold text-white/60">
+                  {episode.number}
+                </span>
                 <span className="min-w-0">
                   <span className="block text-xs font-semibold text-white/85">
                     {episode.number}

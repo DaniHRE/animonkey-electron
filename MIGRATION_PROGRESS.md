@@ -1,5 +1,11 @@
 # Progresso da migração
 
+## Ajuste da lista de episódios em 15/11/2026
+
+- Removida a renderização de thumbnails de episódio nas listas de Anime e Player. Ambas usam o número do episódio em um bloco compacto, seguindo o layout do site antigo e evitando imagens quebradas.
+- Mantido `episode.image` no contrato de dados para outros usos; as telas dessas listas deixam de depender dele.
+- Typecheck, lint, formatação e diff check aprovados. Próxima revisão da Fase 8: controles de busca/ordenação do player e comparação dos viewports.
+
 ## Diagnóstico visual de 15/11/2026 — Fase 8 em andamento
 
 - Controle nativo recuperado após reiniciar a sessão e usar coordenadas de capturas recentes. A árvore de acessibilidade permaneceu desatualizada após navegação; as capturas confirmaram busca, detalhe e player reais.
