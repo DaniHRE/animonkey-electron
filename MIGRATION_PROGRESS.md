@@ -9,6 +9,13 @@
 - A busca por voz japonesa usa a query existente, não duplica requests; a cache do detalhe foi migrada de `anime:v3` para `anime:v4` para renovar objetos persistidos sem dubladores. O hook de design continua ativo e escaneou a UI sem problemas determinísticos.
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. A consulta continua unificada em `AniListCatalog.getAnime`; nenhuma requisição por personagem ou relação foi adicionada.
 
+## Carrossel de Personagens e grade densa de Relações em 15/11/2026
+
+- Personagens saiu da lista vertical e agora usa carrossel horizontal com snap, avanço por setas, rolagem suave que respeita movimento reduzido e cartões compactos.
+- Relações agora usam miniaturas 16:9 e grade de duas a cinco colunas conforme o viewport, reduzindo a altura ocupada por cada item e permitindo visualizar mais relações simultaneamente; metadados úteis e sinopse curta permanecem presentes.
+- O hook Impeccable está ativo e aprovou as edições sem apontamentos determinísticos.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Hash será registrado após o commit.
+
 ## Refino visual de Personagens e Relações em 15/11/2026
 
 - Consultados `../animonkey/components/features/anime/character-grid.tsx`, `anime-page-client.tsx`, o contrato `AnimeCharacter` e o mapeamento AniList existente. Personagens agora usam retratos verticais, identificação de papel, nome sobre gradiente e fallback de avatar; vazio ganhou estado visual próprio.
