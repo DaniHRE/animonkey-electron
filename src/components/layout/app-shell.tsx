@@ -36,7 +36,9 @@ const libraryItems = [
 export function AppShell() {
   const [search, setSearch] = useState('');
   const [searchVisible, setSearchVisible] = useState(true);
+  const [headerVisible, setHeaderVisible] = useState(true);
   const searchFormRef = useRef<HTMLFormElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { session } = useAccount();
@@ -55,9 +57,15 @@ export function AppShell() {
       const searchIsFocused = searchFormRef.current?.contains(
         document.activeElement,
       );
-      if (currentY < 48 || currentY < previousY || searchIsFocused) {
+      const headerIsFocused = headerRef.current?.contains(
+        document.activeElement,
+      );
+      if (currentY < 48 || currentY < previousY || headerIsFocused) {
+        setHeaderVisible(true);
         setSearchVisible(true);
       } else if (currentY > 120) {
+        if (!headerIsFocused) setHeaderVisible(false);
+        if (searchIsFocused) return;
         setSearchVisible(false);
       }
       previousY = currentY;
@@ -166,7 +174,11 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/[0.06] bg-[#0b0b0c]/85 px-10 backdrop-blur-xl">
+        <header
+          ref={headerRef}
+          inert={!headerVisible}
+          className={`sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/[0.06] bg-[#0b0b0c]/85 px-10 backdrop-blur-xl transition-transform duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}
+        >
           {pathname !== '/search' && (
             <form
               ref={searchFormRef}

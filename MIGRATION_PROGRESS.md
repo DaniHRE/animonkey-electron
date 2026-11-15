@@ -1,5 +1,11 @@
 # Progresso da migração
 
+## Topbar recolhível por direção da rolagem em 15/11/2026
+
+- A topbar completa do `AppShell` agora desliza para cima ao rolar para baixo (após 120 px) e volta ao rolar para cima ou ao chegar perto do topo. Foco mantido dentro da barra a mantém visível; enquanto oculta, fica inerte para navegação por teclado.
+- Transição usa movimento vertical curto e respeita `prefers-reduced-motion`; a busca existente continua sincronizada com a direção da rolagem.
+- Verificações e hash do commit serão anotados após validação.
+
 ## Opacidade do banner do anime em 15/11/2026
 
 - Reduzida a densidade das camadas escuras do hero e elevada a presença da arte do banner em `src/components/features/anime/anime-page.tsx`; o gradiente ainda mantém contraste no lado do texto.
