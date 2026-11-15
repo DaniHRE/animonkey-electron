@@ -7,6 +7,12 @@
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Conferência renderizada em runtime ainda pendente.
 - Etapa anterior de labels/divisor: `3ca9eb2` (`fix: label anime sequel relations`).
 
+## Remoção do divisor antes das abas Anime em 15/11/2026
+
+- A linha vinha do `border-t` no `<section>` que contém as abas em `src/components/features/anime/anime-page.tsx`. A referência `../animonkey/components/features/anime/anime-page-client.tsx` inicia as tabs no fluxo contínuo do conteúdo, sem borda separadora; removida a classe.
+- Atualizado o gate da Fase 8 para evitar reintroduzir esse divisor. A borda antes de recomendações é independente e foi mantida.
+- Verificações e hash do commit serão anotados após validação.
+
 ## Temporadas e divisor na página Anime em 15/11/2026
 
 - Comparação direta de `../animonkey/components/features/anime/anime-page-client.tsx` (aba Relations e `getSeasonPartBadge`) com `src/components/features/anime/anime-page.tsx`. A versão anterior detecta `Season N` e `Nth Season` no título relacionado; Electron agora combina essa indicação com a relação AniList, por exemplo `Season 2 · Direct Sequel`, em vez de exibir somente `SEQUEL`.

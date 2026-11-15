@@ -399,7 +399,7 @@ export function AnimePage() {
             ))}
           </div>
         )}
-        <section className="border-t border-white/10">
+        <section>
           <div className="mx-auto w-full max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8">
             <div
               role="tablist"
