@@ -3,7 +3,7 @@
 ## Paridade da página de anime em 15/11/2026
 
 - Hero reorganizado para aproximar a referência web: metadados coloridos no topo, título nativo e título selecionado, gêneros junto ao título, sinopse e ações Assistir/Assistir Depois, Avaliar, Compartilhar e Trailer no mesmo bloco. Banner usa apenas `bannerImage`; cor de destaque é derivada do pôster existente com fallback para CORS.
-- Avaliação foi movida para diálogo associado ao botão do hero; exige conta, mantém edição/remover e mostra erros localizados. Favoritar e compartilhar também comunicam falhas. Metadados continuam vindo de `AniListCatalog.getAnime`/cache; `season` foi adicionado à seleção existente, sem endpoint ou consulta paralela.
+- Avaliação foi movida para diálogo associado ao botão do hero; exige conta, mantém edição/remover e mostra erros localizados. Favoritar e compartilhar também comunicam falhas. Metadados continuam vindo de `AniListCatalog.getAnime`/cache; `season` foi adicionado à seleção existente, sem endpoint ou consulta paralela. A chave do cache do detalhe foi versionada para atualizar objetos existentes que ainda não têm temporada. Implementação principal registrada no commit `f0a19b8`.
 - Validação: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados. Comparação visual runtime no mesmo viewport ainda necessária para aceite final.
 - Próximo passo: validar visualmente `/anime/212888` no Electron e no site antigo, ajustar proporções/estados conforme a comparação e seguir com os pontos restantes da Fase 8.
 

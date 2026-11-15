@@ -483,63 +483,69 @@ export const AniListCatalog = {
   async getAnime(id: string, signal?: AbortSignal): Promise<AnimeInfo | null> {
     const numericId = Number(id);
     if (!Number.isSafeInteger(numericId) || numericId < 1) return null;
-    return withCatalogCache(`anime:${numericId}`, ONE_DAY, signal, async () => {
-      const response = await request(
-        `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: ROLE, perPage: 8) { edges { role node { id name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
-        { id: numericId },
-        signal,
-      );
-      const media = response.data?.Media;
-      if (!media) return null;
-      return {
-        ...mapMedia(media),
-        duration: media.duration ?? undefined,
-        trailer:
-          media.trailer?.id && media.trailer.site
-            ? {
-                id: media.trailer.id,
-                site: media.trailer.site,
-                thumbnail: media.trailer.thumbnail ?? undefined,
-              }
-            : undefined,
-        nextAiringEpisode:
-          media.nextAiringEpisode?.airingAt && media.nextAiringEpisode.episode
-            ? {
-                airingAt: media.nextAiringEpisode.airingAt,
-                episode: media.nextAiringEpisode.episode,
-              }
-            : undefined,
-        characters: (media.characters?.edges ?? []).flatMap((edge) =>
-          edge.node?.id
-            ? [
-                {
-                  id: edge.node.id,
-                  name:
-                    edge.node.name?.userPreferred ??
-                    edge.node.name?.full ??
-                    'Personagem',
-                  image: edge.node.image?.large ?? undefined,
-                  role: edge.role ?? 'SUPPORTING',
-                },
-              ]
-            : [],
-        ),
-        relations: (media.relations?.edges ?? []).flatMap((edge) =>
-          edge.node?.type === 'ANIME'
-            ? [
-                {
-                  ...mapMedia(edge.node),
-                  relationType: edge.relationType ?? 'RELATED',
-                },
-              ]
-            : [],
-        ),
-        recommendations: (media.recommendations?.nodes ?? []).flatMap((node) =>
-          node.mediaRecommendation?.type === 'ANIME'
-            ? [mapMedia(node.mediaRecommendation)]
-            : [],
-        ),
-      };
-    });
+    return withCatalogCache(
+      `anime:v2:${numericId}`,
+      ONE_DAY,
+      signal,
+      async () => {
+        const response = await request(
+          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: ROLE, perPage: 8) { edges { role node { id name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
+          { id: numericId },
+          signal,
+        );
+        const media = response.data?.Media;
+        if (!media) return null;
+        return {
+          ...mapMedia(media),
+          duration: media.duration ?? undefined,
+          trailer:
+            media.trailer?.id && media.trailer.site
+              ? {
+                  id: media.trailer.id,
+                  site: media.trailer.site,
+                  thumbnail: media.trailer.thumbnail ?? undefined,
+                }
+              : undefined,
+          nextAiringEpisode:
+            media.nextAiringEpisode?.airingAt && media.nextAiringEpisode.episode
+              ? {
+                  airingAt: media.nextAiringEpisode.airingAt,
+                  episode: media.nextAiringEpisode.episode,
+                }
+              : undefined,
+          characters: (media.characters?.edges ?? []).flatMap((edge) =>
+            edge.node?.id
+              ? [
+                  {
+                    id: edge.node.id,
+                    name:
+                      edge.node.name?.userPreferred ??
+                      edge.node.name?.full ??
+                      'Personagem',
+                    image: edge.node.image?.large ?? undefined,
+                    role: edge.role ?? 'SUPPORTING',
+                  },
+                ]
+              : [],
+          ),
+          relations: (media.relations?.edges ?? []).flatMap((edge) =>
+            edge.node?.type === 'ANIME'
+              ? [
+                  {
+                    ...mapMedia(edge.node),
+                    relationType: edge.relationType ?? 'RELATED',
+                  },
+                ]
+              : [],
+          ),
+          recommendations: (media.recommendations?.nodes ?? []).flatMap(
+            (node) =>
+              node.mediaRecommendation?.type === 'ANIME'
+                ? [mapMedia(node.mediaRecommendation)]
+                : [],
+          ),
+        };
+      },
+    );
   },
 };
