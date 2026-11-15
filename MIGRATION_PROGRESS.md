@@ -1,5 +1,15 @@
 # Progresso da migração
 
+## Diagnóstico visual de 15/11/2026 — Fase 8 em andamento
+
+- Controle nativo recuperado após reiniciar a sessão e usar coordenadas de capturas recentes. A árvore de acessibilidade permaneceu desatualizada após navegação; as capturas confirmaram busca, detalhe e player reais.
+- Electron em desenvolvimento (`localhost:5173`), anime 159042, episódio 1, idioma de títulos JP. Busca pelo título retornou as duas temporadas; seleção da segunda abriu o detalhe e seleção do episódio abriu o player.
+- Miniaturas dos episódios aparecem quebradas tanto no detalhe quanto na lista lateral do player. Capa do anime e imagens de relacionados carregaram.
+- Chrome em `localhost:3000/watch/159042?ep=159042%3Asub%3A1` exibiu sete episódios, busca e ordenação na lista, servidores disponíveis e player aguardando início. Electron exibiu sete episódios sem esses controles de busca/ordenação na lista observada.
+- Electron reproduziu imagem do episódio e legenda em inglês, depois foi pausado em 0:10 de 23:42. A captura não comprova áudio, sincronização completa nem se a legenda é embutida ou selecionável. Marcadores intro/outro e troca de fonte/episódio permanecem pendentes.
+- Evidência visual disponível nas capturas desta conversa. As áreas úteis ainda não foram igualadas; esta rodada é diagnóstica. O runtime observado é de desenvolvimento e não substitui smoke do pacote. Fase 8 permanece IN_PROGRESS.
+- Próximo passo: corrigir miniaturas e revisar controles de episódios, igualar viewports e comparar detalhes/player completos; depois percorrer as demais rotas da matriz. Validação desta etapa documental por Prettier e `git diff --check`.
+
 Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualizado em 11/11/2026.
 
 | Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
