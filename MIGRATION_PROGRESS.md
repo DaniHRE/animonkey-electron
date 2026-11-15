@@ -1,5 +1,12 @@
 # Progresso da migração
 
+## Polimento do detalhe e deep link em 15/11/2026
+
+- Ajustes pedidos no hero: banner agora ocupa toda a largura disponível da página de conteúdo; pôster maior, com raio menor e ampliação em modal ao clicar após revelar affordance no hover; Assistir Depois ficou somente com ícone e largura compacta. O próximo episódio ganhou linha exclusiva em azul para se destacar da cor dinâmica do anime.
+- Trailer do YouTube agora abre em modal local com iframe `youtube-nocookie`, fechamento por Escape/backdrop e ID validado. Personagens viraram grade visual e relações usam miniaturas; o vazio de relações informa claramente que não há animes relacionados.
+- Compartilhamento usa `app:run://anime/<id>`. O processo principal registra o protocolo, valida IDs numéricos, reutiliza instância ativa e encaminha apenas rotas de anime pela bridge tipada do preload; HashRouter navega internamente. Implementação anterior da página: `f0a19b8`; cache atualizado em `e83b971`.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `git diff --check` e `pnpm package` Windows x64 passaram. A captura do controle visual selecionou a janela Electron pelo ID/title, mas mostrou o conteúdo do Codex nas duas tentativas; parei sem clicar ou digitar. Revisão visual runtime e smoke do deep link ainda pendentes.
+
 ## Paridade da página de anime em 15/11/2026
 
 - Hero reorganizado para aproximar a referência web: metadados coloridos no topo, título nativo e título selecionado, gêneros junto ao título, sinopse e ações Assistir/Assistir Depois, Avaliar, Compartilhar e Trailer no mesmo bloco. Banner usa apenas `bannerImage`; cor de destaque é derivada do pôster existente com fallback para CORS.

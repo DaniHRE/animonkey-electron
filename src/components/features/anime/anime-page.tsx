@@ -1,11 +1,15 @@
 import {
   Bookmark,
   BookmarkCheck,
+  CalendarClock,
   Check,
   Clapperboard,
+  Maximize2,
+  Network,
   Play,
   Share2,
   Star,
+  X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -36,6 +40,8 @@ export function AnimePage() {
   const [ratingOpen, setRatingOpen] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [posterOpen, setPosterOpen] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
   const [accentColor, setAccentColor] = useState('#6366f1');
   const [episodeState, setEpisodeState] = useState<{
     id: string;
@@ -107,6 +113,18 @@ export function AnimePage() {
     const timeout = window.setTimeout(() => setCopied(false), 2000);
     return () => window.clearTimeout(timeout);
   }, [copied]);
+
+  useEffect(() => {
+    if (!posterOpen && !trailerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPosterOpen(false);
+        setTrailerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [posterOpen, trailerOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -182,7 +200,7 @@ export function AnimePage() {
   return (
     <article className="w-full bg-[#111113]">
       <section
-        className="relative mx-auto flex w-full max-w-[1440px] flex-col gap-1"
+        className="relative flex w-full flex-col gap-1"
         style={{ '--anime-accent': accentColor } as React.CSSProperties}
       >
         <div className="relative min-h-[360px] overflow-hidden lg:min-h-[420px]">
@@ -197,11 +215,21 @@ export function AnimePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/55 to-transparent" />
           <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] items-end gap-4 p-6 sm:gap-6 sm:p-8 lg:min-h-[420px] lg:px-12 lg:py-10">
             {image && (
-              <img
-                src={image}
-                alt=""
-                className="h-[240px] w-[170px] rounded-xl object-cover shadow-2xl shadow-black/60"
-              />
+              <button
+                type="button"
+                onClick={() => setPosterOpen(true)}
+                aria-label={`Ampliar pôster de ${title}`}
+                className="group relative aspect-[2/3] h-[250px] w-[167px] shrink-0 cursor-zoom-in overflow-hidden rounded-md shadow-2xl shadow-black/60 sm:h-[300px] sm:w-[200px]"
+              >
+                <img
+                  src={image}
+                  alt={title}
+                  className="size-full object-cover"
+                />
+                <span className="absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100 group-focus-visible:bg-black/45 group-focus-visible:opacity-100">
+                  <Maximize2 size={25} />
+                </span>
+              </button>
             )}
             <div className="max-w-2xl pb-2">
               <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-black/90">
@@ -245,18 +273,6 @@ export function AnimePage() {
                     {anime.duration} min
                   </span>
                 )}
-                {anime.nextAiringEpisode && (
-                  <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1">
-                    Episódio {anime.nextAiringEpisode.episode} em{' '}
-                    {new Date(
-                      anime.nextAiringEpisode.airingAt * 1000,
-                    ).toLocaleString('pt-BR', {
-                      dateStyle: 'short',
-                      timeStyle: 'short',
-                      timeZone: 'America/Sao_Paulo',
-                    })}
-                  </span>
-                )}
               </div>
               {anime.title.native && (
                 <p className="mt-2 line-clamp-1 text-sm font-light text-white/60 md:text-base">
@@ -266,6 +282,22 @@ export function AnimePage() {
               <h1 className="mt-1 line-clamp-2 text-xl font-black leading-tight tracking-tight sm:text-3xl">
                 {title}
               </h1>
+              {anime.nextAiringEpisode && (
+                <p className="mt-2 inline-flex w-fit items-center gap-2 rounded-md border border-sky-300/20 bg-sky-400/10 px-3 py-1.5 text-xs font-semibold text-sky-100">
+                  <CalendarClock size={15} className="shrink-0 text-sky-300" />
+                  <span>
+                    Próximo episódio {anime.nextAiringEpisode.episode}
+                    {' · '}
+                    {new Date(
+                      anime.nextAiringEpisode.airingAt * 1000,
+                    ).toLocaleString('pt-BR', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                      timeZone: 'America/Sao_Paulo',
+                    })}
+                  </span>
+                </p>
+              )}
               {anime.genres.length > 0 && (
                 <div className="mt-2 hidden flex-wrap gap-2 md:flex">
                   {anime.genres.map((genre) => (
@@ -304,14 +336,13 @@ export function AnimePage() {
                         ? 'Remover de Assistir Depois'
                         : 'Adicionar a Assistir Depois'
                     }
-                    className="inline-flex h-10 items-center gap-2 bg-white/75 px-4 text-xs font-semibold text-black/80 transition hover:bg-white/90"
+                    className="inline-flex h-10 w-11 items-center justify-center bg-white/75 text-black/80 transition hover:bg-white/90"
                   >
                     {isInList(anime.id) ? (
-                      <BookmarkCheck size={14} />
+                      <BookmarkCheck size={17} />
                     ) : (
-                      <Bookmark size={14} />
+                      <Bookmark size={17} />
                     )}
-                    {isInList(anime.id) ? 'Na lista' : 'Assistir depois'}
                   </button>
                 </div>
                 <button
@@ -342,9 +373,9 @@ export function AnimePage() {
                   type="button"
                   onClick={async () => {
                     try {
-                      const url = window.location.href;
+                      const url = `app:run://anime/${encodeURIComponent(anime.id)}`;
                       if (navigator.share)
-                        await navigator.share({ title, url });
+                        await navigator.share({ title, text: url });
                       else {
                         await navigator.clipboard.writeText(url);
                         setCopied(true);
@@ -370,16 +401,17 @@ export function AnimePage() {
                     {copied ? 'Link copiado!' : 'Compartilhar'}
                   </span>
                 </button>
-                {anime.trailer?.site === 'youtube' ? (
-                  <a
-                    href={`https://www.youtube.com/watch?v=${encodeURIComponent(anime.trailer.id)}`}
-                    target="_blank"
-                    rel="noreferrer"
+                {anime.trailer?.site === 'youtube' &&
+                /^[\w-]{11}$/.test(anime.trailer.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => setTrailerOpen(true)}
+                    aria-label="Assistir trailer"
                     className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"
                   >
                     <Clapperboard size={14} />
                     <span className="sr-only">Assistir trailer</span>
-                  </a>
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -473,52 +505,91 @@ export function AnimePage() {
             </div>
           )}
           {detailTab === 'characters' && (
-            <div role="tabpanel" className="flex flex-wrap gap-3">
+            <div
+              role="tabpanel"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
+            >
               {anime.characters.map((character) => (
-                <div
+                <article
                   key={character.id}
-                  className="flex w-48 items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.02] p-2"
+                  className="group overflow-hidden rounded-xl bg-white/[0.035] transition-colors hover:bg-white/[0.06]"
                 >
-                  {character.image ? (
-                    <img
-                      src={character.image}
-                      alt=""
-                      className="size-12 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="size-12 rounded-lg bg-white/[0.06]" />
-                  )}
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-white/80">
+                  <div className="relative h-36 overflow-hidden bg-[#1b1b20] sm:h-44">
+                    {character.image ? (
+                      <img
+                        src={character.image}
+                        alt=""
+                        loading="lazy"
+                        className="size-full object-cover object-top transition duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="grid size-full place-items-center text-3xl font-bold text-white/25">
+                        {character.name.slice(0, 1)}
+                      </div>
+                    )}
+                    <span className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 px-3 py-3">
+                    <p className="min-w-0 truncate text-xs font-semibold text-white/90 sm:text-sm">
                       {character.name}
                     </p>
-                    <p className="mt-1 text-[10px] text-white/40">
+                    <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-1 text-[9px] font-semibold text-white/55">
                       {character.role === 'MAIN' ? 'Principal' : 'Coadjuvante'}
-                    </p>
+                    </span>
                   </div>
-                </div>
+                </article>
               ))}
               {!anime.characters.length && (
-                <p className="text-sm text-white/45">
+                <p className="col-span-full py-8 text-center text-sm text-white/50">
                   Sem personagens listados.
                 </p>
               )}
             </div>
           )}
           {detailTab === 'relations' && (
-            <div role="tabpanel" className="flex flex-wrap gap-2">
+            <div
+              role="tabpanel"
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
+            >
               {anime.relations.map((relation) => (
                 <Link
                   key={`${relation.id}-${relation.relationType}`}
                   to={`/anime/${relation.id}`}
-                  className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-white/60 transition hover:border-[#49d77a]/40 hover:text-white"
+                  className="group flex min-w-0 items-center gap-3 rounded-lg bg-white/[0.035] p-2 transition-colors hover:bg-white/[0.07]"
                 >
-                  {relation.relationType.replaceAll('_', ' ')} ·{' '}
-                  {resolveAnimeTitle(relation.title, titleLanguage)}
+                  {relation.image ? (
+                    <img
+                      src={relation.image}
+                      alt=""
+                      loading="lazy"
+                      className="h-16 w-11 shrink-0 rounded object-cover"
+                    />
+                  ) : (
+                    <span className="h-16 w-11 shrink-0 rounded bg-white/[0.06]" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block text-[9px] font-bold tracking-wide text-white/45 uppercase">
+                      {relation.relationType.replaceAll('_', ' ')}
+                    </span>
+                    <span className="mt-1 block line-clamp-2 text-xs font-semibold text-white/85 group-hover:text-white">
+                      {resolveAnimeTitle(relation.title, titleLanguage)}
+                    </span>
+                  </span>
                 </Link>
               ))}
               {!anime.relations.length && (
-                <p className="text-sm text-white/45">Sem obras relacionadas.</p>
+                <div className="col-span-full flex min-h-48 flex-col items-center justify-center px-6 text-center">
+                  <span className="mb-4 grid size-12 place-items-center rounded-full bg-white/[0.05] text-white/45">
+                    <Network size={21} />
+                  </span>
+                  <p className="text-sm font-semibold text-white/75">
+                    Não existem animes relacionados para esta obra.
+                  </p>
+                  <p className="mt-1 text-xs text-white/40">
+                    Quando houver continuações, especiais ou adaptações, elas
+                    aparecerão aqui.
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -534,6 +605,69 @@ export function AnimePage() {
           </section>
         )}
       </section>
+      {posterOpen && image && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-6 backdrop-blur-sm"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setPosterOpen(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Pôster de ${title}`}
+            className="relative flex max-h-[92vh] max-w-[min(92vw,52rem)] items-center justify-center"
+          >
+            <button
+              type="button"
+              onClick={() => setPosterOpen(false)}
+              aria-label="Fechar imagem ampliada"
+              className="absolute -top-12 right-0 grid size-10 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            >
+              <X size={19} />
+            </button>
+            <img
+              src={image}
+              alt={title}
+              className="max-h-[88vh] max-w-full rounded-md object-contain shadow-2xl"
+            />
+          </section>
+        </div>
+      )}
+      {trailerOpen && anime.trailer?.site === 'youtube' && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm sm:p-8"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setTrailerOpen(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Trailer de ${title}`}
+            className="relative w-full max-w-5xl"
+          >
+            <button
+              type="button"
+              onClick={() => setTrailerOpen(false)}
+              aria-label="Fechar trailer"
+              className="absolute -top-12 right-0 grid size-10 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+            >
+              <X size={19} />
+            </button>
+            <div className="aspect-video w-full overflow-hidden rounded-lg bg-black shadow-2xl">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(anime.trailer.id)}?autoplay=1&rel=0&modestbranding=1`}
+                title={`Trailer de ${title}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+                className="size-full"
+              />
+            </div>
+          </section>
+        </div>
+      )}
       {ratingOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"

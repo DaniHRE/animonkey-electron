@@ -1,4 +1,11 @@
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
+import {
+  HashRouter,
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+} from 'react-router-dom';
+import { useEffect } from 'react';
 import { AnimePage } from '@/components/features/anime/anime-page';
 import { WatchLaterPage } from '@/components/features/account/watch-later-page';
 import { ContinueWatchingPage } from '@/components/features/account/continue-watching-page';
@@ -22,6 +29,7 @@ export function AppRoot() {
         <AccountProvider>
           <WatchLaterProvider>
             <HashRouter>
+              <DeepLinkRouteHandler />
               <Routes>
                 <Route element={<AppShell />}>
                   <Route index element={<HomePage />} />
@@ -47,4 +55,18 @@ export function AppRoot() {
       </TitleLanguageProvider>
     </AppErrorBoundary>
   );
+}
+
+function DeepLinkRouteHandler() {
+  const navigate = useNavigate();
+
+  useEffect(
+    () =>
+      window.animonkey.onOpenAnime((animeId) => {
+        if (/^\d+$/.test(animeId)) navigate(`/anime/${animeId}`);
+      }),
+    [navigate],
+  );
+
+  return null;
 }

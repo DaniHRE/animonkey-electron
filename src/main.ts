@@ -32,8 +32,63 @@ const EXTERNAL_LINK_HOSTS = new Set([
   'dailymotion.com',
   'status.animonkey.app',
 ]);
+const APP_PROTOCOL = 'app';
+const ANIME_DEEP_LINK = /^app:run:\/\/anime\/(\d+)\/?$/i;
 
 let mainWindow: BrowserWindow | null = null;
+let pendingAnimeId: string | null = null;
+let rendererReady = false;
+
+function animeIdFromDeepLink(value: string): string | null {
+  const match = ANIME_DEEP_LINK.exec(value);
+  return match?.[1] ?? null;
+}
+
+const initialAnimeDeepLink = process.argv.find((argument) =>
+  argument.toLowerCase().startsWith('app:'),
+);
+if (initialAnimeDeepLink)
+  pendingAnimeId = animeIdFromDeepLink(initialAnimeDeepLink);
+
+function openAnimeDeepLink(value: string): void {
+  const animeId = animeIdFromDeepLink(value);
+  if (!animeId) return;
+  pendingAnimeId = animeId;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+    if (rendererReady) {
+      mainWindow.webContents.send('app:open-anime', animeId);
+      pendingAnimeId = null;
+    }
+  }
+}
+
+if (process.defaultApp && process.argv[1]) {
+  app.setAsDefaultProtocolClient(APP_PROTOCOL, process.execPath, [
+    path.resolve(process.argv[1]),
+  ]);
+} else {
+  app.setAsDefaultProtocolClient(APP_PROTOCOL);
+}
+
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (_event, commandLine) => {
+    const deepLink = commandLine.find((argument) =>
+      argument.toLowerCase().startsWith('app:'),
+    );
+    if (deepLink) openAnimeDeepLink(deepLink);
+  });
+
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    openAnimeDeepLink(url);
+  });
+}
 
 function assertTrustedIpcSender(event: IpcMainInvokeEvent): void {
   if (
@@ -290,6 +345,15 @@ const createWindow = () => {
     return { action: 'deny' };
   });
 
+  rendererReady = false;
+  mainWindow.webContents.once('did-finish-load', () => {
+    rendererReady = true;
+    if (pendingAnimeId) {
+      mainWindow?.webContents.send('app:open-anime', pendingAnimeId);
+      pendingAnimeId = null;
+    }
+  });
+
   mainWindow.webContents.on('will-navigate', (event, url) => {
     const trustedUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
     if (trustedUrl && new URL(url).origin === new URL(trustedUrl).origin)
@@ -313,6 +377,7 @@ registerAccountIpc();
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
+  if (!hasSingleInstanceLock) return;
   installMediaProxy();
   createWindow();
 });

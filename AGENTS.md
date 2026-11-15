@@ -16,6 +16,7 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 ## Segurança Electron
 
 - BrowserWindow usa `contextIsolation: true`, `nodeIntegration: false` e `sandbox: true`, salvo incompatibilidade documentada e justificada.
+- Deep links compartilháveis usam apenas `app:run://anime/<id-numérico>`; validar scheme/rota/ID no processo main antes de encaminhar a rota pelo preload tipado. A janela web nunca deve navegar diretamente para o scheme customizado.
 - Nunca expor `ipcRenderer`, `require`, filesystem ou uma API IPC genérica no preload. Publicar capacidades pequenas, tipadas e necessárias.
 - Validar canal, origem e payload em IPC; negar navegação externa dentro da janela do app e abrir apenas URLs HTTPS explicitamente permitidas no navegador padrão.
 - Manter CSP restritiva. O esquema `animonkey-media:` precisa estar em `connect-src`, `media-src` e `img-src` para HLS/DASH, faixas auxiliares e thumbnails; faixas WebVTT devem ser obtidas pelo proxy e convertidas para `blob:` antes de anexar como `<track>` para evitar incompatibilidade de origem entre HTTP e o esquema Electron.

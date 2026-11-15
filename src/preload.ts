@@ -9,8 +9,26 @@ import type {
 } from './types/account';
 import type { AnimeRating } from './types/anime';
 
+let pendingAnimeId: string | null = null;
+const animeRouteListeners = new Set<(animeId: string) => void>();
+
+ipcRenderer.on('app:open-anime', (_event, animeId: unknown) => {
+  if (typeof animeId !== 'string' || !/^\d+$/.test(animeId)) return;
+  pendingAnimeId = animeId;
+  for (const listener of animeRouteListeners) listener(animeId);
+  if (animeRouteListeners.size) pendingAnimeId = null;
+});
+
 contextBridge.exposeInMainWorld('animonkey', {
   platform: process.platform,
+  onOpenAnime: (callback: (animeId: string) => void) => {
+    animeRouteListeners.add(callback);
+    if (pendingAnimeId) {
+      callback(pendingAnimeId);
+      pendingAnimeId = null;
+    }
+    return () => animeRouteListeners.delete(callback);
+  },
   account: {
     register: (input: AccountRegistration) =>
       ipcRenderer.invoke('account:register', input),
