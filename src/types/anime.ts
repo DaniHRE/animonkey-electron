@@ -15,6 +15,7 @@ export interface AnimeResult {
   genres: string[];
   rating?: number;
   releaseDate?: number;
+  season?: 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
   type?: string;
   status?: string;
   totalEpisodes?: number;

@@ -11,7 +11,7 @@ import { getCatalogCache, putCatalogCache } from '@/services/cache/local-db';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 const ONE_DAY = 24 * 60 * 60 * 1000;
-const CARD_FIELDS = `id type isAdult title { english romaji native } coverImage { extraLarge large } bannerImage description(asHtml: false) genres averageScore popularity trending favourites updatedAt seasonYear format status episodes duration startDate { year month day } endDate { year month day }`;
+const CARD_FIELDS = `id type isAdult title { english romaji native } coverImage { extraLarge large } bannerImage description(asHtml: false) genres averageScore popularity trending favourites updatedAt season seasonYear format status episodes duration startDate { year month day } endDate { year month day }`;
 const PAGE_QUERY = `query ($page: Int, $perPage: Int, $search: String, $sort: [MediaSort], $type: MediaType, $isAdult: Boolean, $status_in: [MediaStatus], $status_not_in: [MediaStatus], $format_in: [MediaFormat], $format_not_in: [MediaFormat], $season: MediaSeason, $seasonYear: Int, $startDate: FuzzyDateInt, $startDate_like: String, $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt, $endDate: FuzzyDateInt, $endDate_greater: FuzzyDateInt, $endDate_lesser: FuzzyDateInt, $episodes_greater: Int, $episodes_lesser: Int, $duration_greater: Int, $duration_lesser: Int, $averageScore_greater: Int, $averageScore_lesser: Int, $popularity_greater: Int, $popularity_lesser: Int, $countryOfOrigin: CountryCode, $countryOfOrigin_not_in: [CountryCode], $source: MediaSource, $isLicensed: Boolean, $licensedBy: String, $licensedById_in: [Int], $genre_in: [String], $genre_not_in: [String], $tag_in: [String], $tag_not_in: [String], $tagCategory_in: [String], $tagCategory_not_in: [String], $minimumTagRank: Int, $id_in: [Int], $id_not_in: [Int], $idMal_in: [Int], $idMal_not_in: [Int]) { Page(page: $page, perPage: $perPage) { pageInfo { currentPage hasNextPage lastPage total } media(type: $type, search: $search, sort: $sort, isAdult: $isAdult, status_in: $status_in, status_not_in: $status_not_in, format_in: $format_in, format_not_in: $format_not_in, season: $season, seasonYear: $seasonYear, startDate: $startDate, startDate_like: $startDate_like, startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser, endDate: $endDate, endDate_greater: $endDate_greater, endDate_lesser: $endDate_lesser, episodes_greater: $episodes_greater, episodes_lesser: $episodes_lesser, duration_greater: $duration_greater, duration_lesser: $duration_lesser, averageScore_greater: $averageScore_greater, averageScore_lesser: $averageScore_lesser, popularity_greater: $popularity_greater, popularity_lesser: $popularity_lesser, countryOfOrigin: $countryOfOrigin, countryOfOrigin_not_in: $countryOfOrigin_not_in, source: $source, isLicensed: $isLicensed, licensedBy: $licensedBy, licensedById_in: $licensedById_in, genre_in: $genre_in, genre_not_in: $genre_not_in, tag_in: $tag_in, tag_not_in: $tag_not_in, tagCategory_in: $tagCategory_in, tagCategory_not_in: $tagCategory_not_in, minimumTagRank: $minimumTagRank, id_in: $id_in, id_not_in: $id_not_in, idMal_in: $idMal_in, idMal_not_in: $idMal_not_in) { ${CARD_FIELDS} } } }`;
 
 interface AniListMedia {
@@ -29,6 +29,7 @@ interface AniListMedia {
   favourites?: number | null;
   updatedAt?: number | null;
   seasonYear?: number | null;
+  season?: 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL' | null;
   format?: string | null;
   status?: string | null;
   episodes?: number | null;
@@ -140,6 +141,7 @@ function mapMedia(media: AniListMedia): AnimeResult {
     genres: media.genres ?? [],
     rating: media.averageScore ? media.averageScore / 10 : undefined,
     releaseDate: media.seasonYear ?? undefined,
+    season: media.season ?? undefined,
     type: media.format ?? undefined,
     status: media.status ?? undefined,
     totalEpisodes: media.episodes ?? undefined,
