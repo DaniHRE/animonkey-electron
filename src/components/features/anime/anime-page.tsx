@@ -163,11 +163,11 @@ export function AnimePage() {
             <img
               src={anime.banner}
               alt=""
-              className="absolute inset-0 size-full object-cover opacity-35 blur-[1px]"
+              className="absolute inset-0 size-full object-cover opacity-45 blur-[1px]"
             />
           )}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#111113] via-[#111113]/75 to-[#111113]/25" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/55 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#111113]/90 via-[#111113]/55 to-[#111113]/15" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#111113]/90 via-[#111113]/35 to-transparent" />
           <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] items-end gap-4 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:min-h-[420px] lg:px-8 lg:py-10">
             {image && (
               <button
