@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
 import { VideoPlayer } from '@/components/features/player/video-player';
 import { ServerSelector } from '@/components/features/player/server-selector';
+import { EpisodeListControls } from '@/components/features/anime/episode-list-controls';
 import { PlayerErrorBoundary } from '@/components/features/player/player-error-boundary';
 import { AniListCatalog } from '@/services/anilist.service';
 import { AnivexaCatalog } from '@/services/anivexa.service';
@@ -17,8 +18,16 @@ import type {
   EpisodeSources,
 } from '@/types/player';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { filterAndSortEpisodes } from '@/lib/episode-filter';
+
+const PLAYER_EPISODE_PAGE_SIZE = 50;
 
 export function WatchPage() {
+  const { id = '' } = useParams();
+  return <WatchPageContent key={id} />;
+}
+
+function WatchPageContent() {
   const { titleLanguage } = useTitleLanguage();
   const { id = '' } = useParams();
   const [params, setParams] = useSearchParams();
@@ -44,6 +53,10 @@ export function WatchPage() {
     error: string | null;
   }>({ key: '', sources: null, error: null });
   const [retryVersion, setRetryVersion] = useState(0);
+  const [episodeSearch, setEpisodeSearch] = useState('');
+  const [episodesAscending, setEpisodesAscending] = useState(true);
+  const [episodePage, setEpisodePage] = useState(0);
+  const activeEpisodeRef = useRef<HTMLButtonElement | null>(null);
   const selection = usePlaybackSessionStore((state) => state.selection);
   const selectServer = usePlaybackSessionStore((state) => state.selectServer);
   const clearSelection = usePlaybackSessionStore(
@@ -99,6 +112,17 @@ export function WatchPage() {
     () => (episodeState.id === anime?.id ? episodeState.episodes : []),
     [anime?.id, episodeState.episodes, episodeState.id],
   );
+  const filteredEpisodes = useMemo(
+    () => filterAndSortEpisodes(episodes, episodeSearch, episodesAscending),
+    [episodeSearch, episodes, episodesAscending],
+  );
+  const episodePageCount = Math.ceil(
+    filteredEpisodes.length / PLAYER_EPISODE_PAGE_SIZE,
+  );
+  const visibleEpisodes = filteredEpisodes.slice(
+    episodePage * PLAYER_EPISODE_PAGE_SIZE,
+    (episodePage + 1) * PLAYER_EPISODE_PAGE_SIZE,
+  );
   const currentEpisodeId = episodes.some(
     (episode) => episode.id === requestedEpisodeId,
   )
@@ -108,6 +132,13 @@ export function WatchPage() {
     () => episodes.find((episode) => episode.id === currentEpisodeId) ?? null,
     [currentEpisodeId, episodes],
   );
+
+  useEffect(() => {
+    activeEpisodeRef.current?.scrollIntoView({
+      block: 'nearest',
+      behavior: 'smooth',
+    });
+  }, [currentEpisodeId, episodePage, episodeSearch]);
 
   useEffect(() => {
     if (!currentEpisodeId || currentEpisodeId === requestedEpisodeId) return;
@@ -362,12 +393,45 @@ export function WatchPage() {
           </section>
         </div>
         <div className="self-start space-y-6 xl:sticky xl:top-24">
-          <aside className="max-h-[75vh] overflow-y-auto rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
-            <h2 className="sticky top-0 z-10 bg-[#0d0d0f] px-2 py-3 text-xs font-bold">
-              Episódios <span className="text-white/35">{episodes.length}</span>
-            </h2>
+          <aside className="flex max-h-[75vh] flex-col overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.02] p-3">
+            <EpisodeListControls
+              heading="Episódios"
+              count={filteredEpisodes.length}
+              search={episodeSearch}
+              onSearchChange={(value) => {
+                setEpisodeSearch(value);
+                setEpisodePage(0);
+              }}
+              ascending={episodesAscending}
+              onToggleOrder={() => {
+                setEpisodesAscending((current) => !current);
+                setEpisodePage(0);
+              }}
+            />
+            {episodePageCount > 1 && (
+              <div className="flex shrink-0 flex-wrap gap-1 border-b border-white/[0.05] px-1 py-2">
+                {Array.from({ length: episodePageCount }, (_, index) => {
+                  const first = index * PLAYER_EPISODE_PAGE_SIZE + 1;
+                  const last = Math.min(
+                    (index + 1) * PLAYER_EPISODE_PAGE_SIZE,
+                    filteredEpisodes.length,
+                  );
+                  return (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-current={episodePage === index ? 'page' : undefined}
+                      onClick={() => setEpisodePage(index)}
+                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${episodePage === index ? 'bg-[#49d77a] text-[#07110a]' : 'bg-white/[0.04] text-white/45 hover:bg-white/[0.08] hover:text-white'}`}
+                    >
+                      {first}–{last}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             {loadingEpisodes ? (
-              <div className="space-y-2 p-2">
+              <div className="flex-1 space-y-2 overflow-y-auto p-2">
                 {Array.from({ length: 8 }, (_, index) => (
                   <div
                     key={index}
@@ -375,12 +439,17 @@ export function WatchPage() {
                   />
                 ))}
               </div>
-            ) : episodes.length ? (
-              <div className="space-y-1">
-                {episodes.map((episode) => (
+            ) : visibleEpisodes.length ? (
+              <div className="min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto pt-2">
+                {visibleEpisodes.map((episode) => (
                   <button
                     key={episode.id}
                     type="button"
+                    ref={
+                      episode.id === currentEpisodeId
+                        ? activeEpisodeRef
+                        : undefined
+                    }
                     aria-current={
                       episode.id === currentEpisodeId ? 'true' : undefined
                     }
@@ -401,6 +470,10 @@ export function WatchPage() {
                   </button>
                 ))}
               </div>
+            ) : episodes.length > 0 ? (
+              <p className="flex min-h-36 flex-1 items-center justify-center px-4 text-center text-xs leading-relaxed text-white/40">
+                Nenhum episódio encontrado para “{episodeSearch}”.
+              </p>
             ) : (
               <p className="p-3 text-xs leading-relaxed text-white/40">
                 {episodeState.error ??

@@ -1,5 +1,14 @@
 # Progresso da migração
 
+## Comparação direta da UI Anime e filtros de episódios em 15/11/2026
+
+- Regra operacional adicionada a `AGENTS.md`: antes de qualquer port de UI, comparar os componentes, hooks, services, tipos e estilos exatos do repo `../animonkey`; captura de tela é evidência complementar, não substitui o código. Referências consultadas nesta etapa: `../animonkey/components/features/anime/anime-detail-hero.tsx`, `../animonkey/services/anilist/index.ts`, `../animonkey/components/features/anime/episode-list.tsx` e `../animonkey/components/features/anime/watch-episode-list.tsx`.
+- A cor antiga não era calculada por Canvas: o service lia `Media.coverImage.color` do AniList e o hero usava `metadata?.color`. Electron agora inclui `coverImage.color` em `CARD_FIELDS`/`mapMedia`, usa a mesma fonte e mantém cache do detalhe versionado; nenhuma consulta paralela foi adicionada.
+- Banner vai até as laterais da área principal disponível no shell desktop; pôster, textos, ações, badge do próximo episódio, abas, listas e recomendações usam o trilho central `max-width: 1440px` e gutters (`px-4 sm:px-6 lg:px-8`) conferidos com `anime-detail-hero.tsx` e `anime-page-client.tsx`. A sidebar desktop continua sendo adaptação do shell.
+- Detalhe do anime recebe busca por título/número/descrição, ordem, alternância grade/lista e paginação de oito. Lateral do player recebe busca por título/número, ordem, contador de resultados e paginação em grupos de 50. A filtragem é compartilhada e continua usando os episódios sub legendados da Anivexa.
+- Step `Fase 8 / QA Player — captions, timestamps e thumbnails` adicionado ao plano; segue PENDENTE até validar fontes reais no app empacotado e comparar sprites WebVTT/`xywh`, captions, timestamps intro/outro e trocas rápidas.
+- Validação de implementação concluída: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Falta empacotar e fazer conferência visual lado a lado em viewport equivalente; QA audiovisual real de captions/timestamps/thumbnails permanece pendente.
+
 ## Polimento do detalhe e deep link em 15/11/2026
 
 - Ajustes pedidos no hero: banner agora ocupa toda a largura disponível da página de conteúdo; pôster maior, com raio menor e ampliação em modal ao clicar após revelar affordance no hover; Assistir Depois ficou somente com ícone e largura compacta. O próximo episódio ganhou linha exclusiva em azul para se destacar da cor dinâmica do anime.
@@ -9,7 +18,7 @@
 
 ## Paridade da página de anime em 15/11/2026
 
-- Hero reorganizado para aproximar a referência web: metadados coloridos no topo, título nativo e título selecionado, gêneros junto ao título, sinopse e ações Assistir/Assistir Depois, Avaliar, Compartilhar e Trailer no mesmo bloco. Banner usa apenas `bannerImage`; cor de destaque é derivada do pôster existente com fallback para CORS.
+- Hero reorganizado para aproximar a referência web: metadados coloridos no topo, título nativo e título selecionado, gêneros junto ao título, sinopse e ações Assistir/Assistir Depois, Avaliar, Compartilhar e Trailer no mesmo bloco. Banner usa apenas `bannerImage`. A leitura posterior do código legado confirmou que a cor de destaque vem de `Media.coverImage.color` do AniList; Electron agora consome esse campo pela consulta/cache existentes, sem amostragem Canvas ou chamada duplicada.
 - Avaliação foi movida para diálogo associado ao botão do hero; exige conta, mantém edição/remover e mostra erros localizados. Favoritar e compartilhar também comunicam falhas. Metadados continuam vindo de `AniListCatalog.getAnime`/cache; `season` foi adicionado à seleção existente, sem endpoint ou consulta paralela. A chave do cache do detalhe foi versionada para atualizar objetos existentes que ainda não têm temporada. Implementação principal registrada no commit `f0a19b8`.
 - Validação: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados. Comparação visual runtime no mesmo viewport ainda necessária para aceite final.
 - Próximo passo: validar visualmente `/anime/212888` no Electron e no site antigo, ajustar proporções/estados conforme a comparação e seguir com os pontos restantes da Fase 8.

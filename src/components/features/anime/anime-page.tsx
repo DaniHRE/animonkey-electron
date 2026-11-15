@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AnimeCard } from '@/components/shared/anime-card';
+import { AnimeEpisodeList } from '@/components/features/anime/anime-episode-list';
 import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeInfo } from '@/types/anime';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
@@ -42,7 +43,6 @@ export function AnimePage() {
   const [copied, setCopied] = useState(false);
   const [posterOpen, setPosterOpen] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
-  const [accentColor, setAccentColor] = useState('#6366f1');
   const [episodeState, setEpisodeState] = useState<{
     id: string;
     episodes: AnimeEpisode[];
@@ -51,56 +51,6 @@ export function AnimePage() {
   const [detailTab, setDetailTab] = useState<DetailTab>('episodes');
 
   const reviewValue = reviewDraft ?? userRating.rating?.review ?? '';
-
-  useEffect(() => {
-    let active = true;
-    const source =
-      state.id === id && state.anime ? getAnimeImage(state.anime) : undefined;
-    if (!source) return;
-    const image = new Image();
-    image.crossOrigin = 'anonymous';
-    image.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 16;
-        canvas.height = 16;
-        const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) return;
-        context.drawImage(image, 0, 0, canvas.width, canvas.height);
-        const pixels = context.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height,
-        ).data;
-        let red = 0;
-        let green = 0;
-        let blue = 0;
-        let samples = 0;
-        for (let index = 0; index < pixels.length; index += 4) {
-          if (pixels[index + 3] < 128) continue;
-          red += pixels[index];
-          green += pixels[index + 1];
-          blue += pixels[index + 2];
-          samples += 1;
-        }
-        if (samples && active) {
-          setAccentColor(
-            `rgb(${Math.round(red / samples)}, ${Math.round(green / samples)}, ${Math.round(blue / samples)})`,
-          );
-        }
-      } catch {
-        if (active) setAccentColor('#6366f1');
-      }
-    };
-    image.onerror = () => {
-      if (active) setAccentColor('#6366f1');
-    };
-    image.src = source;
-    return () => {
-      active = false;
-    };
-  }, [id, state]);
 
   useEffect(() => {
     if (!feedback) return;
@@ -201,7 +151,11 @@ export function AnimePage() {
     <article className="w-full bg-[#111113]">
       <section
         className="relative flex w-full flex-col gap-1"
-        style={{ '--anime-accent': accentColor } as React.CSSProperties}
+        style={
+          {
+            '--anime-accent': anime.color ?? '#6366f1',
+          } as React.CSSProperties
+        }
       >
         <div className="relative min-h-[360px] overflow-hidden lg:min-h-[420px]">
           {anime.banner && (
@@ -213,7 +167,7 @@ export function AnimePage() {
           )}
           <div className="absolute inset-0 bg-gradient-to-r from-[#111113] via-[#111113]/75 to-[#111113]/25" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/55 to-transparent" />
-          <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] items-end gap-4 p-6 sm:gap-6 sm:p-8 lg:min-h-[420px] lg:px-12 lg:py-10">
+          <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] items-end gap-4 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:min-h-[420px] lg:px-8 lg:py-10">
             {image && (
               <button
                 type="button"
@@ -433,7 +387,7 @@ export function AnimePage() {
           </div>
         </div>
         {anime.genres.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-6 pb-5 md:hidden sm:px-8 lg:px-12">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap gap-2 px-4 pb-5 md:hidden sm:px-6 lg:px-8">
             {anime.genres.map((genre) => (
               <span
                 key={genre}
@@ -444,163 +398,145 @@ export function AnimePage() {
             ))}
           </div>
         )}
-        <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
-          <div
-            role="tablist"
-            aria-label="Informações do anime"
-            className="mb-5 inline-flex gap-1 rounded-lg bg-white/[0.035] p-1"
-          >
-            {(
-              [
-                ['episodes', 'Episódios'],
-                ['characters', 'Personagens'],
-                ['relations', 'Relações'],
-              ] as const
-            ).map(([tab, label]) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={detailTab === tab}
-                onClick={() => setDetailTab(tab)}
-                className={`rounded-md px-4 py-2 text-xs font-semibold transition ${detailTab === tab ? 'bg-white/[0.07] text-white' : 'text-white/45 hover:text-white/75'}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          {detailTab === 'episodes' && (
-            <div role="tabpanel" className="space-y-2">
-              {episodes.map((episode) => (
-                <Link
-                  key={episode.id}
-                  to={`/watch/${anime.id}?ep=${encodeURIComponent(episode.id)}`}
-                  className="flex items-center gap-3 rounded-lg border border-white/[0.05] bg-white/[0.025] p-3 transition hover:bg-white/[0.06]"
-                >
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold text-white/60">
-                    {episode.number}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-xs font-semibold text-white/85">
-                      {episode.number}
-                      {' · '}
-                      {episode.title ?? `Episódio ${episode.number}`}
-                    </span>
-                    {episode.description && (
-                      <span className="mt-1 block truncate text-[11px] text-white/40">
-                        {stripHtml(episode.description)}
-                      </span>
-                    )}
-                  </span>
-                </Link>
-              ))}
-              {!episodes.length && (
-                <p className="rounded-lg bg-white/[0.025] p-5 text-sm text-white/45">
-                  {episodesError ??
-                    (episodesLoading
-                      ? 'Carregando episódios…'
-                      : 'Nenhum episódio disponível pela Anivexa.')}
-                </p>
-              )}
-            </div>
-          )}
-          {detailTab === 'characters' && (
+        <section className="border-t border-white/[0.07]">
+          <div className="mx-auto w-full max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8">
             <div
-              role="tabpanel"
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
+              role="tablist"
+              aria-label="Informações do anime"
+              className="mb-5 inline-flex gap-1 rounded-lg bg-white/[0.035] p-1"
             >
-              {anime.characters.map((character) => (
-                <article
-                  key={character.id}
-                  className="group overflow-hidden rounded-xl bg-white/[0.035] transition-colors hover:bg-white/[0.06]"
+              {(
+                [
+                  ['episodes', 'Episódios'],
+                  ['characters', 'Personagens'],
+                  ['relations', 'Relações'],
+                ] as const
+              ).map(([tab, label]) => (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={detailTab === tab}
+                  onClick={() => setDetailTab(tab)}
+                  className={`rounded-md px-4 py-2 text-xs font-semibold transition ${detailTab === tab ? 'bg-white/[0.07] text-white' : 'text-white/45 hover:text-white/75'}`}
                 >
-                  <div className="relative h-36 overflow-hidden bg-[#1b1b20] sm:h-44">
-                    {character.image ? (
+                  {label}
+                </button>
+              ))}
+            </div>
+            {detailTab === 'episodes' && (
+              <AnimeEpisodeList
+                key={anime.id}
+                animeId={anime.id}
+                episodes={episodes}
+                loading={episodesLoading}
+                error={episodesError}
+              />
+            )}
+            {detailTab === 'characters' && (
+              <div
+                role="tabpanel"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4"
+              >
+                {anime.characters.map((character) => (
+                  <article
+                    key={character.id}
+                    className="group overflow-hidden rounded-xl bg-white/[0.035] transition-colors hover:bg-white/[0.06]"
+                  >
+                    <div className="relative h-36 overflow-hidden bg-[#1b1b20] sm:h-44">
+                      {character.image ? (
+                        <img
+                          src={character.image}
+                          alt=""
+                          loading="lazy"
+                          className="size-full object-cover object-top transition duration-300 group-hover:scale-[1.03]"
+                        />
+                      ) : (
+                        <div className="grid size-full place-items-center text-3xl font-bold text-white/25">
+                          {character.name.slice(0, 1)}
+                        </div>
+                      )}
+                      <span className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
+                    </div>
+                    <div className="flex items-center justify-between gap-2 px-3 py-3">
+                      <p className="min-w-0 truncate text-xs font-semibold text-white/90 sm:text-sm">
+                        {character.name}
+                      </p>
+                      <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-1 text-[9px] font-semibold text-white/55">
+                        {character.role === 'MAIN'
+                          ? 'Principal'
+                          : 'Coadjuvante'}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+                {!anime.characters.length && (
+                  <p className="col-span-full py-8 text-center text-sm text-white/50">
+                    Sem personagens listados.
+                  </p>
+                )}
+              </div>
+            )}
+            {detailTab === 'relations' && (
+              <div
+                role="tabpanel"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
+              >
+                {anime.relations.map((relation) => (
+                  <Link
+                    key={`${relation.id}-${relation.relationType}`}
+                    to={`/anime/${relation.id}`}
+                    className="group flex min-w-0 items-center gap-3 rounded-lg bg-white/[0.035] p-2 transition-colors hover:bg-white/[0.07]"
+                  >
+                    {relation.image ? (
                       <img
-                        src={character.image}
+                        src={relation.image}
                         alt=""
                         loading="lazy"
-                        className="size-full object-cover object-top transition duration-300 group-hover:scale-[1.03]"
+                        className="h-16 w-11 shrink-0 rounded object-cover"
                       />
                     ) : (
-                      <div className="grid size-full place-items-center text-3xl font-bold text-white/25">
-                        {character.name.slice(0, 1)}
-                      </div>
+                      <span className="h-16 w-11 shrink-0 rounded bg-white/[0.06]" />
                     )}
-                    <span className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/70 to-transparent" />
-                  </div>
-                  <div className="flex items-center justify-between gap-2 px-3 py-3">
-                    <p className="min-w-0 truncate text-xs font-semibold text-white/90 sm:text-sm">
-                      {character.name}
+                    <span className="min-w-0">
+                      <span className="block text-[9px] font-bold tracking-wide text-white/45 uppercase">
+                        {relation.relationType.replaceAll('_', ' ')}
+                      </span>
+                      <span className="mt-1 block line-clamp-2 text-xs font-semibold text-white/85 group-hover:text-white">
+                        {resolveAnimeTitle(relation.title, titleLanguage)}
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+                {!anime.relations.length && (
+                  <div className="col-span-full flex min-h-48 flex-col items-center justify-center px-6 text-center">
+                    <span className="mb-4 grid size-12 place-items-center rounded-full bg-white/[0.05] text-white/45">
+                      <Network size={21} />
+                    </span>
+                    <p className="text-sm font-semibold text-white/75">
+                      Não existem animes relacionados para esta obra.
                     </p>
-                    <span className="shrink-0 rounded-full bg-white/[0.08] px-2 py-1 text-[9px] font-semibold text-white/55">
-                      {character.role === 'MAIN' ? 'Principal' : 'Coadjuvante'}
-                    </span>
+                    <p className="mt-1 text-xs text-white/40">
+                      Quando houver continuações, especiais ou adaptações, elas
+                      aparecerão aqui.
+                    </p>
                   </div>
-                </article>
-              ))}
-              {!anime.characters.length && (
-                <p className="col-span-full py-8 text-center text-sm text-white/50">
-                  Sem personagens listados.
-                </p>
-              )}
-            </div>
-          )}
-          {detailTab === 'relations' && (
-            <div
-              role="tabpanel"
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4"
-            >
-              {anime.relations.map((relation) => (
-                <Link
-                  key={`${relation.id}-${relation.relationType}`}
-                  to={`/anime/${relation.id}`}
-                  className="group flex min-w-0 items-center gap-3 rounded-lg bg-white/[0.035] p-2 transition-colors hover:bg-white/[0.07]"
-                >
-                  {relation.image ? (
-                    <img
-                      src={relation.image}
-                      alt=""
-                      loading="lazy"
-                      className="h-16 w-11 shrink-0 rounded object-cover"
-                    />
-                  ) : (
-                    <span className="h-16 w-11 shrink-0 rounded bg-white/[0.06]" />
-                  )}
-                  <span className="min-w-0">
-                    <span className="block text-[9px] font-bold tracking-wide text-white/45 uppercase">
-                      {relation.relationType.replaceAll('_', ' ')}
-                    </span>
-                    <span className="mt-1 block line-clamp-2 text-xs font-semibold text-white/85 group-hover:text-white">
-                      {resolveAnimeTitle(relation.title, titleLanguage)}
-                    </span>
-                  </span>
-                </Link>
-              ))}
-              {!anime.relations.length && (
-                <div className="col-span-full flex min-h-48 flex-col items-center justify-center px-6 text-center">
-                  <span className="mb-4 grid size-12 place-items-center rounded-full bg-white/[0.05] text-white/45">
-                    <Network size={21} />
-                  </span>
-                  <p className="text-sm font-semibold text-white/75">
-                    Não existem animes relacionados para esta obra.
-                  </p>
-                  <p className="mt-1 text-xs text-white/40">
-                    Quando houver continuações, especiais ou adaptações, elas
-                    aparecerão aqui.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            )}
+          </div>
         </section>
         {anime.recommendations.length > 0 && (
-          <section className="border-t border-white/[0.07] px-6 py-7 sm:px-8 lg:px-12">
-            <h2 className="mb-5 text-sm font-bold">Você também pode gostar</h2>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-6">
-              {anime.recommendations.map((recommendation) => (
-                <AnimeCard key={recommendation.id} anime={recommendation} />
-              ))}
+          <section className="border-t border-white/[0.07]">
+            <div className="mx-auto w-full max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8">
+              <h2 className="mb-5 text-sm font-bold">
+                Você também pode gostar
+              </h2>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-x-5 xl:grid-cols-6">
+                {anime.recommendations.map((recommendation) => (
+                  <AnimeCard key={recommendation.id} anime={recommendation} />
+                ))}
+              </div>
             </div>
           </section>
         )}

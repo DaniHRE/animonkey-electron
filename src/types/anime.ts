@@ -11,6 +11,7 @@ export interface AnimeResult {
   title: AnimeTitle;
   image?: string;
   banner?: string;
+  color?: string;
   description?: string;
   genres: string[];
   rating?: number;
