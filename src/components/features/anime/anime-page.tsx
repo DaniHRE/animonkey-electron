@@ -439,35 +439,63 @@ export function AnimePage() {
             {detailTab === 'characters' && (
               <div
                 role="tabpanel"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5"
+                className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
               >
                 {anime.characters.map((character) => (
                   <article
                     key={character.id}
-                    className="group relative isolate aspect-[4/5] overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719]"
+                    className="flex min-w-0 items-center gap-3 rounded-xl border border-white/[0.08] bg-[#171719] p-2.5 sm:gap-3.5 sm:p-3"
                   >
-                    <div className="absolute inset-0 overflow-hidden">
+                    <div className="relative h-[92px] w-[70px] shrink-0 overflow-hidden rounded-lg bg-white/[0.05] sm:h-[104px] sm:w-[78px]">
                       {character.image ? (
                         <img
                           src={character.image}
                           alt=""
                           loading="lazy"
-                          className="size-full object-cover object-top transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
+                          className="size-full object-cover object-top"
                         />
                       ) : (
-                        <div className="grid size-full place-items-center text-white/30">
+                        <div
+                          className="grid size-full place-items-center text-white/30"
+                          aria-hidden="true"
+                        >
                           <UserRound size={42} strokeWidth={1.25} />
                         </div>
                       )}
                     </div>
-                    <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/15 to-black/10" />
-                    <span className="absolute top-3 left-3 rounded-md border border-white/15 bg-black/70 px-2 py-1 text-[9px] font-bold tracking-wide text-white/85 uppercase">
-                      {character.role === 'MAIN' ? 'Principal' : 'Coadjuvante'}
-                    </span>
-                    <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-                      <p className="line-clamp-2 text-sm font-bold leading-snug text-white sm:text-base">
+                    <div className="min-w-0 flex-1 py-1">
+                      <p className="line-clamp-2 text-sm font-bold leading-snug text-white">
                         {character.name}
                       </p>
+                      <span className="mt-1.5 inline-flex rounded-md bg-white/[0.07] px-2 py-1 text-[9px] font-semibold text-white/55">
+                        {character.role === 'MAIN'
+                          ? 'Principal'
+                          : 'Coadjuvante'}
+                      </span>
+                      {character.voiceActor && (
+                        <div className="mt-2.5 flex min-w-0 items-center gap-2">
+                          {character.voiceActor.image ? (
+                            <img
+                              src={character.voiceActor.image}
+                              alt=""
+                              loading="lazy"
+                              className="size-6 shrink-0 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-white/[0.07] text-white/35">
+                              <UserRound size={13} aria-hidden="true" />
+                            </span>
+                          )}
+                          <span className="min-w-0">
+                            <span className="block text-[9px] leading-none text-white/35">
+                              Voz japonesa
+                            </span>
+                            <span className="mt-1 block truncate text-[10px] font-medium text-white/65">
+                              {character.voiceActor.name}
+                            </span>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -489,7 +517,7 @@ export function AnimePage() {
             {detailTab === 'relations' && (
               <div
                 role="tabpanel"
-                className="grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3"
+                className="grid grid-cols-1 gap-2.5 lg:grid-cols-2 2xl:grid-cols-3"
               >
                 {anime.relations.map((relation) => {
                   const relationTitle = resolveAnimeTitle(
@@ -505,34 +533,63 @@ export function AnimePage() {
                     <Link
                       key={`${relation.id}-${relation.relationType}`}
                       to={`/anime/${relation.id}`}
-                      className="group relative block aspect-[4/3] overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719] transition duration-200 hover:border-white/[0.16] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a]"
+                      className="group flex min-h-[148px] min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719] transition duration-200 hover:border-white/[0.16] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a]"
                     >
-                      <span className="absolute inset-0 overflow-hidden bg-white/[0.04]">
+                      <span className="relative min-h-full w-[92px] shrink-0 overflow-hidden bg-white/[0.04] sm:w-[104px]">
                         {relation.image ? (
                           <img
                             src={relation.image}
                             alt=""
                             loading="lazy"
-                            className="size-full object-cover transition duration-500 group-hover:scale-[1.035] motion-reduce:transform-none motion-reduce:transition-none"
+                            className="absolute inset-0 size-full object-cover transition duration-300 group-hover:scale-[1.025] motion-reduce:transform-none motion-reduce:transition-none"
                           />
                         ) : (
-                          <span className="grid size-full place-items-center text-white/20">
+                          <span className="grid size-full place-items-center text-white/25">
                             <Clapperboard size={28} aria-hidden="true" />
                           </span>
                         )}
-                        <span className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-black/20" />
-                        <span className="absolute top-3 left-3 inline-flex max-w-[calc(100%-3.5rem)] items-center gap-1.5 truncate rounded-md border border-white/15 bg-black/75 px-2.5 py-1.5 text-[10px] font-bold tracking-wide text-white shadow-lg">
-                          <Network size={12} aria-hidden="true" />
-                          <span className="truncate">{relationLabel}</span>
-                        </span>
-                        <span className="absolute top-3 right-3 grid size-9 place-items-center rounded-full border border-white/20 bg-black/45 text-white/80 transition group-hover:border-white/40 group-hover:bg-black/70 group-hover:text-white">
-                          <ArrowUpRight size={16} aria-hidden="true" />
-                        </span>
                       </span>
-                      <span className="absolute inset-x-0 bottom-0 px-4 pt-16 pb-4">
-                        <span className="line-clamp-2 text-base font-bold leading-snug text-white transition group-hover:text-white sm:text-lg">
+                      <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-3 py-2.5 sm:px-4">
+                        <span className="flex min-w-0 items-center justify-between gap-2">
+                          <span className="min-w-0 truncate text-[9px] font-bold tracking-wide text-[#70e793] uppercase">
+                            {relationLabel}
+                          </span>
+                          <ArrowUpRight
+                            size={15}
+                            aria-hidden="true"
+                            className="shrink-0 text-white/30 transition group-hover:text-white/75"
+                          />
+                        </span>
+                        <span className="line-clamp-2 text-sm font-bold leading-snug text-white/90 sm:text-[15px]">
                           {relationTitle}
                         </span>
+                        <span className="flex flex-wrap gap-x-2 gap-y-1 text-[9px] font-medium text-white/45">
+                          {relation.type && <span>{relation.type}</span>}
+                          {relation.status && (
+                            <span>{formatRelationStatus(relation.status)}</span>
+                          )}
+                          {(relation.season || relation.releaseDate) && (
+                            <span>
+                              {relation.season
+                                ? `${capitalize(relation.season.toLowerCase())} ${relation.releaseDate ?? ''}`.trim()
+                                : relation.releaseDate}
+                            </span>
+                          )}
+                          {relation.genres[0] && (
+                            <span>{relation.genres[0]}</span>
+                          )}
+                          {relation.totalEpisodes != null && (
+                            <span>{relation.totalEpisodes} eps</span>
+                          )}
+                          {relation.rating != null && (
+                            <span>★ {relation.rating.toFixed(1)}</span>
+                          )}
+                        </span>
+                        {relation.description && (
+                          <span className="hidden line-clamp-2 text-[10px] leading-relaxed text-white/40 sm:block">
+                            {stripHtml(relation.description)}
+                          </span>
+                        )}
                       </span>
                     </Link>
                   );
@@ -792,4 +849,12 @@ function getRelationLabel(relationType: string, title: string): string {
           .join(' ');
 
   return season ? `${season} · ${readableType}` : readableType;
+}
+
+function formatRelationStatus(status: string): string {
+  return status.toLowerCase().split('_').map(capitalize).join(' ');
+}
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }

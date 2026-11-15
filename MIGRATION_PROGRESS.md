@@ -1,5 +1,14 @@
 # Progresso da migração
 
+## Mais informações em cards compactos de personagens e relações em 15/11/2026
+
+- Inventário após leitura de `../animonkey/services/anilist/index.ts`, `../animonkey/types/meta.ts`, `../animonkey/components/features/anime/character-grid.tsx`, do `AniListCatalog.getAnime` Electron e dos tipos atuais:
+  - Personagem: ID, nome preferido, imagem e papel principal/coadjuvante. O legado também pedia dublador japonês (ID, nome, imagem); a consulta Electron agora o inclui na mesma chamada, seleciona a primeira voz japonesa e retorna nome/imagem ao card.
+  - Anime relacionado: título, capa, relação, formato, status, estação/ano, número de episódios, nota, gêneros, sinopse, banner, cor e flag adulto. O card compacto mostra capa, tipo de relação/temporada, título, formato, status, estação/ano, primeiro gênero, episódios, nota e sinopse curta.
+- Reduzida a altura dos dois tipos de card: personagens em linha compacta com retrato e dados; relações em linha com capa estreita e metadados alinhados. A grade abre colunas conforme cresce o viewport.
+- A busca por voz japonesa usa a query existente, não duplica requests; a cache do detalhe foi migrada de `anime:v3` para `anime:v4` para renovar objetos persistidos sem dubladores. O hook de design continua ativo e escaneou a UI sem problemas determinísticos.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. A consulta continua unificada em `AniListCatalog.getAnime`; nenhuma requisição por personagem ou relação foi adicionada.
+
 ## Refino visual de Personagens e Relações em 15/11/2026
 
 - Consultados `../animonkey/components/features/anime/character-grid.tsx`, `anime-page-client.tsx`, o contrato `AnimeCharacter` e o mapeamento AniList existente. Personagens agora usam retratos verticais, identificação de papel, nome sobre gradiente e fallback de avatar; vazio ganhou estado visual próprio.

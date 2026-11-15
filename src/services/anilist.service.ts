@@ -60,6 +60,12 @@ interface AniListMedia {
   characters?: {
     edges?: Array<{
       role?: string | null;
+      voiceActors?: Array<{
+        id?: number | null;
+        languageV2?: string | null;
+        name?: { userPreferred?: string | null; full?: string | null } | null;
+        image?: { large?: string | null } | null;
+      }>;
       node?: {
         id?: number | null;
         name?: { userPreferred?: string | null; full?: string | null } | null;
@@ -489,12 +495,12 @@ export const AniListCatalog = {
     const numericId = Number(id);
     if (!Number.isSafeInteger(numericId) || numericId < 1) return null;
     return withCatalogCache(
-      `anime:v3:${numericId}`,
+      `anime:v4:${numericId}`,
       ONE_DAY,
       signal,
       async () => {
         const response = await request(
-          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: ROLE, perPage: 8) { edges { role node { id name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
+          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: [ROLE, RELEVANCE, ID], perPage: 50) { edges { role node { id name { userPreferred full } image { large } } voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) { id languageV2 name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
           { id: numericId },
           signal,
         );
@@ -518,21 +524,34 @@ export const AniListCatalog = {
                   episode: media.nextAiringEpisode.episode,
                 }
               : undefined,
-          characters: (media.characters?.edges ?? []).flatMap((edge) =>
-            edge.node?.id
-              ? [
-                  {
-                    id: edge.node.id,
-                    name:
-                      edge.node.name?.userPreferred ??
-                      edge.node.name?.full ??
-                      'Personagem',
-                    image: edge.node.image?.large ?? undefined,
-                    role: edge.role ?? 'SUPPORTING',
-                  },
-                ]
-              : [],
-          ),
+          characters: (media.characters?.edges ?? []).flatMap((edge) => {
+            if (!edge.node?.id) return [];
+            const voiceActor = edge.voiceActors?.find(
+              (actor) => actor.languageV2 === 'Japanese' && actor.id,
+            );
+            return [
+              {
+                id: edge.node.id,
+                name:
+                  edge.node.name?.userPreferred ??
+                  edge.node.name?.full ??
+                  'Personagem',
+                image: edge.node.image?.large ?? undefined,
+                role: edge.role ?? 'SUPPORTING',
+                voiceActor:
+                  voiceActor?.id != null
+                    ? {
+                        id: voiceActor.id,
+                        name:
+                          voiceActor.name?.userPreferred ??
+                          voiceActor.name?.full ??
+                          'Dublador japonês',
+                        image: voiceActor.image?.large ?? undefined,
+                      }
+                    : undefined,
+              },
+            ];
+          }),
           relations: (media.relations?.edges ?? []).flatMap((edge) =>
             edge.node?.type === 'ANIME'
               ? [

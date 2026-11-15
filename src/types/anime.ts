@@ -149,6 +149,13 @@ export interface AnimeCharacter {
   name: string;
   image?: string;
   role: string;
+  voiceActor?: AnimeVoiceActor;
+}
+
+export interface AnimeVoiceActor {
+  id: number;
+  name: string;
+  image?: string;
 }
 
 export interface AnimeInfo extends AnimeResult {
