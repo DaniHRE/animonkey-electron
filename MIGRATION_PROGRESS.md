@@ -262,3 +262,8 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 - Etapa anterior: `16fe031`. Após iniciar o player, clicar em outro ponto da timeline com o vídeo pausado podia deixar a sobreposição de carregamento presa à espera de um evento de reprodução. O buffering só abre a sobreposição enquanto o player está tocando. Pausa e conclusão do seek pausado limpam o indicador. A sobreposição de carregamento permite interação com os controles.
 - Typecheck, lint, formatação dos arquivos editados e diff check verificados. Smoke empacotado do seek pausado permanece pendente.
+
+## Re-seek pausado durante inicialização do Vidstack em 16/11/2026
+
+- O ajuste `b9c5d62` não cobria a corrida em que `waiting` podia chegar depois de `seeked` durante seek pausado no carregamento inicial. O player agora mantém esse seek identificado como pausado até `can-play` ou `playing`, ignora `waiting` nesse intervalo e reinicia a identificação ao trocar de fonte. Isso evita reexibir um estado de carregamento sem interação, enquanto aguarda a rede.
+- Typecheck passou. Lint passou depois de formatar o arquivo. Confirmação no pacote Windows permanece pendente.

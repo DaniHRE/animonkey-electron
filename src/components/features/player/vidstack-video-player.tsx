@@ -114,6 +114,7 @@ export function VidstackVideoPlayer({
   const skip = skipState.key === playbackKey ? skipState.value : null;
   const lastSavedAt = useRef(0);
   const resumed = useRef(false);
+  const pausedSeek = useRef(false);
   const sourcesRef = useRef(sources);
 
   const activeSource =
@@ -172,6 +173,7 @@ export function VidstackVideoPlayer({
 
   useEffect(() => {
     resumed.current = false;
+    pausedSeek.current = false;
     lastSavedAt.current = 0;
   }, [playbackKey]);
 
@@ -310,16 +312,25 @@ export function VidstackVideoPlayer({
           preload="none"
           onProviderChange={handleProviderChange}
           onCanPlay={() => {
+            pausedSeek.current = false;
             setPlaybackLoading(false);
             markHealthy();
           }}
+          onSeeking={() => {
+            if (playerRef.current?.paused) pausedSeek.current = true;
+          }}
           onWaiting={() => {
-            if (playerRef.current?.paused === false) setPlaybackLoading(true);
+            if (playerRef.current?.paused === false && !pausedSeek.current)
+              setPlaybackLoading(true);
           }}
           onSeeked={() => {
-            if (playerRef.current?.paused) setPlaybackLoading(false);
+            if (playerRef.current?.paused) {
+              pausedSeek.current = true;
+              setPlaybackLoading(false);
+            }
           }}
           onPlaying={() => {
+            pausedSeek.current = false;
             setPlaybackLoading(false);
             markHealthy();
           }}
