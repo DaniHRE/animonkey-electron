@@ -13,7 +13,8 @@ export function normalizeSubtitleLanguage(
     .replaceAll('_', '-');
   if (
     /^(pt|por)(?:-[a-z0-9]+)*$/.test(normalized) ||
-    /portugues|brazilian|brazil/.test(normalized)
+    /^(pt|por)br$/.test(normalized) ||
+    /\b(?:portugues|portuguese|brazilian|brazil)\b/.test(normalized)
   )
     return 'pt-BR';
   if (

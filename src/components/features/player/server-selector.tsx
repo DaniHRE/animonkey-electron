@@ -13,7 +13,7 @@ function languagePriority(server: EpisodeServer): number {
   if (server.subtitleLanguages.includes('pt-BR')) return 0;
   if (server.subtitlePresentation === 'embedded') return 1;
   if (server.subtitleLanguages.includes('en')) return 2;
-  return 1;
+  return 3;
 }
 
 function providerLabel(provider: string): string {
@@ -158,7 +158,9 @@ export function ServerSelector({
                     {server.subtitleLanguages.length === 0 &&
                       server.subtitlePresentation !== 'embedded' && (
                         <span className="text-[9px] text-white/35">
-                          Sem faixas detectadas
+                          {server.subtitleType === 'softsub'
+                            ? 'Sem idioma compatível'
+                            : 'Idioma não identificado'}
                         </span>
                       )}
                   </span>

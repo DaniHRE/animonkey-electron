@@ -1,5 +1,4 @@
 import { getSubtitleFormat, normalizeSubtitleLanguage } from '@/lib/subtitle';
-import { AniListCatalog } from '@/services/anilist.service';
 import type {
   AnimeEpisode,
   EpisodeServer,
@@ -164,12 +163,23 @@ function matchingEpisodes(
   audio: 'sub' | 'dub',
   number: number,
 ) {
-  return orderedProviders(index).flatMap((provider) => {
+  const matches = orderedProviders(index).flatMap((provider) => {
     const episode = index[provider]?.episodes?.[audio]?.find(
       (item) => Number(item.number) === number,
     );
     return episode ? [{ provider, episode }] : [];
   });
+  if (
+    audio !== 'sub' ||
+    !('reanime' in index) ||
+    matches.some((candidate) => candidate.provider === 'reanime')
+  )
+    return matches;
+
+  return [
+    { provider: 'reanime', episode: { id: `reanime-${number}`, number } },
+    ...matches,
+  ];
 }
 
 function watchPath(
@@ -189,22 +199,25 @@ function watchPath(
 function supportedLanguages(
   payload: StreamPayload,
   stream: NonNullable<StreamPayload['streams']>[number],
+  includePayloadSubtitles = true,
 ): Array<'pt-BR' | 'en'> {
   const found = new Set<'pt-BR' | 'en'>();
   for (const track of [
     ...(stream.subtitles ?? []),
-    ...(payload.subtitles ?? []),
+    ...(includePayloadSubtitles ? (payload.subtitles ?? []) : []),
   ]) {
-    const language = [
+    const languageValues = [
       track.srclang,
       track.lang,
       track.label,
       track.language,
-    ].find(
+    ].filter(
       (item): item is string =>
         typeof item === 'string' && item.trim().length > 0,
     );
-    const normalized = language ? normalizeSubtitleLanguage(language) : null;
+    const normalized = languageValues
+      .map((language) => normalizeSubtitleLanguage(language))
+      .find((language): language is 'pt-BR' | 'en' => language !== null);
     if (normalized) found.add(normalized);
   }
   return (['pt-BR', 'en'] as const).filter((language) => found.has(language));
@@ -214,7 +227,7 @@ function subtitlePriority(server: EpisodeServer): number {
   if (server.subtitleLanguages.includes('pt-BR')) return 0;
   if (server.subtitlePresentation === 'embedded') return 1;
   if (server.subtitleLanguages.includes('en')) return 2;
-  return 1;
+  return 3;
 }
 
 function subtitleType(value: unknown): 'softsub' | 'hardsub' | 'unknown' {
@@ -248,9 +261,11 @@ function mapTracks(
   stream: NonNullable<StreamPayload['streams']>[number],
 ): EpisodeSubtitle[] {
   const tracks = new Map<string, EpisodeSubtitle>();
+  const isHardSub =
+    subtitleType(stream.subtitleType ?? stream.server) === 'hardsub';
   for (const track of [
     ...(stream.subtitles ?? []),
-    ...(payload.subtitles ?? []),
+    ...(isHardSub ? [] : (payload.subtitles ?? [])),
   ]) {
     const url =
       typeof track.url === 'string'
@@ -259,10 +274,18 @@ function mapTracks(
           ? track.file
           : undefined;
     if (!url || tracks.has(url)) continue;
-    const lang = [track.srclang, track.lang, track.label, track.language].find(
+    const languageValues = [
+      track.srclang,
+      track.lang,
+      track.label,
+      track.language,
+    ].filter(
       (item): item is string =>
         typeof item === 'string' && item.trim().length > 0,
     );
+    const lang =
+      languageValues.find((item) => normalizeSubtitleLanguage(item)) ??
+      languageValues[0];
     const format = getSubtitleFormat(url);
     tracks.set(url, {
       kind: 'captions',
@@ -320,14 +343,6 @@ export const AnivexaCatalog = {
       `/episodes/${encodeURIComponent(animeId)}`,
       signal,
     );
-    const anime =
-      audio === 'sub'
-        ? await AniListCatalog.getAnime(animeId, signal).catch(() => null)
-        : null;
-    const allowEmbeddedSubtitles =
-      anime?.isAdult === true ||
-      anime?.genres.some((genre) => genre.trim().toLowerCase() === 'hentai') ===
-        true;
     const candidates = matchingEpisodes(index, audio, number);
     const resolved = await Promise.all(
       candidates.map(async ({ provider, episode }) => {
@@ -338,16 +353,14 @@ export const AnivexaCatalog = {
           );
           return (payload.streams ?? []).flatMap((stream, streamIndex) => {
             if (!stream.url) return [];
-            const languages = supportedLanguages(payload, stream);
             const presentation = subtitleType(
               stream.subtitleType ?? stream.server,
             );
-            if (
-              !languages.length &&
-              !allowEmbeddedSubtitles &&
-              presentation !== 'hardsub'
-            )
-              return [];
+            const languages = supportedLanguages(
+              payload,
+              stream,
+              presentation !== 'hardsub',
+            );
             const serverName = stream.server ?? `Fonte ${streamIndex + 1}`;
             return [
               {
@@ -355,10 +368,11 @@ export const AnivexaCatalog = {
                 provider,
                 serverName,
                 subtitleLanguages: languages,
-                subtitlePresentation:
-                  languages.length && presentation !== 'hardsub'
-                    ? ('tracks' as const)
-                    : ('embedded' as const),
+                ...(presentation === 'hardsub'
+                  ? { subtitlePresentation: 'embedded' as const }
+                  : languages.length
+                    ? { subtitlePresentation: 'tracks' as const }
+                    : {}),
                 subtitleType: presentation,
               },
             ];
