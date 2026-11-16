@@ -51,6 +51,7 @@ export function AnimePage() {
     episodes: AnimeEpisode[];
     error: string | null;
   }>({ id: '', episodes: [], error: null });
+  const [episodeRetryVersion, setEpisodeRetryVersion] = useState(0);
   const [detailTab, setDetailTab] = useState<DetailTab>('episodes');
 
   const reviewValue = reviewDraft ?? userRating.rating?.review ?? '';
@@ -125,7 +126,7 @@ export function AnimePage() {
           });
       });
     return () => controller.abort();
-  }, [id]);
+  }, [episodeRetryVersion, id]);
 
   const loading = state.id !== id;
   const anime = loading ? null : state.anime;
@@ -161,6 +162,10 @@ export function AnimePage() {
   const episodesLoading = episodeState.id !== id;
   const episodes = episodeState.id === id ? episodeState.episodes : [];
   const episodesError = episodeState.id === id ? episodeState.error : null;
+  const retryEpisodeCatalog = () => {
+    setEpisodeState({ id: '', episodes: [], error: null });
+    setEpisodeRetryVersion((version) => version + 1);
+  };
   return (
     <article className="w-full bg-[#111113]">
       <section
@@ -470,6 +475,7 @@ export function AnimePage() {
                 episodes={episodes}
                 loading={episodesLoading}
                 error={episodesError}
+                onRetry={retryEpisodeCatalog}
               />
             )}
             {detailTab === 'characters' && (

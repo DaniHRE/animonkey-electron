@@ -431,7 +431,11 @@ function WatchPageContent() {
               </div>
             )}
             {loadingEpisodes ? (
-              <div className="flex-1 space-y-2 overflow-y-auto p-2">
+              <div
+                className="flex-1 space-y-2 overflow-y-auto p-2"
+                role="status"
+                aria-label="Carregando episódios"
+              >
                 {Array.from({ length: 8 }, (_, index) => (
                   <div
                     key={index}
@@ -475,10 +479,24 @@ function WatchPageContent() {
                 Nenhum episódio encontrado para “{episodeSearch}”.
               </p>
             ) : (
-              <p className="p-3 text-xs leading-relaxed text-white/40">
-                {episodeState.error ??
-                  'Nenhum episódio disponível pela Anivexa.'}
-              </p>
+              <div
+                className="flex flex-1 flex-col items-center justify-center gap-3 p-3 text-center text-xs leading-relaxed text-white/40"
+                role={episodeState.error ? 'alert' : undefined}
+              >
+                <p>
+                  {episodeState.error ??
+                    'Nenhum episódio disponível pela Anivexa.'}
+                </p>
+                {episodeState.error && (
+                  <button
+                    type="button"
+                    onClick={retryPlayer}
+                    className="rounded-md border border-white/10 px-3 py-2 font-semibold text-white/75 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a]"
+                  >
+                    Tentar novamente
+                  </button>
+                )}
+              </div>
             )}
           </aside>
           <WatchRelatedList

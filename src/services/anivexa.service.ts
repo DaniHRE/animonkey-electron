@@ -11,6 +11,8 @@ const API_BASE = (
   import.meta.env.VITE_ANIVEXA_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:4000' : '')
 ).replace(/\/$/, '');
+const DEFAULT_REQUEST_TIMEOUT_MS = 25_000;
+const EPISODE_INDEX_TIMEOUT_MS = 120_000;
 const PROVIDER_PRIORITY = [
   'reanime',
   'anikoto',
@@ -89,14 +91,18 @@ function inferRefererFromEmbed(
   return undefined;
 }
 
-async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function getJson<T>(
+  path: string,
+  signal?: AbortSignal,
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`${requireBase()}${path}`, {
       headers: { Accept: 'application/json' },
       signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(25000)])
-        : AbortSignal.timeout(25000),
+        ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
+        : AbortSignal.timeout(timeoutMs),
     });
   } catch (cause) {
     if (signal?.aborted) throw cause;
@@ -133,6 +139,14 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
       { cause },
     );
   }
+}
+
+function getEpisodeIndex(animeId: string, signal?: AbortSignal) {
+  return getJson<EpisodeIndex>(
+    `/episodes/${encodeURIComponent(animeId)}`,
+    signal,
+    EPISODE_INDEX_TIMEOUT_MS,
+  );
 }
 
 function orderedProviders(index: EpisodeIndex): string[] {
@@ -297,10 +311,7 @@ export const AnivexaCatalog = {
     signal?: AbortSignal,
   ): Promise<AnimeEpisode[]> {
     if (!/^\d+$/.test(animeId)) return [];
-    const index = await getJson<EpisodeIndex>(
-      `/episodes/${encodeURIComponent(animeId)}`,
-      signal,
-    );
+    const index = await getEpisodeIndex(animeId, signal);
     const episodes = new Map<number, AnimeEpisode>();
     for (const provider of orderedProviders(index)) {
       for (const episode of index[provider]?.episodes?.sub ?? []) {
@@ -328,10 +339,7 @@ export const AnivexaCatalog = {
     signal?: AbortSignal,
   ): Promise<EpisodeServer[]> {
     const { animeId, audio, number } = parseEpisodeId(episodeId);
-    const index = await getJson<EpisodeIndex>(
-      `/episodes/${encodeURIComponent(animeId)}`,
-      signal,
-    );
+    const index = await getEpisodeIndex(animeId, signal);
     const candidates = matchingEpisodes(index, audio, number);
     const resolved = await Promise.all(
       candidates.map(async ({ provider, episode }) => {
@@ -390,10 +398,7 @@ export const AnivexaCatalog = {
       (!/^[a-z0-9_-]+$/i.test(wanted[0]) || !/^\d+$/.test(wanted[1] ?? ''))
     )
       throw new Error('Servidor de episódio inválido.');
-    const index = await getJson<EpisodeIndex>(
-      `/episodes/${encodeURIComponent(animeId)}`,
-      signal,
-    );
+    const index = await getEpisodeIndex(animeId, signal);
     const candidates = matchingEpisodes(index, audio, number).filter(
       ({ provider }) => !wanted || provider === wanted[0],
     );

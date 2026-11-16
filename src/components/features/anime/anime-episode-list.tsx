@@ -16,6 +16,7 @@ interface AnimeEpisodeListProps {
   episodes: AnimeEpisode[];
   loading: boolean;
   error: string | null;
+  onRetry: () => void;
 }
 
 export function AnimeEpisodeList({
@@ -23,11 +24,13 @@ export function AnimeEpisodeList({
   episodes,
   loading,
   error,
+  onRetry,
 }: AnimeEpisodeListProps) {
   const [search, setSearch] = useState('');
   const [ascending, setAscending] = useState(true);
   const [viewMode, setViewMode] = useState<EpisodeViewMode>('list');
   const [page, setPage] = useState(1);
+
   const filteredEpisodes = useMemo(
     () => filterAndSortEpisodes(episodes, search, ascending, true),
     [ascending, episodes, search],
@@ -67,7 +70,7 @@ export function AnimeEpisodeList({
         <div
           className="space-y-2"
           role="status"
-          aria-label="Carregando episódios"
+          aria-label="Carregando episódios; a primeira busca de catálogos grandes pode demorar mais"
         >
           {Array.from({ length: 5 }, (_, index) => (
             <div
@@ -75,6 +78,9 @@ export function AnimeEpisodeList({
               className="h-14 animate-pulse rounded-lg bg-white/[0.035]"
             />
           ))}
+          <p className="pt-2 text-xs text-white/45">
+            Catálogos grandes podem demorar mais na primeira busca.
+          </p>
         </div>
       ) : visibleEpisodes.length ? (
         <div
@@ -113,13 +119,24 @@ export function AnimeEpisodeList({
           ))}
         </div>
       ) : (
-        <p className="rounded-lg bg-white/[0.025] p-8 text-center text-sm text-white/50">
-          {episodes.length === 0 && error
-            ? error
-            : episodes.length === 0
-              ? 'Nenhum episódio disponível pela Anivexa.'
-              : 'Nenhum episódio encontrado.'}
-        </p>
+        <div className="rounded-lg bg-white/[0.025] p-8 text-center text-sm text-white/50">
+          {episodes.length === 0 && error ? (
+            <div role="alert" className="space-y-3">
+              <p>{error}</p>
+              <button
+                type="button"
+                onClick={onRetry}
+                className="rounded-md border border-white/10 px-3 py-2 text-xs font-semibold text-white/75 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a]"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          ) : episodes.length === 0 ? (
+            'Nenhum episódio disponível pela Anivexa.'
+          ) : (
+            'Nenhum episódio encontrado.'
+          )}
+        </div>
       )}
       {totalPages > 1 && (
         <nav
