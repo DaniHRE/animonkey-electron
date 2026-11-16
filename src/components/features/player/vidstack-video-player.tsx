@@ -132,23 +132,25 @@ export function VidstackVideoPlayer({
   const chapterUrl = useMemo(() => {
     if (!intro && !outro) return '';
     const formatTime = (time: number) => {
-      const hours = Math.floor(time / 3600);
-      const minutes = Math.floor((time % 3600) / 60);
-      const seconds = Math.floor(time % 60);
-      return [hours, minutes, seconds]
+      const milliseconds = Math.round(time * 1000);
+      const hours = Math.floor(milliseconds / 3_600_000);
+      const minutes = Math.floor(milliseconds / 60_000) % 60;
+      const seconds = Math.floor(milliseconds / 1000) % 60;
+      const clock = [hours, minutes, seconds]
         .map((part) => String(part).padStart(2, '0'))
         .join(':');
+      return `${clock}.${String(milliseconds % 1000).padStart(3, '0')}`;
     };
     const chapters = ['WEBVTT', ''];
     if (intro)
       chapters.push(
-        `${formatTime(intro.start)}.000 --> ${formatTime(intro.end)}.000`,
+        `${formatTime(intro.start)} --> ${formatTime(intro.end)}`,
         'Intro',
         '',
       );
     if (outro)
       chapters.push(
-        `${formatTime(outro.start)}.000 --> ${formatTime(outro.end)}.000`,
+        `${formatTime(outro.start)} --> ${formatTime(outro.end)}`,
         'Encerramento',
         '',
       );
@@ -342,6 +344,7 @@ export function VidstackVideoPlayer({
                 kind="chapters"
                 label="Capítulos"
                 lang="pt"
+                default
               />
             )}
           </MediaProvider>

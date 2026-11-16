@@ -251,3 +251,9 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - 11/11/2026 — Busca ampliada para aproveitar os filtros públicos AniList compatíveis com catálogo exclusivamente de anime: status/formato incluído/excluído, temporada e datas exatas/intervalos, episódios/duração, nota/popularidade, país, origem, licenciamento, gênero, tags/categorias, IDs AniList/MyAnimeList, conteúdo adulto e ordenação. Gêneros e tags são carregados do AniList (19 gêneros/430 tags na consulta de validação) e critérios ficam persistidos na URL. Filtros pessoais dependentes de OAuth não foram apresentados como disponíveis. Consulta GraphQL completa, conjunto combinado de filtros e opções validados ao vivo contra o endpoint público do AniList; typecheck/lint/formato/diff check aprovados. Paridade visual runtime da Busca segue pendente; revisar filtros, paginação e grid no ciclo página a página.
 
 - 11/11/2026 — refinada a UI da Busca após feedback de design: filtros principais reorganizados em uma barra compacta, opções adultas viraram segmentos, filtros avançados agrupados por assunto e seletores múltiplos passaram a popovers pesquisáveis com chips removíveis. Revisão visual runtime não executada nesta etapa; typecheck e lint aprovados, format/diff check pendentes.
+
+## Faixa de capítulos Vidstack em 16/11/2026
+
+- O smoke anterior está no commit `e28582e`. A Anivexa local retornou três streams para Reanime no episódio 1 de `212888`, com metadados de abertura e encerramento presentes na resposta.
+- A faixa de capítulos WebVTT passou a ser padrão para o Vidstack e preserva milissegundos nos limites. A ativação visual e a troca entre fontes com e sem metadados ainda precisam de smoke no pacote atualizado.
+- Typecheck e lint passaram. O Prettier geral apontou apenas o cache ignorado `.impeccable/hook.cache.json`.
