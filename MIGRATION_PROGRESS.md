@@ -317,6 +317,7 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - No detalhe do anime, a arte do episódio agora aparece tanto na visualização compacta em lista quanto em grade. No player, o painel lateral agora permite lista/grade, exibe arte, título e descrição disponíveis, realça o episódio atual e mantém busca, ordenação, paginação e IDs do catálogo Anivexa.
 - A sidebar do Electron inicia recolhida como rail de 64 px; o controle de expansão fica junto ao fim da navegação e abre o painel para 244 px. Rótulos continuam disponíveis a leitores de tela e por tooltip, e a transição respeita `prefers-reduced-motion`.
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram após as alterações. Não fiz QA visual do app nem smoke de mídia; o usuário fará essa comparação no runtime/pacote e deverá confirmar se as capturas das thumbs carregam na máquina.
+- Commit local da implementação: `569f903` (`feat: refine episode navigation and chapters`).
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram; `.prettierignore` exclui o cache temporário `.impeccable/hook.cache.json`.
 
 ## Seek pausado no Vidstack em 16/11/2026
