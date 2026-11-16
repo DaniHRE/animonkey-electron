@@ -97,22 +97,17 @@ export function AnimeEpisodeList({
             <Link
               key={episode.id}
               to={`/watch/${animeId}?ep=${encodeURIComponent(episode.id)}`}
-              className={`group flex min-w-0 items-center gap-4 rounded-md border border-white/[0.06] bg-white/[0.025] px-4 py-3 transition hover:bg-white/[0.06] ${viewMode === 'grid' ? 'min-h-20' : ''}`}
+              className={`group flex min-w-0 items-center gap-4 rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-3 transition hover:border-[#49d77a]/25 hover:bg-white/[0.05] ${viewMode === 'grid' ? 'min-h-20' : ''}`}
             >
-              {viewMode === 'grid' && (
-                <EpisodeThumbnail image={episode.image} className="w-24" />
-              )}
-              {viewMode === 'list' && (
-                <span className="w-8 shrink-0 text-center text-sm font-semibold text-white/60">
-                  {episode.number}
-                </span>
-              )}
+              <EpisodeThumbnail image={episode.image} className="w-24" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-white group-hover:text-white">
-                  {viewMode === 'grid' ? episode.number + '. ' : ''}
+                  <span className="mr-1 font-bold text-[#49d77a]">
+                    {String(episode.number).padStart(2, '0')}.
+                  </span>
                   {episode.title ?? `Episódio ${episode.number}`}
                 </span>
-                {viewMode === 'grid' && episode.description && (
+                {episode.description && (
                   <span className="mt-1 line-clamp-2 block text-[11px] leading-relaxed text-white/40">
                     {stripHtml(episode.description)}
                   </span>
@@ -120,7 +115,13 @@ export function AnimeEpisodeList({
               </span>
               <span className="flex shrink-0 items-center gap-2 text-white/40">
                 {episode.isSubbed && (
-                  <Captions size={16} aria-label="Episódio legendado" />
+                  <span
+                    className="inline-flex items-center gap-1 rounded bg-white/[0.07] px-1.5 py-1 text-[9px] font-bold tracking-wide"
+                    aria-label="Episódio legendado"
+                    title="Legendado"
+                  >
+                    <Captions size={11} aria-hidden="true" /> SUB
+                  </span>
                 )}
                 <Heart size={16} aria-hidden="true" />
               </span>

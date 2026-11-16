@@ -45,7 +45,6 @@ interface Props {
 }
 
 type SubtitleFormat = 'vtt' | 'srt' | 'ass' | 'ssa' | 'json';
-const CHAPTER_TRACK_END = 99 * 60 * 60 + 59 * 60 + 59.999;
 
 function formatChapterTime(time: number): string {
   const milliseconds = Math.round(time * 1000);
@@ -71,40 +70,28 @@ function createChapterVtt(
         Number.isFinite(range.start) &&
         Number.isFinite(range.end) &&
         range.start >= 0 &&
-        range.start < CHAPTER_TRACK_END &&
         range.end > range.start,
     )
     .sort((first, second) => first.start - second.start);
   if (!ranges.length) return '';
 
-  const chapters: Array<{ start: number; end: number; title: string }> = [];
   let cursor = 0;
-  for (const range of ranges) {
-    const end = Math.min(range.end, CHAPTER_TRACK_END);
-    if (range.start < cursor || end <= range.start) continue;
-    if (range.start > cursor)
-      chapters.push({ start: cursor, end: range.start, title: 'Episódio' });
-    chapters.push({ start: range.start, end, title: range.title });
-    cursor = end;
-  }
-  if (!chapters.length) return '';
-  if (cursor < CHAPTER_TRACK_END)
-    chapters.push({
-      start: cursor,
-      end: CHAPTER_TRACK_END,
-      title: 'Episódio',
-    });
-
-  const cues = chapters
+  const cues = ranges
+    .filter((range) => {
+      if (range.start < cursor) return false;
+      cursor = range.end;
+      return true;
+    })
     .map(
-      (chapter) =>
-        formatChapterTime(chapter.start) +
+      (range) =>
+        formatChapterTime(range.start) +
         ' --> ' +
-        formatChapterTime(chapter.end) +
+        formatChapterTime(range.end) +
         '\n' +
-        chapter.title,
+        range.title,
     )
     .join('\n\n');
+  if (!cues) return '';
   return 'WEBVTT\n\n' + cues + '\n';
 }
 
@@ -197,17 +184,9 @@ export function VidstackVideoPlayer({
   const intro = sources?.intro;
   const outro = sources?.outro;
 
-  const chapterUrl = useMemo(() => {
-    const chapters = createChapterVtt(intro, outro);
-    if (!chapters) return '';
-    return URL.createObjectURL(new Blob([chapters], { type: 'text/vtt' }));
-  }, [intro, outro]);
-
-  useEffect(
-    () => () => {
-      if (chapterUrl) URL.revokeObjectURL(chapterUrl);
-    },
-    [chapterUrl],
+  const chapterContent = useMemo(
+    () => createChapterVtt(intro, outro),
+    [intro, outro],
   );
 
   useEffect(() => {
@@ -404,10 +383,10 @@ export function VidstackVideoPlayer({
                 default={subtitle.url === defaultSubtitle?.url}
               />
             ))}
-            {chapterUrl && (
+            {chapterContent && (
               <Track
                 key={`${sourceKey}:chapters`}
-                src={chapterUrl}
+                content={chapterContent}
                 type="vtt"
                 kind="chapters"
                 label="Capítulos"

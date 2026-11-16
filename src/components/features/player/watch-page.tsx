@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ExternalLink, Play } from 'lucide-react';
 import { VideoPlayer } from '@/components/features/player/video-player';
 import { ServerSelector } from '@/components/features/player/server-selector';
-import { EpisodeListControls } from '@/components/features/anime/episode-list-controls';
+import {
+  EpisodeListControls,
+  type EpisodeViewMode,
+} from '@/components/features/anime/episode-list-controls';
 import { PlayerErrorBoundary } from '@/components/features/player/player-error-boundary';
 import { AniListCatalog } from '@/services/anilist.service';
 import { AnivexaCatalog } from '@/services/anivexa.service';
@@ -57,6 +60,8 @@ function WatchPageContent() {
   const [retryVersion, setRetryVersion] = useState(0);
   const [episodeSearch, setEpisodeSearch] = useState('');
   const [episodesAscending, setEpisodesAscending] = useState(true);
+  const [episodeViewMode, setEpisodeViewMode] =
+    useState<EpisodeViewMode>('list');
   const [episodePage, setEpisodePage] = useState(0);
   const activeEpisodeRef = useRef<HTMLButtonElement | null>(null);
   const selection = usePlaybackSessionStore((state) => state.selection);
@@ -413,6 +418,8 @@ function WatchPageContent() {
                 setEpisodesAscending((current) => !current);
                 setEpisodePage(0);
               }}
+              viewMode={episodeViewMode}
+              onViewModeChange={setEpisodeViewMode}
             />
             {episodePageCount > 1 && (
               <nav
@@ -468,36 +475,56 @@ function WatchPageContent() {
                 ))}
               </div>
             ) : visibleEpisodes.length ? (
-              <div className="min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto pt-2">
-                {visibleEpisodes.map((episode) => (
-                  <button
-                    key={episode.id}
-                    type="button"
-                    ref={
-                      episode.id === currentEpisodeId
-                        ? activeEpisodeRef
-                        : undefined
-                    }
-                    aria-current={
-                      episode.id === currentEpisodeId ? 'true' : undefined
-                    }
-                    onClick={() => selectEpisode(episode.id)}
-                    className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${episode.id === currentEpisodeId ? 'bg-[#49d77a]/10 text-[#70e793]' : 'text-white/60 hover:bg-white/[0.05]'}`}
-                  >
-                    <EpisodeThumbnail
-                      image={episode.image}
-                      className="w-[4.5rem]"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-[11px] font-bold">
-                        Episódio {episode.number}
+              <div
+                className={`min-h-0 flex-1 overflow-x-hidden overflow-y-auto pt-2 ${episodeViewMode === 'grid' ? 'grid auto-rows-max grid-cols-2 content-start gap-2' : 'space-y-2'}`}
+              >
+                {visibleEpisodes.map((episode) => {
+                  const isCurrent = episode.id === currentEpisodeId;
+                  const isGrid = episodeViewMode === 'grid';
+                  return (
+                    <button
+                      key={episode.id}
+                      type="button"
+                      ref={isCurrent ? activeEpisodeRef : undefined}
+                      aria-current={isCurrent ? 'true' : undefined}
+                      onClick={() => selectEpisode(episode.id)}
+                      className={`group relative flex w-full min-w-0 rounded-lg border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a] ${isGrid ? 'flex-col items-stretch gap-2 p-2' : 'items-center gap-3 p-2'} ${isCurrent ? 'border-[#49d77a]/45 bg-[#49d77a]/[0.08] text-[#70e793]' : 'border-white/[0.06] bg-white/[0.015] text-white/65 hover:border-white/[0.12] hover:bg-white/[0.04]'}`}
+                    >
+                      <span
+                        className={`relative block ${isGrid ? 'w-full' : 'w-[6.75rem] shrink-0'}`}
+                      >
+                        <EpisodeThumbnail
+                          image={episode.image}
+                          className="w-full"
+                        />
+                        <span
+                          aria-hidden="true"
+                          className={`absolute inset-0 grid place-items-center rounded-md bg-black/45 transition-opacity ${isCurrent ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100'}`}
+                        >
+                          <Play size={18} fill="currentColor" />
+                        </span>
+                        <span className="absolute top-1 left-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                          {String(episode.number).padStart(2, '0')}
+                        </span>
                       </span>
-                      <span className="mt-1 block truncate text-[10px] text-white/35">
-                        {episode.title ?? 'Anime'}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[11px] font-bold leading-snug">
+                          {episode.title ?? `Episódio ${episode.number}`}
+                        </span>
+                        {episode.description && (
+                          <span className="mt-1 line-clamp-2 block text-[10px] leading-relaxed text-white/40">
+                            {stripHtml(episode.description)}
+                          </span>
+                        )}
+                        {episode.isSubbed && (
+                          <span className="mt-1.5 inline-flex rounded bg-white/[0.07] px-1.5 py-0.5 text-[8px] font-bold tracking-wide text-white/55">
+                            SUB
+                          </span>
+                        )}
                       </span>
-                    </span>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             ) : episodes.length > 0 ? (
               <p className="flex min-h-36 flex-1 items-center justify-center px-4 text-center text-xs leading-relaxed text-white/40">

@@ -40,7 +40,7 @@ export function AppShell() {
   const [search, setSearch] = useState('');
   const [searchVisible, setSearchVisible] = useState(true);
   const [headerVisible, setHeaderVisible] = useState(true);
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const searchFormRef = useRef<HTMLFormElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -93,7 +93,7 @@ export function AppShell() {
         id="app-sidebar"
         aria-label="Navegação do aplicativo"
         data-collapsed={!sidebarExpanded ? 'true' : undefined}
-        className="app-sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r border-white/[0.06] bg-[#0d0d0f] py-6"
+        className="app-sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r border-white/[0.06] bg-[#08090a] py-6"
       >
         <div className="app-sidebar__brand-row mb-10 flex items-center gap-2">
           <NavLink
@@ -111,29 +111,6 @@ export function AppShell() {
               ani<span className="text-[#49d77a]">monkey</span>
             </span>
           </NavLink>
-          <button
-            type="button"
-            onClick={() => setSidebarExpanded((expanded) => !expanded)}
-            aria-label={
-              sidebarExpanded
-                ? 'Recolher navegação lateral'
-                : 'Expandir navegação lateral'
-            }
-            aria-expanded={sidebarExpanded}
-            aria-controls="app-sidebar"
-            title={
-              sidebarExpanded
-                ? 'Recolher navegação lateral'
-                : 'Expandir navegação lateral'
-            }
-            className="app-sidebar__toggle grid size-9 shrink-0 place-items-center rounded-lg text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a]"
-          >
-            {sidebarExpanded ? (
-              <ChevronLeft size={18} aria-hidden="true" />
-            ) : (
-              <ChevronRight size={18} aria-hidden="true" />
-            )}
-          </button>
         </div>
 
         <p
@@ -154,7 +131,7 @@ export function AppShell() {
               className={({ isActive }) =>
                 `flex h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
                   isActive
-                    ? 'bg-[#49d77a]/10 text-[#67e58f]'
+                    ? 'relative bg-white/[0.04] text-[#67e58f]'
                     : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
                 }`
               }
@@ -188,7 +165,7 @@ export function AppShell() {
                 className={({ isActive }) =>
                   `flex h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
                     isActive
-                      ? 'bg-[#49d77a]/10 text-[#67e58f]'
+                      ? 'relative bg-white/[0.04] text-[#67e58f]'
                       : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
                   }`
                 }
@@ -228,6 +205,33 @@ export function AppShell() {
             ),
           )}
         </nav>
+
+        <button
+          type="button"
+          onClick={() => setSidebarExpanded((expanded) => !expanded)}
+          aria-label={
+            sidebarExpanded
+              ? 'Recolher navegação lateral'
+              : 'Expandir navegação lateral'
+          }
+          aria-expanded={sidebarExpanded}
+          aria-controls="app-sidebar"
+          title={
+            sidebarExpanded
+              ? 'Recolher navegação lateral'
+              : 'Expandir navegação lateral'
+          }
+          className="app-sidebar__toggle mt-4 flex h-10 w-full shrink-0 items-center gap-3 rounded-xl px-3 text-[12px] font-semibold text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a]"
+        >
+          {sidebarExpanded ? (
+            <ChevronLeft size={18} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={18} aria-hidden="true" />
+          )}
+          <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
+            {sidebarExpanded ? 'Recolher menu' : 'Expandir menu'}
+          </span>
+        </button>
 
         <div className="app-sidebar__footer mt-auto rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
           <div className="app-sidebar__footer-heading mb-2 flex items-center gap-2 text-xs font-bold text-white/80">

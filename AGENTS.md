@@ -39,6 +39,7 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm start` e `pnpm make` são os comandos do destino.
 - Não enfraquecer TypeScript strict. Evitar `any`, segredos em logs, `console.log` persistente e supressões de lint sem motivo.
+- O cache local `.impeccable/hook.cache.json` é estado gerado pelo hook de design: manter fora de commits e ignorado pela formatação global.
 - Para segurança Electron ou player, a validação exige executar o app empacotado e conferir o comportamento real, não apenas compilar.
 
 ## Etapas e commits da migração
@@ -105,6 +106,7 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - QA registrado em 16/11/2026: confirmar a presença do executável ao empacotar. Nesta máquina, o Forge encerrou sem artefato com Node 26 e concluiu com Node 22. Registrar o viewport CSS de cada interface, pois a dimensão da captura da janela inclui a moldura e o menu.
 - Antes de aceitar um smoke empacotado após correção do player, fechar instâncias antigas e conferir o `LastWriteTime` do artefato e o caminho do processo da janela; registrar commit, provider e sequência reproduzida.
 - Vidstack: declarar a faixa WebVTT de capítulos como padrão para ativá-la na timeline e preservar a precisão dos timestamps até milissegundos.
+- Vidstack: instanciar capítulos como `Track` `kind="chapters"` ativo dentro de `MediaProvider`. `useChapterOptions` lê opções do track ativo, mas não cria o track. Emitir somente intervalos reais fornecidos pela fonte; o slider completa as lacunas conforme a duração/seek range e não deve receber um cue artificial com fim sentinela.
 - Vidstack: eventos de buffering durante seek pausado não devem bloquear os controles. Limpar o indicador ao pausar ou concluir o seek pausado.
 - Vidstack: seek de timeline pode emitir `waiting` antes ou depois de `seeked`. Ao concluir seek, limpar o indicador imediatamente e ignorar eventos `waiting` da operação até `playing` confirmar retomada.
 - Vidstack: atualizar intenção de reprodução nos eventos `play`/`pause`; evento `playing` atrasado após pausa não pode liberar o estado de um seek pendente.
