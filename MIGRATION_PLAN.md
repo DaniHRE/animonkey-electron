@@ -71,6 +71,14 @@ Regras da fronteira Electron:
 
 ## Fases e critérios de saída
 
+### Requisitos de aceite para a versão 1.0 — adicionados em 16/11/2026
+
+- **Sidebar:** abrir/expandir e recolher/fechar de forma funcional, com movimento coerente com a identidade e os hooks/stack existentes. Estado acessível por teclado e leitores de tela, foco preservado, `prefers-reduced-motion` respeitado e sem conteúdo inacessível quando a animação é reduzida/interrompida.
+- **Capítulos na timeline:** os timestamps válidos do episódio devem aparecer como marcadores/capítulos utilizáveis na timeline do Vidstack, com rótulos e navegação corretos. O critério exige evidência no player em runtime; gerar ou anexar VTT `kind="chapters"` sem os marcadores visíveis não aprova. Testar fonte com timestamps, sem timestamps e troca de episódio/fonte.
+- **Enriquecimento de dados a partir do AniZip:** buscar e exibir thumbnails por episódio e analisar os campos completos para selecionar recursos adicionais de 1.0. A normalização/cache fica na camada Anivexa; expor ao Electron apenas os campos de domínio aprovados, com origem, idioma, lacunas e IDs preservados. A resposta de 1,8 MB do exemplo One Piece não deve ser repassada inteira ao renderer. Validar chaves regulares, especiais e outros sem inventar sequência, cobertura dos campos, fallback de imagens e política das origens de imagem.
+
+O escopo de recursos adicionais derivados do AniZip permanece aberto até a revisão da cobertura e qualidade dos dados. A implementação atual é evidência de integração parcial, não aceite destes requisitos.
+
 ### Fase 0 — Preparar repositório e baseline
 
 - Confirmar/criar Git para `animonkey-electron`, remotes, branch padrão e origem do starter; preservar seus arquivos atuais.
