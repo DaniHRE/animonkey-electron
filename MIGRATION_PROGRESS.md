@@ -277,3 +277,9 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 - O relato especificou a ordem `play` → `pause` → seek futuro. O handler anterior limpava a marca do seek em qualquer `playing`, inclusive evento atrasado da reprodução anterior. Agora eventos `waiting` só mostram o indicador quando o app registrou intenção atual de reprodução; a pausa encerra essa intenção; `playing` atrasado não libera um seek se o player já está pausado.
 - Confirmado que a janela testada antes desta rodada usava o pacote de 09:17, anterior aos commits mais recentes. O pacote atualizado foi gerado às 10:00. Typecheck e lint passaram para esta correção. A fonte de `212888` falhou neste smoke antes de permitir repetir o seek, apesar de a API local listar DASH/HLS para os servidores. Não marcar o smoke funcional como aprovado.
+
+## Smoke empacotado de seek após play/pause em 16/11/2026
+
+- Verificado o pacote em `out/Animonkey-win32-x64/Animonkey.exe`: arquivo alterado às 10:06, após o commit `54a5fec` (10:05); os processos da janela estavam executando esse mesmo caminho. A janela Electron estava na rota `/watch/212888?ep=212888:sub:1`, viewport capturado de 1426×913, provider Ani.pm/HLS.
+- Reproduzida a sequência `play` → `pause` → seek futuro na timeline. A posição avançou de aproximadamente 20:09 para 22:17, o quadro correspondente foi renderizado, o player permaneceu pausado e a sobreposição “Carregando vídeo…” não ficou presa. Um seek anterior para 20:02 também concluiu. O estado após o clique da barra foi observado novamente para permitir a atualização assíncrona do tempo.
+- A falha não se reproduziu no pacote atual. A correção existente passou este smoke; não houve nova alteração de lógica. `pnpm typecheck`, `pnpm lint` e a geração do pacote constam na validação do commit `54a5fec`; não foram repetidos nesta rodada. O teste cobre um provider/fonte HLS; outras fontes e a comparação visual completa continuam pendentes.
