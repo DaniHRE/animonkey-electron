@@ -107,3 +107,4 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - Vidstack: eventos de buffering durante seek pausado não devem bloquear os controles. Limpar o indicador ao pausar ou concluir o seek pausado.
 - Vidstack: seek de timeline pode emitir `waiting` antes ou depois de `seeked`. Ao concluir seek, limpar o indicador imediatamente e ignorar eventos `waiting` da operação até `playing` confirmar retomada.
 - Vidstack: atualizar intenção de reprodução nos eventos `play`/`pause`; evento `playing` atrasado após pausa não pode liberar o estado de um seek pendente.
+- Na depuração de servidores Anivexa, conferir `/episodes/:id` antes de investigar o filtro de idioma: `AnivexaCatalog.servers()` só consulta `/watch` para providers que têm o episódio indexado. `isActive` escolhe a fonte inicial, mas não comprova PT-BR; não inferir idioma ou H-SUB sem metadata explícita.
