@@ -248,6 +248,205 @@
   transition: color 140ms ease;
 }
 
+.watch-related {
+  width: 100%;
+  max-width: 440px;
+  min-width: 0;
+}
+
+.watch-related__heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.watch-related__heading h2 {
+  min-width: 0;
+  margin: 0;
+  color: #f5f5f5;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.watch-related__marker {
+  width: 3px;
+  height: 20px;
+  flex: 0 0 3px;
+  border-radius: 3px;
+  background: var(--watch-accent);
+}
+
+.watch-related__list {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.watch-related__list--scrollable {
+  max-height: 400px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 3px 2px 0;
+  scrollbar-width: none;
+}
+
+.watch-related__list--scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+.watch-related__list--scrollable:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid var(--watch-accent);
+  outline-offset: 3px;
+}
+
+.watch-related__item {
+  display: flex;
+  min-width: 0;
+  min-height: 86px;
+  align-items: center;
+  gap: 12px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 2.5%);
+  padding-right: 6px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.watch-related__item:hover {
+  transform: scale(0.985);
+  border-color: rgb(255 255 255 / 13%);
+  background: rgb(255 255 255 / 6%);
+}
+
+.watch-related__item:focus-visible {
+  outline: 2px solid var(--watch-accent);
+  outline-offset: 2px;
+}
+
+.watch-related__image {
+  display: grid;
+  width: 65px;
+  height: 86px;
+  flex: 0 0 65px;
+  overflow: hidden;
+  place-items: center;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 5%);
+  color: rgb(255 255 255 / 40%);
+  font-size: 14px;
+}
+
+.watch-related__image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.watch-related__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding-block: 5px;
+}
+
+.watch-related__title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgb(255 255 255 / 92%);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.watch-related__item:hover .watch-related__title {
+  color: #fff;
+}
+
+.watch-related__metadata {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: rgb(255 255 255 / 67%);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.watch-related__metadata > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.watch-related__relation-type {
+  color: #9be8af;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.watch-related--recommendations .watch-related__metadata {
+  gap: 8px;
+  font-size: 12px;
+}
+
+.watch-related__rating {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+  color: #f2c15b;
+  font-variant-numeric: tabular-nums;
+}
+
+.watch-related__more {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 8px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 3%);
+  padding: 8px 12px;
+  color: rgb(255 255 255 / 68%);
+  font-size: 12px;
+  font-weight: 600;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.watch-related__more:hover {
+  border-color: rgb(73 215 122 / 25%);
+  background: rgb(255 255 255 / 7%);
+  color: #fff;
+}
+
+.watch-related__more:focus-visible {
+  outline: 2px solid var(--watch-accent);
+  outline-offset: 2px;
+}
+
 .watch-page__breadcrumb {
   display: flex;
   min-width: 0;
@@ -915,6 +1114,16 @@
   .watch-page__episode-list.is-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .watch-related__item {
+    gap: 10px;
+  }
+
+  .watch-related__image {
+    width: 58px;
+    height: 77px;
+    flex-basis: 58px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -924,8 +1133,15 @@
   .watch-page__play-overlay,
   .watch-page__episode-card,
   .watch-server-provider,
-  .watch-server-option {
+  .watch-server-option,
+  .watch-related__item,
+  .watch-related__image img,
+  .watch-related__more {
     transition: none;
+  }
+
+  .watch-related__item:hover {
+    transform: none;
   }
 
   .watch-page__episode-list:not([role='status']) {

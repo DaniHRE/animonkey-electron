@@ -491,14 +491,15 @@ function WatchPageContent() {
             </a>
           </div>
           <WatchRelatedList
+            variant="related"
             title="Animes relacionados"
             items={anime.relations}
             titleLanguage={titleLanguage}
           />
           <WatchRelatedList
+            variant="recommendations"
             title="Recomendações"
             items={anime.recommendations}
-            label="Recomendado"
             titleLanguage={titleLanguage}
           />
         </aside>
@@ -818,56 +819,120 @@ function WatchPageContent() {
 }
 
 function WatchRelatedList({
+  variant,
   title,
   items,
-  label,
   titleLanguage,
 }: {
+  variant: 'related' | 'recommendations';
   title: string;
   items: Array<AnimeResult & { relationType?: string }>;
-  label?: string;
   titleLanguage: 'en' | 'jp';
 }) {
+  const [showAllRelated, setShowAllRelated] = useState(false);
+
   if (items.length === 0) return null;
 
+  const isScrollable = variant === 'recommendations' && items.length > 4;
+  const hasMoreRelated = variant === 'related' && items.length > 5;
+  const visibleItems =
+    hasMoreRelated && !showAllRelated ? items.slice(0, 5) : items;
+  const headingId = `watch-related-${variant}-heading`;
+  const listId = `watch-related-${variant}-list`;
+
   return (
-    <section>
-      <div className="mb-3 flex items-center gap-3">
-        <span className="h-5 w-1 rounded-full bg-[#49d77a]" />
-        <h2 className="text-sm font-bold text-white">{title}</h2>
+    <section
+      className={`watch-related watch-related--${variant}`}
+      aria-labelledby={headingId}
+    >
+      <div className="watch-related__heading">
+        <span className="watch-related__marker" aria-hidden="true" />
+        <h2 id={headingId}>{title}</h2>
       </div>
-      <div className="divide-y divide-white/[0.05] rounded-xl border border-white/[0.07] bg-white/[0.02] px-2 py-1">
-        {items.map((item) => (
-          <Link
-            key={item.id}
-            to={`/anime/${item.id}`}
-            className="group flex items-center gap-3 rounded-md p-2 transition-colors hover:bg-white/[0.04]"
-          >
-            <div className="size-16 shrink-0 overflow-hidden rounded-md border border-white/10 bg-white/[0.04]">
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt=""
-                  loading="lazy"
-                  className="size-full object-cover transition-transform group-hover:scale-105"
-                />
-              ) : (
-                <span className="grid size-full place-items-center text-xs text-white/30">
-                  ?
+      <div
+        id={listId}
+        className={`watch-related__list ${isScrollable ? 'watch-related__list--scrollable' : ''}`}
+        aria-label={isScrollable ? title : undefined}
+        role={isScrollable ? 'region' : undefined}
+        tabIndex={isScrollable ? 0 : undefined}
+      >
+        {visibleItems.map((item) => {
+          const itemTitle = resolveAnimeTitle(item.title, titleLanguage);
+          const relationLabel = item.relationType?.replace(/_/g, ' ');
+          const year =
+            typeof item.releaseDate === 'number' &&
+            Number.isFinite(item.releaseDate)
+              ? item.releaseDate
+              : undefined;
+          const rating =
+            typeof item.rating === 'number' &&
+            Number.isFinite(item.rating) &&
+            item.rating > 0
+              ? item.rating
+              : undefined;
+
+          return (
+            <Link
+              key={item.id}
+              to={`/anime/${item.id}`}
+              className="watch-related__item"
+            >
+              <span className="watch-related__image">
+                {item.image ? (
+                  <img src={item.image} alt="" loading="lazy" />
+                ) : (
+                  <span aria-hidden="true">?</span>
+                )}
+              </span>
+              <span className="watch-related__copy">
+                <span className="watch-related__title" title={itemTitle}>
+                  {itemTitle}
                 </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-sm font-medium text-white/85 group-hover:text-white">
-                {resolveAnimeTitle(item.title, titleLanguage)}
-              </p>
-              <p className="mt-1 truncate text-[10px] font-semibold tracking-wide text-white/40 uppercase">
-                {label ?? item.relationType ?? 'Relacionado'}
-              </p>
-            </div>
-          </Link>
-        ))}
+                <span className="watch-related__metadata">
+                  {variant === 'related' ? (
+                    <>
+                      <span className="watch-related__relation-type">
+                        {relationLabel ?? 'Relacionado'}
+                      </span>
+                      {item.type && <span>{item.type}</span>}
+                      {year !== undefined && <span>{year}</span>}
+                    </>
+                  ) : (
+                    <>
+                      {item.type && <span>{item.type}</span>}
+                      {rating !== undefined && (
+                        <span
+                          className="watch-related__rating"
+                          aria-label={`Nota AniList ${rating.toFixed(1)} de 10`}
+                        >
+                          <Star size={12} aria-hidden="true" />
+                          {rating.toFixed(1)}
+                        </span>
+                      )}
+                      {!item.type && rating === undefined && (
+                        <span>Recomendado</span>
+                      )}
+                    </>
+                  )}
+                </span>
+              </span>
+            </Link>
+          );
+        })}
       </div>
+      {hasMoreRelated && (
+        <button
+          className="watch-related__more"
+          type="button"
+          aria-controls={listId}
+          aria-expanded={showAllRelated}
+          onClick={() => setShowAllRelated((expanded) => !expanded)}
+        >
+          {showAllRelated
+            ? 'Mostrar menos'
+            : `Mostrar mais ${items.length - visibleItems.length}`}
+        </button>
+      )}
     </section>
   );
 }
