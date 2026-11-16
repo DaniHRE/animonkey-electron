@@ -9,6 +9,7 @@ import { filterAndSortEpisodes } from '@/lib/episode-filter';
 import { stripHtml } from '@/lib/anime';
 import { getPaginationItems } from '@/lib/pagination';
 import type { AnimeEpisode } from '@/types/player';
+import { EpisodeThumbnail } from '@/components/shared/episode-thumbnail';
 
 const PAGE_SIZE = 8;
 
@@ -98,11 +99,17 @@ export function AnimeEpisodeList({
               to={`/watch/${animeId}?ep=${encodeURIComponent(episode.id)}`}
               className={`group flex min-w-0 items-center gap-4 rounded-md border border-white/[0.06] bg-white/[0.025] px-4 py-3 transition hover:bg-white/[0.06] ${viewMode === 'grid' ? 'min-h-20' : ''}`}
             >
-              <span className="w-8 shrink-0 text-center text-sm font-semibold text-white/60">
-                {episode.number}
-              </span>
+              {viewMode === 'grid' && (
+                <EpisodeThumbnail image={episode.image} className="w-24" />
+              )}
+              {viewMode === 'list' && (
+                <span className="w-8 shrink-0 text-center text-sm font-semibold text-white/60">
+                  {episode.number}
+                </span>
+              )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-white group-hover:text-white">
+                  {viewMode === 'grid' ? episode.number + '. ' : ''}
                   {episode.title ?? `Episódio ${episode.number}`}
                 </span>
                 {viewMode === 'grid' && episode.description && (

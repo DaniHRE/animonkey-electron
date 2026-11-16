@@ -20,6 +20,7 @@ import type {
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { filterAndSortEpisodes } from '@/lib/episode-filter';
 import { getPaginationItems } from '@/lib/pagination';
+import { EpisodeThumbnail } from '@/components/shared/episode-thumbnail';
 
 const PLAYER_EPISODE_PAGE_SIZE = 50;
 
@@ -483,9 +484,10 @@ function WatchPageContent() {
                     onClick={() => selectEpisode(episode.id)}
                     className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition ${episode.id === currentEpisodeId ? 'bg-[#49d77a]/10 text-[#70e793]' : 'text-white/60 hover:bg-white/[0.05]'}`}
                   >
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.05] text-xs font-bold">
-                      {episode.number}
-                    </span>
+                    <EpisodeThumbnail
+                      image={episode.image}
+                      className="w-[4.5rem]"
+                    />
                     <span className="min-w-0">
                       <span className="block text-[11px] font-bold">
                         Episódio {episode.number}

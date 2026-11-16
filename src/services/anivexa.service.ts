@@ -252,6 +252,8 @@ function asTimestamp(value: unknown): EpisodeTimestamp | undefined {
   if (
     typeof maybe.start !== 'number' ||
     typeof maybe.end !== 'number' ||
+    !Number.isFinite(maybe.start) ||
+    !Number.isFinite(maybe.end) ||
     maybe.start < 0 ||
     maybe.end <= maybe.start
   )

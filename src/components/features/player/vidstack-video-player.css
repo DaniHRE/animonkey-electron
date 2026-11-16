@@ -36,3 +36,18 @@
   font-size: inherit !important;
   text-shadow: inherit !important;
 }
+
+.vidstack-player
+  .vds-time-slider
+  .vds-slider-chapter:not(:first-child)::before {
+  position: absolute;
+  top: 0;
+  left: -1px;
+  z-index: 1;
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: rgb(245 245 245 / 75%);
+  content: '';
+  pointer-events: none;
+}

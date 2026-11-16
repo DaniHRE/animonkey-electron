@@ -14,7 +14,11 @@ import {
 } from '@vidstack/react/player/layouts/default';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePlaybackController } from '@/hooks/use-playback-controller';
-import type { EpisodeSources, EpisodeSubtitle } from '@/types/player';
+import type {
+  EpisodeSources,
+  EpisodeSubtitle,
+  EpisodeTimestamp,
+} from '@/types/player';
 import { createMediaProxyUrl } from '@/lib/media-proxy';
 import { resolvePlaybackSource } from '@/lib/player-source-resolver';
 import {
@@ -41,6 +45,68 @@ interface Props {
 }
 
 type SubtitleFormat = 'vtt' | 'srt' | 'ass' | 'ssa' | 'json';
+const CHAPTER_TRACK_END = 99 * 60 * 60 + 59 * 60 + 59.999;
+
+function formatChapterTime(time: number): string {
+  const milliseconds = Math.round(time * 1000);
+  const hours = Math.floor(milliseconds / 3_600_000);
+  const minutes = Math.floor(milliseconds / 60_000) % 60;
+  const seconds = Math.floor(milliseconds / 1000) % 60;
+  const clock = [hours, minutes, seconds]
+    .map((part) => String(part).padStart(2, '0'))
+    .join(':');
+  return clock + '.' + String(milliseconds % 1000).padStart(3, '0');
+}
+
+function createChapterVtt(
+  intro?: EpisodeTimestamp,
+  outro?: EpisodeTimestamp,
+): string {
+  const ranges = [
+    ...(intro ? [{ ...intro, title: 'Abertura' }] : []),
+    ...(outro ? [{ ...outro, title: 'Encerramento' }] : []),
+  ]
+    .filter(
+      (range) =>
+        Number.isFinite(range.start) &&
+        Number.isFinite(range.end) &&
+        range.start >= 0 &&
+        range.start < CHAPTER_TRACK_END &&
+        range.end > range.start,
+    )
+    .sort((first, second) => first.start - second.start);
+  if (!ranges.length) return '';
+
+  const chapters: Array<{ start: number; end: number; title: string }> = [];
+  let cursor = 0;
+  for (const range of ranges) {
+    const end = Math.min(range.end, CHAPTER_TRACK_END);
+    if (range.start < cursor || end <= range.start) continue;
+    if (range.start > cursor)
+      chapters.push({ start: cursor, end: range.start, title: 'Episódio' });
+    chapters.push({ start: range.start, end, title: range.title });
+    cursor = end;
+  }
+  if (!chapters.length) return '';
+  if (cursor < CHAPTER_TRACK_END)
+    chapters.push({
+      start: cursor,
+      end: CHAPTER_TRACK_END,
+      title: 'Episódio',
+    });
+
+  const cues = chapters
+    .map(
+      (chapter) =>
+        formatChapterTime(chapter.start) +
+        ' --> ' +
+        formatChapterTime(chapter.end) +
+        '\n' +
+        chapter.title,
+    )
+    .join('\n\n');
+  return 'WEBVTT\n\n' + cues + '\n';
+}
 
 function getSubtitleFormat(subtitle: EpisodeSubtitle): SubtitleFormat {
   if (subtitle.format === 'ass' || subtitle.format === 'ssa')
@@ -132,33 +198,9 @@ export function VidstackVideoPlayer({
   const outro = sources?.outro;
 
   const chapterUrl = useMemo(() => {
-    if (!intro && !outro) return '';
-    const formatTime = (time: number) => {
-      const milliseconds = Math.round(time * 1000);
-      const hours = Math.floor(milliseconds / 3_600_000);
-      const minutes = Math.floor(milliseconds / 60_000) % 60;
-      const seconds = Math.floor(milliseconds / 1000) % 60;
-      const clock = [hours, minutes, seconds]
-        .map((part) => String(part).padStart(2, '0'))
-        .join(':');
-      return `${clock}.${String(milliseconds % 1000).padStart(3, '0')}`;
-    };
-    const chapters = ['WEBVTT', ''];
-    if (intro)
-      chapters.push(
-        `${formatTime(intro.start)} --> ${formatTime(intro.end)}`,
-        'Intro',
-        '',
-      );
-    if (outro)
-      chapters.push(
-        `${formatTime(outro.start)} --> ${formatTime(outro.end)}`,
-        'Encerramento',
-        '',
-      );
-    return URL.createObjectURL(
-      new Blob([chapters.join('\n')], { type: 'text/vtt' }),
-    );
+    const chapters = createChapterVtt(intro, outro);
+    if (!chapters) return '';
+    return URL.createObjectURL(new Blob([chapters], { type: 'text/vtt' }));
   }, [intro, outro]);
 
   useEffect(
