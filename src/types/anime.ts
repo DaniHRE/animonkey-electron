@@ -15,6 +15,7 @@ export interface AnimeResult {
   description?: string;
   genres: string[];
   rating?: number;
+  ratingCount?: number;
   releaseDate?: number;
   season?: 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL';
   type?: string;

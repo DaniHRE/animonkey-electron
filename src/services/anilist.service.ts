@@ -28,6 +28,9 @@ interface AniListMedia {
   description?: string | null;
   genres?: string[];
   averageScore?: number | null;
+  stats?: {
+    scoreDistribution?: Array<{ amount?: number | null }> | null;
+  } | null;
   popularity?: number | null;
   trending?: number | null;
   favourites?: number | null;
@@ -151,6 +154,10 @@ function mapMedia(media: AniListMedia): AnimeResult {
     description: media.description ?? undefined,
     genres: media.genres ?? [],
     rating: media.averageScore ? media.averageScore / 10 : undefined,
+    ratingCount: media.stats?.scoreDistribution?.reduce(
+      (total, bucket) => total + (bucket.amount ?? 0),
+      0,
+    ),
     releaseDate: media.seasonYear ?? undefined,
     season: media.season ?? undefined,
     type: media.format ?? undefined,
@@ -495,12 +502,12 @@ export const AniListCatalog = {
     const numericId = Number(id);
     if (!Number.isSafeInteger(numericId) || numericId < 1) return null;
     return withCatalogCache(
-      `anime:v4:${numericId}`,
+      `anime:v5:${numericId}`,
       ONE_DAY,
       signal,
       async () => {
         const response = await request(
-          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: [ROLE, RELEVANCE, ID], perPage: 50) { edges { role node { id name { userPreferred full } image { large } } voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) { id languageV2 name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
+          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} stats { scoreDistribution { amount } } duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: [ROLE, RELEVANCE, ID], perPage: 50) { edges { role node { id name { userPreferred full } image { large } } voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) { id languageV2 name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
           { id: numericId },
           signal,
         );

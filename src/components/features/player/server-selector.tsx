@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Captions, Check, MonitorPlay } from 'lucide-react';
+import { Captions, Check } from 'lucide-react';
 import type { EpisodeServer } from '@/types/player';
 
 interface Props {
@@ -85,11 +85,11 @@ export function ServerSelector({
     providerGroups[0];
 
   return (
-    <div className="space-y-3">
+    <div className="watch-server-selector">
       <div
         role="group"
         aria-label="Selecionar provedor de reprodução"
-        className="flex flex-wrap gap-2"
+        className="watch-server-providers"
       >
         {providerGroups.map((group) => (
           <button
@@ -100,12 +100,10 @@ export function ServerSelector({
             onClick={() =>
               setProviderSelection({ activeId, provider: group.provider })
             }
-            className={`rounded-lg border px-3 py-2 text-xs font-bold transition-colors disabled:cursor-wait disabled:opacity-55 ${group.provider === selectedGroup.provider ? 'border-[#49d77a]/55 bg-[#49d77a]/10 text-white' : 'border-white/[0.09] bg-white/[0.025] text-white/65 hover:border-white/20 hover:bg-white/[0.06]'}`}
+            className={`watch-server-provider ${group.provider === selectedGroup.provider ? 'is-active' : ''}`}
           >
             {group.label}
-            <span className="ml-2 text-[10px] font-medium text-white/45">
-              {group.servers.length}
-            </span>
+            <span className="watch-server-count">{group.servers.length}</span>
           </button>
         ))}
       </div>
@@ -114,7 +112,7 @@ export function ServerSelector({
         <div
           role="group"
           aria-label={`Servidores do provedor ${selectedGroup.label}`}
-          className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"
+          className="watch-server-options"
         >
           {selectedGroup.servers.map((server) => {
             const selected = server.id === activeId;
@@ -125,50 +123,38 @@ export function ServerSelector({
                 aria-pressed={selected}
                 disabled={disabled}
                 onClick={() => onSelect(server.id)}
-                className={`group flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 text-left transition-colors disabled:cursor-wait disabled:opacity-55 ${selected ? 'border-[#49d77a]/55 bg-[#49d77a]/10 text-white shadow-[0_0_18px_rgba(73,215,122,0.08)]' : 'border-white/[0.09] bg-white/[0.025] text-white/70 hover:border-white/20 hover:bg-white/[0.06]'}`}
+                className={`watch-server-option ${selected ? 'is-active' : ''}`}
               >
-                <span
-                  className={`grid size-9 shrink-0 place-items-center rounded-lg ${selected ? 'bg-[#49d77a]/15 text-[#6feb92]' : 'bg-white/[0.06] text-white/45'}`}
-                >
-                  <MonitorPlay size={16} aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-xs font-bold">
-                    {server.serverName}
-                  </span>
-                  <span className="mt-1 flex flex-wrap gap-1.5">
-                    {server.subtitleLanguages.map((language) => (
-                      <span
-                        key={language}
-                        className="rounded bg-white/[0.07] px-1.5 py-0.5 text-[9px] font-semibold text-white/55"
-                      >
-                        <Captions
-                          className="mr-1 inline"
-                          size={10}
-                          aria-hidden="true"
-                        />
-                        {language === 'pt-BR' ? 'PT-BR' : 'EN'}
-                      </span>
-                    ))}
-                    {server.subtitlePresentation === 'embedded' && (
-                      <span className="rounded bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold text-amber-200/80">
-                        H-SUB · EMBUTIDA
+                <span className="watch-server-name">{server.serverName}</span>
+                <span className="watch-server-languages">
+                  {server.subtitleLanguages.map((language) => (
+                    <span key={language} className="watch-server-language">
+                      <Captions
+                        className="mr-1 inline"
+                        size={10}
+                        aria-hidden="true"
+                      />
+                      {language === 'pt-BR' ? 'PT-BR' : 'EN'}
+                    </span>
+                  ))}
+                  {server.subtitlePresentation === 'embedded' && (
+                    <span className="watch-server-language is-embedded">
+                      H-SUB · EMBUTIDA
+                    </span>
+                  )}
+                  {server.subtitleLanguages.length === 0 &&
+                    server.subtitlePresentation !== 'embedded' && (
+                      <span className="watch-server-language is-unknown">
+                        {server.subtitleType === 'softsub'
+                          ? 'Sem idioma compatível'
+                          : 'Idioma não identificado'}
                       </span>
                     )}
-                    {server.subtitleLanguages.length === 0 &&
-                      server.subtitlePresentation !== 'embedded' && (
-                        <span className="text-[9px] text-white/35">
-                          {server.subtitleType === 'softsub'
-                            ? 'Sem idioma compatível'
-                            : 'Idioma não identificado'}
-                        </span>
-                      )}
-                  </span>
                 </span>
                 {selected && (
                   <Check
                     size={15}
-                    className="shrink-0 text-[#6feb92]"
+                    className="watch-server-check"
                     aria-hidden="true"
                   />
                 )}

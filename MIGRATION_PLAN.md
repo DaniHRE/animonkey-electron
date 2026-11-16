@@ -80,7 +80,7 @@ Regras da fronteira Electron:
 
 O escopo de recursos adicionais derivados do AniZip permanece aberto até a revisão da cobertura e qualidade dos dados. A implementação atual é evidência de integração parcial, não aceite destes requisitos.
 
-**Implementação base em 16/11/2026:** sidebar expansível, thumbnails e layout de player inspirado no ReAnime foram conectados ao shell/listas. A track de capítulos emite somente intervalos válidos de intro/outro; a resposta integral AniZip continua confinada ao lado Anivexa. O layout e o seletor têm validação estática, mas aguardam QA visual do usuário no Electron. O player ainda exige smoke empacotado para aceitar timeline, imagens e estados de ausência/troca de mídia.
+**Implementação base em 16/11/2026:** sidebar expansível, thumbnails e layout de player inspirado no ReAnime foram conectados ao shell/listas. A track de capítulos emite somente intervalos válidos de intro/outro; a resposta integral AniZip continua confinada ao lado Anivexa. Uma revisão posterior mediu o watch em 1920×1024 CSS px e refinou header/rail, painel de episódios, card lateral, servidores e seleção lista/grade; o total de votos vem da distribuição AniList. A implementação passou typecheck/lint/formatação, mas aguarda QA visual do usuário no Electron. O player ainda exige smoke empacotado para aceitar timeline, imagens e estados de ausência/troca de mídia.
 
 ### Fase 0 — Preparar repositório e baseline
 

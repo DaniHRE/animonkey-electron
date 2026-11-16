@@ -12,6 +12,8 @@ import {
   Play,
   Search,
   Star,
+  Captions,
+  Mic,
 } from 'lucide-react';
 import { VideoPlayer } from '@/components/features/player/video-player';
 import { ServerSelector } from '@/components/features/player/server-selector';
@@ -353,6 +355,13 @@ function WatchPageContent() {
     );
   const title = resolveAnimeTitle(anime.title, titleLanguage);
   const poster = getAnimeImage(anime);
+  const catalogReady = episodeState.id === anime.id;
+  const subbedEpisodeCount = episodes.filter(
+    (episode) => episode.isSubbed,
+  ).length;
+  const dubbedEpisodeCount = episodes.filter(
+    (episode) => episode.isDubbed,
+  ).length;
   const loadingEpisodes = episodeState.id !== anime.id;
   const loadingServers =
     Boolean(currentEpisodeId) && serverState.episodeId !== currentEpisodeId;
@@ -372,44 +381,71 @@ function WatchPageContent() {
       <div className="watch-page__layout">
         <aside className="watch-page__info">
           <div className="watch-page__info-card">
-            {poster ? (
-              <img
-                src={poster}
-                alt={`Pôster de ${title}`}
-                className="watch-page__poster"
-              />
-            ) : (
-              <div className="watch-page__poster-placeholder">Animonkey</div>
-            )}
+            <div className="watch-page__poster-stage">
+              {poster && (
+                <div
+                  aria-hidden="true"
+                  className="watch-page__poster-glow"
+                  style={{
+                    backgroundImage: `linear-gradient(180deg, rgb(8 10 12 / 12%), #080a0c 96%), url("${poster}")`,
+                  }}
+                />
+              )}
+              {poster ? (
+                <img
+                  src={poster}
+                  alt={`Pôster de ${title}`}
+                  className="watch-page__poster"
+                />
+              ) : (
+                <div className="watch-page__poster-placeholder">Animonkey</div>
+              )}
+            </div>
             <h1 className="watch-page__anime-title">{title}</h1>
             {anime.title.native && anime.title.native !== title && (
               <p className="watch-page__native-title">{anime.title.native}</p>
             )}
-            <div className="watch-page__metadata">
-              {anime.rating !== undefined && (
-                <span className="watch-page__metadata-highlight">
-                  <Star size={11} fill="currentColor" aria-hidden="true" />{' '}
-                  {anime.rating.toFixed(1)} / 10
-                </span>
+            <div
+              className="watch-page__availability"
+              aria-label="Disponibilidade"
+            >
+              {catalogReady ? (
+                <>
+                  {subbedEpisodeCount > 0 && (
+                    <span>
+                      <Captions size={12} aria-hidden="true" />
+                      SUB {subbedEpisodeCount}
+                    </span>
+                  )}
+                  {dubbedEpisodeCount > 0 && (
+                    <span>
+                      <Mic size={12} aria-hidden="true" />
+                      DUB {dubbedEpisodeCount}
+                    </span>
+                  )}
+                </>
+              ) : (
+                anime.totalEpisodes !== undefined && (
+                  <span>{anime.totalEpisodes} episódios</span>
+                )
               )}
-              {anime.type && <span>{anime.type}</span>}
               {anime.status && (
-                <span>
+                <span className="is-status">
                   {ANIME_STATUS_LABELS[anime.status] ??
                     anime.status.replaceAll('_', ' ')}
                 </span>
               )}
-              {anime.totalEpisodes !== undefined && (
-                <span>{anime.totalEpisodes} episódios</span>
-              )}
-              {anime.duration !== undefined && (
-                <span>{anime.duration} min</span>
-              )}
+            </div>
+            <div className="watch-page__metadata">
+              {anime.type && <span>{anime.type}</span>}
               {anime.season && (
                 <span>
                   {ANIME_SEASON_LABELS[anime.season] ?? anime.season}
                   {anime.releaseDate ? ` ${anime.releaseDate}` : ''}
                 </span>
+              )}
+              {anime.duration !== undefined && (
+                <span>{anime.duration} min</span>
               )}
             </div>
             {anime.genres.length > 0 && (
@@ -420,9 +456,33 @@ function WatchPageContent() {
               </div>
             )}
             {anime.description && (
-              <p className="watch-page__description">
-                {stripHtml(anime.description)}
-              </p>
+              <div
+                className="watch-page__description-box"
+                role="region"
+                aria-label={`Sinopse de ${title}`}
+                tabIndex={0}
+              >
+                <p className="watch-page__description">
+                  {stripHtml(anime.description)}
+                </p>
+              </div>
+            )}
+            {anime.rating !== undefined && (
+              <a
+                href={`https://anilist.co/anime/${anime.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="watch-page__rating"
+                aria-label={`Nota AniList ${anime.rating.toFixed(1)} de 10${anime.ratingCount === undefined ? '' : `, ${anime.ratingCount.toLocaleString('pt-BR')} votos`}`}
+              >
+                <Star size={14} fill="currentColor" aria-hidden="true" />
+                <strong>{anime.rating.toFixed(1)}</strong>
+                {anime.ratingCount !== undefined && (
+                  <span>
+                    · {anime.ratingCount.toLocaleString('pt-BR')} votos
+                  </span>
+                )}
+              </a>
             )}
             <a
               href={`https://anilist.co/anime/${anime.id}`}
@@ -542,7 +602,7 @@ function WatchPageContent() {
 
           <section className="watch-page__servers">
             <div className="watch-page__servers-heading">
-              <span>Servidores de reprodução</span>
+              <span>Servidores</span>
               {loadingSources && <span role="status">Carregando…</span>}
             </div>
             <ServerSelector
@@ -721,6 +781,7 @@ function WatchPageContent() {
             </div>
           ) : visibleEpisodes.length ? (
             <div
+              key={`${episodeViewMode}-${episodeAudioFilter}-${episodePage}`}
               className={`watch-page__episode-list ${episodeViewMode === 'grid' ? 'is-grid' : ''}`}
             >
               {visibleEpisodes.map((episode) => {
@@ -746,12 +807,12 @@ function WatchPageContent() {
                       >
                         <Play size={18} fill="currentColor" />
                       </span>
-                      <span className="watch-page__episode-number">
-                        {String(episode.number).padStart(2, '0')}
-                      </span>
                     </span>
                     <span className="watch-page__episode-copy">
                       <span className="watch-page__episode-title">
+                        <span className="watch-page__episode-number">
+                          {String(episode.number).padStart(2, '0')}.
+                        </span>{' '}
                         {episode.title ?? `Episódio ${episode.number}`}
                       </span>
                       {episode.description && (

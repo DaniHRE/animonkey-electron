@@ -14,9 +14,8 @@ import {
   Search,
   Settings,
   Sparkles,
-  Languages,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAccount } from '@/context/account-state';
@@ -40,12 +39,8 @@ const moreItems = [
 
 export function AppShell() {
   const [search, setSearch] = useState('');
-  const [searchVisible, setSearchVisible] = useState(true);
-  const [headerVisible, setHeaderVisible] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [moreExpanded, setMoreExpanded] = useState(false);
-  const searchFormRef = useRef<HTMLFormElement>(null);
-  const headerRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
   const moreRouteActive = moreItems.some(
     ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
@@ -59,35 +54,6 @@ export function AppShell() {
     !pathname.startsWith('/anime/') &&
     !pathname.startsWith('/watch/');
 
-  useEffect(() => {
-    let previousY = window.scrollY;
-    const updateSearchVisibility = () => {
-      const currentY = window.scrollY;
-      if (Math.abs(currentY - previousY) < 8) return;
-
-      const searchIsFocused = searchFormRef.current?.contains(
-        document.activeElement,
-      );
-      const headerIsFocused = headerRef.current?.contains(
-        document.activeElement,
-      );
-      if (currentY < 48 || currentY < previousY || headerIsFocused) {
-        setHeaderVisible(true);
-        setSearchVisible(true);
-      } else if (currentY > 120) {
-        if (!headerIsFocused) setHeaderVisible(false);
-        if (searchIsFocused) return;
-        setSearchVisible(false);
-      }
-      previousY = currentY;
-    };
-
-    window.addEventListener('scroll', updateSearchVisibility, {
-      passive: true,
-    });
-    return () => window.removeEventListener('scroll', updateSearchVisibility);
-  }, []);
-
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = search.trim();
@@ -100,113 +66,91 @@ export function AppShell() {
         id="app-sidebar"
         aria-label="Navegação do aplicativo"
         data-collapsed={!sidebarExpanded ? 'true' : undefined}
-        className="app-sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r border-white/[0.06] bg-[#08090a]"
+        className="app-sidebar fixed top-[81px] bottom-0 left-0 z-30 flex flex-col border-r border-white/[0.045] bg-[#0b0b0c]"
       >
-        <div className="app-sidebar__brand-row mb-10 flex items-center gap-2">
-          <NavLink
-            to="/"
-            aria-label="Ir para o início do Animonkey"
-            className="app-sidebar__brand flex min-w-0 items-center gap-3 px-3"
+        <div className="app-sidebar__nav-stack">
+          <nav className="space-y-2" aria-label="Navegação principal">
+            {navItems.map(({ label, path, icon: Icon, end }) => (
+              <NavLink
+                key={label}
+                to={path}
+                end={end}
+                data-sidebar-link="true"
+                aria-label={label}
+                title={!sidebarExpanded ? label : undefined}
+                className={({ isActive }) =>
+                  `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
+                    isActive
+                      ? 'relative bg-white/[0.06] text-[#67e58f]'
+                      : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+                  }`
+                }
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                <span
+                  aria-hidden={!sidebarExpanded}
+                  className="app-sidebar__label"
+                >
+                  {label}
+                </span>
+              </NavLink>
+            ))}
+          </nav>
+
+          <button
+            type="button"
+            data-sidebar-link="true"
+            aria-label="Mais seções"
+            aria-expanded={showMoreItems}
+            aria-controls="app-sidebar-more"
+            title={!sidebarExpanded ? 'Mais seções' : undefined}
+            onClick={() => setMoreExpanded((expanded) => !expanded)}
+            className={`app-sidebar__more-toggle mt-2 flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${showMoreItems ? 'bg-white/[0.05] text-[#67e58f]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#49d77a] text-[#07110a]">
-              <Clapperboard size={21} strokeWidth={2.2} />
+            <MoreHorizontal size={18} strokeWidth={1.8} />
+            <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
+              Mais
             </span>
-            <span
-              aria-hidden={!sidebarExpanded}
-              className="app-sidebar__brand-text text-[19px] font-extrabold tracking-tight"
-            >
-              ani<span className="text-[#49d77a]">monkey</span>
-            </span>
-          </NavLink>
+            <ChevronDown
+              size={15}
+              aria-hidden="true"
+              className={`app-sidebar__more-chevron ml-auto transition-transform ${showMoreItems ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <nav
+            id="app-sidebar-more"
+            aria-label="Mais seções"
+            aria-hidden={!showMoreItems}
+            inert={!showMoreItems}
+            data-expanded={showMoreItems}
+            className="app-sidebar__more-list space-y-2"
+          >
+            {moreItems.map(({ label, icon: Icon, path }) => (
+              <NavLink
+                key={label}
+                to={path}
+                data-sidebar-link="true"
+                aria-label={label}
+                title={!sidebarExpanded ? label : undefined}
+                className={({ isActive }) =>
+                  `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
+                    isActive
+                      ? 'relative bg-white/[0.04] text-[#67e58f]'
+                      : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+                  }`
+                }
+              >
+                <Icon size={18} strokeWidth={1.8} />
+                <span
+                  aria-hidden={!sidebarExpanded}
+                  className="app-sidebar__label"
+                >
+                  {label}
+                </span>
+              </NavLink>
+            ))}
+          </nav>
         </div>
-
-        <p
-          aria-hidden={!sidebarExpanded}
-          className="app-sidebar__section-label px-3 pb-3 text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase"
-        >
-          Descobrir
-        </p>
-        <nav className="space-y-1" aria-label="Navegação principal">
-          {navItems.map(({ label, path, icon: Icon, end }) => (
-            <NavLink
-              key={label}
-              to={path}
-              end={end}
-              data-sidebar-link="true"
-              aria-label={label}
-              title={!sidebarExpanded ? label : undefined}
-              className={({ isActive }) =>
-                `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
-                  isActive
-                    ? 'relative bg-white/[0.04] text-[#67e58f]'
-                    : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-                }`
-              }
-            >
-              <Icon size={18} strokeWidth={1.8} />
-              <span
-                aria-hidden={!sidebarExpanded}
-                className="app-sidebar__label"
-              >
-                {label}
-              </span>
-            </NavLink>
-          ))}
-        </nav>
-
-        <button
-          type="button"
-          data-sidebar-link="true"
-          aria-label="Mais seções"
-          aria-expanded={showMoreItems}
-          aria-controls="app-sidebar-more"
-          title={!sidebarExpanded ? 'Mais seções' : undefined}
-          onClick={() => setMoreExpanded((expanded) => !expanded)}
-          className={`app-sidebar__more-toggle mt-2 flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${showMoreItems ? 'bg-white/[0.05] text-[#67e58f]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}
-        >
-          <MoreHorizontal size={18} strokeWidth={1.8} />
-          <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
-            Mais
-          </span>
-          <ChevronDown
-            size={15}
-            aria-hidden="true"
-            className={`app-sidebar__more-chevron ml-auto transition-transform ${showMoreItems ? 'rotate-180' : ''}`}
-          />
-        </button>
-        <nav
-          id="app-sidebar-more"
-          aria-label="Mais seções"
-          aria-hidden={!showMoreItems}
-          inert={!showMoreItems}
-          data-expanded={showMoreItems}
-          className="app-sidebar__more-list space-y-1"
-        >
-          {moreItems.map(({ label, icon: Icon, path }) => (
-            <NavLink
-              key={label}
-              to={path}
-              data-sidebar-link="true"
-              aria-label={label}
-              title={!sidebarExpanded ? label : undefined}
-              className={({ isActive }) =>
-                `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
-                  isActive
-                    ? 'relative bg-white/[0.04] text-[#67e58f]'
-                    : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-                }`
-              }
-            >
-              <Icon size={18} strokeWidth={1.8} />
-              <span
-                aria-hidden={!sidebarExpanded}
-                className="app-sidebar__label"
-              >
-                {label}
-              </span>
-            </NavLink>
-          ))}
-        </nav>
 
         <button
           type="button"
@@ -253,24 +197,6 @@ export function AppShell() {
             Configurações
           </span>
         </NavLink>
-
-        <div className="app-sidebar__footer mt-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
-          <div className="app-sidebar__footer-heading mb-2 flex items-center gap-2 text-xs font-bold text-white/80">
-            <Clapperboard size={15} className="text-[#49d77a]" />
-            <span
-              aria-hidden={!sidebarExpanded}
-              className="app-sidebar__footer-copy"
-            >
-              Animonkey Desktop
-            </span>
-          </div>
-          <p
-            aria-hidden={!sidebarExpanded}
-            className="app-sidebar__footer-description text-[11px] leading-relaxed text-white/40"
-          >
-            Sua biblioteca de animes, agora no desktop.
-          </p>
-        </div>
       </aside>
 
       <div
@@ -283,31 +209,37 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header
-          ref={headerRef}
-          inert={!headerVisible}
-          className={`sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/[0.06] bg-[#0b0b0c]/85 px-10 backdrop-blur-xl transition-transform duration-250 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${headerVisible ? 'translate-y-0' : '-translate-y-full'}`}
-        >
+        <header className="app-header fixed inset-x-0 top-0 z-40 flex h-[81px] items-center gap-8 border-b border-white/[0.06] bg-[#0b0b0c] px-6">
+          <NavLink
+            to="/"
+            aria-label="Ir para o início do Animonkey"
+            className="app-header__brand flex shrink-0 items-center gap-2"
+          >
+            <span className="grid size-10 place-items-center rounded-lg bg-[#49d77a] text-[#07110a]">
+              <Clapperboard size={21} strokeWidth={2.2} />
+            </span>
+            <span className="text-lg font-extrabold tracking-tight text-white">
+              ani<span className="text-[#49d77a]">monkey</span>
+            </span>
+          </NavLink>
+
           {pathname !== '/search' && (
             <form
-              ref={searchFormRef}
               onSubmit={submitSearch}
-              aria-hidden={!searchVisible}
-              className={`absolute top-1/2 left-1/2 z-10 w-[min(520px,calc(100%-430px))] -translate-x-1/2 transition-[opacity,transform] duration-200 ${searchVisible ? '-translate-y-1/2 opacity-100' : '-translate-y-[140%] pointer-events-none opacity-0'}`}
+              className="app-header__search relative w-[min(320px,calc(100vw-520px))] shrink-0"
             >
               <Search
                 size={17}
-                className="absolute top-1/2 left-4 -translate-y-1/2 text-white/35"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-white/40"
               />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Busque por anime, gênero ou temporada..."
                 aria-label="Buscar animes"
-                tabIndex={searchVisible ? 0 : -1}
-                className="h-11 w-full rounded-xl border border-white/[0.07] bg-white/[0.035] pr-16 pl-11 text-[13px] text-white outline-none transition placeholder:text-white/30 focus:border-[#49d77a]/45 focus:bg-white/[0.05]"
+                className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.025] pr-12 pl-10 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:border-[#49d77a]/45 focus:bg-white/[0.04]"
               />
-              <kbd className="absolute top-1/2 right-3 -translate-y-1/2 rounded-md border border-white/10 px-1.5 py-1 text-[9px] text-white/30">
+              <kbd className="absolute top-1/2 right-3 -translate-y-1/2 text-[10px] text-white/35">
                 ENTER
               </kbd>
             </form>
@@ -315,10 +247,10 @@ export function AppShell() {
 
           <div className="ml-auto flex items-center gap-4">
             <div
-              className="flex items-center gap-2 rounded-full border border-white/[0.07] bg-white/[0.03] p-1"
+              role="group"
+              className="app-header__language flex items-center gap-1 rounded-md bg-white/[0.045] p-1"
               aria-label="Idioma dos títulos"
             >
-              <Languages size={14} className="ml-1 text-white/35" />
               {(['en', 'jp'] as const).map((language) => (
                 <button
                   key={language}
@@ -327,7 +259,7 @@ export function AppShell() {
                     if (titleLanguage !== language) toggleTitleLanguage();
                   }}
                   aria-pressed={titleLanguage === language}
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold transition ${titleLanguage === language ? 'bg-[#2caf57] text-[#0d0d0d]' : 'text-white/45 hover:text-white'}`}
+                  className={`rounded px-2 py-1 text-[10px] font-bold transition ${titleLanguage === language ? 'bg-white/[0.12] text-white' : 'text-white/50 hover:text-white'}`}
                 >
                   {language.toUpperCase()}
                 </button>
@@ -354,7 +286,7 @@ export function AppShell() {
         <main
           id="main-content"
           tabIndex={-1}
-          className="min-h-[calc(100vh-76px)] w-full p-0 outline-none"
+          className="min-h-[calc(100vh-81px)] w-full p-0 outline-none"
         >
           {useContentFrame ? (
             <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 2xl:px-10">
