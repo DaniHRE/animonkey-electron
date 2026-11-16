@@ -257,3 +257,8 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - O smoke anterior está no commit `e28582e`. A Anivexa local retornou três streams para Reanime no episódio 1 de `212888`, com metadados de abertura e encerramento presentes na resposta.
 - A faixa de capítulos WebVTT passou a ser padrão para o Vidstack e preserva milissegundos nos limites. A ativação visual e a troca entre fontes com e sem metadados ainda precisam de smoke no pacote atualizado.
 - Typecheck e lint passaram. O Prettier geral apontou apenas o cache ignorado `.impeccable/hook.cache.json`.
+
+## Seek pausado no Vidstack em 16/11/2026
+
+- Etapa anterior: `16fe031`. Após iniciar o player, clicar em outro ponto da timeline com o vídeo pausado podia deixar a sobreposição de carregamento presa à espera de um evento de reprodução. O buffering só abre a sobreposição enquanto o player está tocando. Pausa e conclusão do seek pausado limpam o indicador. A sobreposição de carregamento permite interação com os controles.
+- Typecheck, lint, formatação dos arquivos editados e diff check verificados. Smoke empacotado do seek pausado permanece pendente.

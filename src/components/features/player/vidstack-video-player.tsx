@@ -274,7 +274,9 @@ export function VidstackVideoPlayer({
   return (
     <div className="vidstack-player relative aspect-video w-full overflow-hidden rounded-xl bg-black">
       {showOverlay && (
-        <div className="absolute inset-0 z-20 grid place-items-center bg-black/55 backdrop-blur-[2px]">
+        <div
+          className={`absolute inset-0 z-20 grid place-items-center bg-black/55 backdrop-blur-[2px]${playerError ? '' : ' pointer-events-none'}`}
+        >
           <div className="max-w-md rounded-2xl border border-white/10 bg-[#101012]/90 px-7 py-5 text-center shadow-2xl">
             <p
               role={playerError ? 'alert' : 'status'}
@@ -311,13 +313,19 @@ export function VidstackVideoPlayer({
             setPlaybackLoading(false);
             markHealthy();
           }}
-          onWaiting={() => setPlaybackLoading(true)}
+          onWaiting={() => {
+            if (playerRef.current?.paused === false) setPlaybackLoading(true);
+          }}
+          onSeeked={() => {
+            if (playerRef.current?.paused) setPlaybackLoading(false);
+          }}
           onPlaying={() => {
             setPlaybackLoading(false);
             markHealthy();
           }}
           onTimeUpdate={handleTimeUpdate}
           onPause={() => {
+            setPlaybackLoading(false);
             const player = playerRef.current;
             if (player && player.duration > 0)
               onProgress?.(player.currentTime, player.duration);

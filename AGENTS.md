@@ -103,3 +103,4 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 
 - QA registrado em 16/11/2026: confirmar a presença do executável ao empacotar. Nesta máquina, o Forge encerrou sem artefato com Node 26 e concluiu com Node 22. Registrar o viewport CSS de cada interface, pois a dimensão da captura da janela inclui a moldura e o menu.
 - Vidstack: declarar a faixa WebVTT de capítulos como padrão para ativá-la na timeline e preservar a precisão dos timestamps até milissegundos.
+- Vidstack: eventos de buffering durante seek pausado não devem bloquear os controles. Limpar o indicador ao pausar ou concluir o seek pausado.
