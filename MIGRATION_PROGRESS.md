@@ -388,3 +388,4 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - Compactei a seleção de provider/servidor em botões com a fonte Rubik herdada; idioma reconhecido, H-SUB embutida e desconhecido continuam distintos.
 - Verificações: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Consulta pública de AniList para o anime 212888 retornou distribuição de score. Não rodei testes automatizados nem smoke final do Electron; a conferência visual de aceite continua com o usuário.
 - Estado: implementação estática revisada, aguardando QA visual do usuário no Electron. Próximo passo: conferir 1920×1024 e janelas estreitas, expandir/recolher a rail, alternar lista/grade, rolar episódios/sinopse e validar a tela após carregar anime real.
+- Commit local da implementação: `9bcf9ff` (`feat(watch): refine ReAnime visual parity`).
