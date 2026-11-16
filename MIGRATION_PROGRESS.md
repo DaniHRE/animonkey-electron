@@ -1,5 +1,13 @@
 # Progresso da migração
 
+## Fechamento da sessão e handoff em 15/11/2026
+
+- Branch `main`; working tree limpo ao iniciar esta conferência. Etapa de UI mais recente no HEAD: `6cca601` (`feat: add character carousel and compact relations grid`).
+- Conferidos os commits e o conteúdo do plano/tracker. Os hashes e validações das etapas de UI que estavam marcados para registro posterior foram reconciliados abaixo.
+- Teste direto da API AniList para a sinopse: `Media.description` oferece apenas `asHtml`; consulta com argumento `language: "pt-BR"` foi rejeitada pelo schema. Sinopses de `212888` (Overgeared), `1` (Cowboy Bebop), `21` (One Piece), `16498` (Attack on Titan) e `101922` (Demon Slayer) vieram em inglês. Não houve alteração de código; a API não entrega variante PT-BR selecionável.
+- Estado para a próxima sessão: detalhe/player ainda precisam de comparação visual em viewports iguais; QA de captions, timestamps intro/outro e thumbnails requer fontes reais no app empacotado e continua pendente. Iniciar conferindo `git status`, depois priorizar `/anime/212888` lado a lado e avançar para o step de QA do player.
+- Validação documental desta conferência: `pnpm format:check` e `git diff --check`; hash do commit documental será anotado na sessão seguinte.
+
 ## Mais informações em cards compactos de personagens e relações em 15/11/2026
 
 - Inventário após leitura de `../animonkey/services/anilist/index.ts`, `../animonkey/types/meta.ts`, `../animonkey/components/features/anime/character-grid.tsx`, do `AniListCatalog.getAnime` Electron e dos tipos atuais:
@@ -7,38 +15,38 @@
   - Anime relacionado: título, capa, relação, formato, status, estação/ano, número de episódios, nota, gêneros, sinopse, banner, cor e flag adulto. O card compacto mostra capa, tipo de relação/temporada, título, formato, status, estação/ano, primeiro gênero, episódios, nota e sinopse curta.
 - Reduzida a altura dos dois tipos de card: personagens em linha compacta com retrato e dados; relações em linha com capa estreita e metadados alinhados. A grade abre colunas conforme cresce o viewport.
 - A busca por voz japonesa usa a query existente, não duplica requests; a cache do detalhe foi migrada de `anime:v3` para `anime:v4` para renovar objetos persistidos sem dubladores. O hook de design continua ativo e escaneou a UI sem problemas determinísticos.
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. A consulta continua unificada em `AniListCatalog.getAnime`; nenhuma requisição por personagem ou relação foi adicionada.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. A consulta continua unificada em `AniListCatalog.getAnime`; nenhuma requisição por personagem ou relação foi adicionada. Commit `fe61a18` (`feat: compact anime credits and relation cards`).
 
 ## Carrossel de Personagens e grade densa de Relações em 15/11/2026
 
 - Personagens saiu da lista vertical e agora usa carrossel horizontal com snap, avanço por setas, rolagem suave que respeita movimento reduzido e cartões compactos.
 - Relações agora usam miniaturas 16:9 e grade de duas a cinco colunas conforme o viewport, reduzindo a altura ocupada por cada item e permitindo visualizar mais relações simultaneamente; metadados úteis e sinopse curta permanecem presentes.
 - O hook Impeccable está ativo e aprovou as edições sem apontamentos determinísticos.
-- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Hash será registrado após o commit.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Commit `6cca601` (`feat: add character carousel and compact relations grid`).
 
 ## Refino visual de Personagens e Relações em 15/11/2026
 
 - Consultados `../animonkey/components/features/anime/character-grid.tsx`, `anime-page-client.tsx`, o contrato `AnimeCharacter` e o mapeamento AniList existente. Personagens agora usam retratos verticais, identificação de papel, nome sobre gradiente e fallback de avatar; vazio ganhou estado visual próprio.
 - Relações agora seguem cards de capa imersivos, com tipo/temporada no alto, nome legível na base e affordance de navegação; rótulos, links e dados existentes foram preservados.
-- Hook detector Impeccable estava habilitado e escaneou o arquivo após ambas as edições, sem problemas determinísticos. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` serão registrados após validação.
+- Hook detector Impeccable estava habilitado e escaneou o arquivo após ambas as edições, sem problemas determinísticos. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Commit `6298e5b` (`style: elevate anime character and relation panels`).
 - Etapa anterior: `7cf0667` (`feat: refine anime relation cards`).
 
 ## Topbar recolhível por direção da rolagem em 15/11/2026
 
 - A topbar completa do `AppShell` agora desliza para cima ao rolar para baixo (após 120 px) e volta ao rolar para cima ou ao chegar perto do topo. Foco mantido dentro da barra a mantém visível; enquanto oculta, fica inerte para navegação por teclado.
 - Transição usa movimento vertical curto e respeita `prefers-reduced-motion`; a busca existente continua sincronizada com a direção da rolagem.
-- Verificações e hash do commit serão anotados após validação.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Commit `4385e88` (`feat: hide topbar while scrolling down`).
 
 ## Opacidade do banner do anime em 15/11/2026
 
 - Reduzida a densidade das camadas escuras do hero e elevada a presença da arte do banner em `src/components/features/anime/anime-page.tsx`; o gradiente ainda mantém contraste no lado do texto.
-- Verificações e hash do commit serão anotados após validação.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Commit `867de4c` (`style: soften anime banner overlay`).
 
 ## Transição do banner e sobreposição da topbar em 15/11/2026
 
 - O hero agora começa 76 px acima da área de conteúdo, atrás da parte inferior da topbar translúcida; `pt-[76px]` preserva a posição original do poster/textos e as alturas ajustadas preservam o fim do hero.
 - A máscara inferior termina na cor sólida do site (`#111113`) e usa parada intermediária para um fade contínuo, sem costura visível antes do restante da página.
-- Verificações e hash do commit serão anotados após validação.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Commit `77b2e14` (`style: extend anime banner behind topbar`).
 
 ## Refinamento dos cartões de relações em 15/11/2026
 
@@ -51,13 +59,13 @@
 
 - A linha vinha do `border-t` no `<section>` que contém as abas em `src/components/features/anime/anime-page.tsx`. A referência `../animonkey/components/features/anime/anime-page-client.tsx` inicia as tabs no fluxo contínuo do conteúdo, sem borda separadora; removida a classe.
 - Atualizado o gate da Fase 8 para evitar reintroduzir esse divisor. A borda antes de recomendações é independente e foi mantida.
-- Verificações e hash do commit serão anotados após validação.
+- `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Commit `c21dda5` (`fix: remove divider before anime tabs`).
 
 ## Temporadas e divisor na página Anime em 15/11/2026
 
 - Comparação direta de `../animonkey/components/features/anime/anime-page-client.tsx` (aba Relations e `getSeasonPartBadge`) com `src/components/features/anime/anime-page.tsx`. A versão anterior detecta `Season N` e `Nth Season` no título relacionado; Electron agora combina essa indicação com a relação AniList, por exemplo `Season 2 · Direct Sequel`, em vez de exibir somente `SEQUEL`.
-- O separador horizontal entre o hero e tabs/listas permanece full-width na área de conteúdo e ganhou contraste sutil (`border-white/10`) para corresponder à régua visível da referência; o conteúdo das abas segue no max-width/gutters padrão.
-- Etapa anterior que adicionou a regra de consulta direta ao legado: `fa2bad8` (`feat: port legacy episode filters and anime color`). Validação desta etapa e hash serão anotados após o commit.
+- Naquela etapa o separador recebeu contraste; depois foi removido a pedido do usuário (commit `c21dda5`), como confirma a referência antiga. Conteúdo das abas segue no max-width/gutters.
+- Etapa que adicionou a regra de consulta direta ao legado: `fa2bad8` (`feat: port legacy episode filters and anime color`).
 - Comparação estática do código concluída; revisão visual pareada de relações ainda pendente.
 
 ## Comparação direta da UI Anime e filtros de episódios em 15/11/2026
@@ -101,17 +109,17 @@
 
 Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualizado em 11/11/2026.
 
-| Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| --------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0 — Repositório e baseline        | `COMPLETED`   | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| 1 — Fundação UI e compatibilidade | `IN_PROGRESS` | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| 2 — Domínio e dados públicos      | `IN_PROGRESS` | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                                                                                                                                                                                                                                                                                                                                                                                                |
-| 3 — Player e streaming            | `COMPLETED`   | Vidstack é o player único; engine, resolver, controller, Zustand, captions e fallback foram validados no smoke do pacote confirmado pelo usuário em 11/11/2026. `TD-PLAYER-001` permanece adiado. Novo step complementar de QA: verificar sincronização de captions e marcadores intro/outro na timeline com timestamps reais; pendente.                                                                                                                                                                                                                                                          |
-| 4 — Persistência offline          | `COMPLETED`   | Usuário confirmou importação válida/mesclagem, rejeição do backup inválido e retenção após upgrade do IndexedDB v3→v4. Cache vencido é limpo após 30 dias de fallback; gravação de cache é opcional para AniList.                                                                                                                                                                                                                                                                                                                                                                                 |
-| 5 — Conta e sync                  | `COMPLETED`   | Conta, sync, ratings, senha bcrypt, perfil/avatar, export, privacidade e feed paginado implementados. Feed atualiza por foco/manual; novo evento `episode_completed` é emitido ao cruzar 90% uma vez por anime/episódio. Migration Supabase `20261111225606_desktop_activity_episode_completed` aplicada e verificada em transação com rollback.                                                                                                                                                                                                                                                  |
-| 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| 8 — Paridade visual e QA          | `IN_PROGRESS` | Comparação real de `/anime/159042` e `/watch/159042` feita em 11/11 (Chrome 1520×900; Electron 1426×912, portanto ainda sem viewport idêntico). O Electron tinha personagens/recomendações mas faltavam as abas/lista de episódios do detalhe; lista e abas adicionadas via Anivexa. Player dos dois mostrou ausência de servidores, sem validação de reprodução ou paridade. Header do Electron renderizou avatar; avatar no feed precisa de confirmação. Próximo ciclo: avaliar todas as rotas migradas uma por uma em viewport/estado equivalentes, incluindo captions e timeline intro/outro. |
+| Fase                              | Estado        | Evidência / próximo passo                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0 — Repositório e baseline        | `COMPLETED`   | `main` acompanha `origin/main` (`DaniHRE/animonkey-electron`); `AGENTS.md`, scripts, identidade do app e baseline de validação configurados. Sem commits/push nesta migração.                                                                                                                                                                                          |
+| 1 — Fundação UI e compatibilidade | `IN_PROGRESS` | HashRouter, shell desktop, alias, Tailwind 4, primitiva shadcn, error boundary global, skip link e CSP derivada da URL pública. Faltam outras primitivas e QA de acessibilidade.                                                                                                                                                                                       |
+| 2 — Domínio e dados públicos      | `IN_PROGRESS` | Home, busca AniList paginada com ANIME/adult e filtros, detalhes enriquecidos, catálogo e agenda; cache IndexedDB com TTL e fallback expirado. Falta revisar paridade completa e otimizar o cache.                                                                                                                                                                     |
+| 3 — Player e streaming            | `COMPLETED`   | Vidstack é o player único; engine, resolver, controller, Zustand, captions e fallback foram validados no smoke do pacote confirmado pelo usuário em 11/11/2026. `TD-PLAYER-001` permanece adiado. Novo step complementar de QA: verificar sincronização de captions e marcadores intro/outro na timeline com timestamps reais; pendente.                               |
+| 4 — Persistência offline          | `COMPLETED`   | Usuário confirmou importação válida/mesclagem, rejeição do backup inválido e retenção após upgrade do IndexedDB v3→v4. Cache vencido é limpo após 30 dias de fallback; gravação de cache é opcional para AniList.                                                                                                                                                      |
+| 5 — Conta e sync                  | `COMPLETED`   | Conta, sync, ratings, senha bcrypt, perfil/avatar, export, privacidade e feed paginado implementados. Feed atualiza por foco/manual; novo evento `episode_completed` é emitido ao cruzar 90% uma vez por anime/episódio. Migration Supabase `20261111225606_desktop_activity_episode_completed` aplicada e verificada em transação com rollback.                       |
+| 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                                                                                                                                                                                    |
+| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                                                                                                                                                               |
+| 8 — Paridade visual e QA          | `IN_PROGRESS` | Implementados hero/metadados, filtros de episódios no detalhe e player, personagens em carrossel e relações em grade compacta. Ainda falta comparar `/anime/212888` e `/watch/212888` em viewport/estado equivalentes. QA de captions, intro/outro e thumbnails exige fontes reais no pacote e segue pendente; nenhuma tela anime/player aprovada para paridade total. |
 
 ## Trilha de modernização de player e arquitetura
 
