@@ -318,9 +318,6 @@ function WatchPageContent() {
     currentEpisodeId,
     currentEpisode?.number,
   );
-  const activeIndex = episodes.findIndex((episode) =>
-    episodeHasId(episode, currentEpisodeId),
-  );
   const selectEpisode = (
     episode: AnimeEpisode,
     audio: 'sub' | 'dub' = currentEpisodeAudio,
@@ -561,45 +558,6 @@ function WatchPageContent() {
               onProgress={save}
             />
           </PlayerErrorBoundary>
-          <div className="watch-page__episode-heading">
-            <div className="min-w-0">
-              <h2 className="truncate">
-                {currentEpisode?.title ??
-                  (currentEpisode
-                    ? `Episódio ${currentEpisode.number}`
-                    : 'Selecione um episódio')}
-              </h2>
-              <p>
-                {title}
-                {currentEpisode ? ` · Episódio ${currentEpisode.number}` : ''}
-              </p>
-            </div>
-            <button
-              type="button"
-              disabled={activeIndex <= 0}
-              onClick={() => {
-                const previous = episodes[activeIndex - 1];
-                if (previous) selectEpisode(previous, preferredAudio);
-              }}
-              aria-label="Reproduzir episódio anterior"
-              className="watch-page__step-button"
-            >
-              <ArrowLeft size={15} />
-            </button>
-            <button
-              type="button"
-              disabled={activeIndex < 0 || activeIndex >= episodes.length - 1}
-              onClick={() => {
-                const next = episodes[activeIndex + 1];
-                if (next) selectEpisode(next, preferredAudio);
-              }}
-              aria-label="Reproduzir próximo episódio"
-              className="watch-page__step-button"
-            >
-              <ArrowRight size={15} />
-            </button>
-          </div>
-
           <section className="watch-page__servers">
             <div className="watch-page__servers-heading">
               <span>Servidores</span>
