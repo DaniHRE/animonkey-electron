@@ -6,6 +6,12 @@
 - Evidência desta rodada: `230554b fix: compact episode pagination`; typecheck, lint, formatação e `git diff --check` aprovados. O pacote não foi aberto nesta rodada.
 - Permanecem sem nova validação real os estados de captions/timestamps/previews com fonte real e a comparação visual pareada no pacote; ficam como acompanhamento opcional do player, sem bloquear o aceite da Fase 8.
 
+## Anivexa no bundle Electron — desenho pendente em 16/11/2026
+
+- O usuário direcionou que a Anivexa seja incorporada à distribuição/bundle do Electron; o mecanismo de execução e integração ainda está em avaliação. A verificação de endpoint HTTPS externo deixa de ser o próximo requisito até essa decisão.
+- Não alterei código nem o checkout irmão `Anivexa-API`; ele permanece na branch `fix/reanime-episode-catalog-selection` para testes de providers.
+- A Fase 7 continua `IN_PROGRESS`. Próximo passo: definir o modelo de empacotamento e ciclo de vida da API respeitando a separação entre serviços de domínio, Electron main e renderer.
+
 ## Paginação compacta de catálogos longos em 16/11/2026
 
 - A captura enviada pelo usuário mostrou a página Anime renderizando um botão por página. O player também criava um chip por faixa de 50 episódios. Ambos agora usam `getPaginationItems`: cinco páginas próximas, primeira e última páginas e reticências quando há lacunas. Os tamanhos das listas permanecem 8 no detalhe e 50 no player.
@@ -149,7 +155,7 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 | 4 — Persistência offline          | `COMPLETED`   | Usuário confirmou importação válida/mesclagem, rejeição do backup inválido e retenção após upgrade do IndexedDB v3→v4. Cache vencido é limpo após 30 dias de fallback; gravação de cache é opcional para AniList.                                                                                                                                |
 | 5 — Conta e sync                  | `COMPLETED`   | Conta, sync, ratings, senha bcrypt, perfil/avatar, export, privacidade e feed paginado implementados. Feed atualiza por foco/manual; novo evento `episode_completed` é emitido ao cruzar 90% uma vez por anime/episódio. Migration Supabase `20261111225606_desktop_activity_episode_completed` aplicada e verificada em transação com rollback. |
 | 6 — Watch Together e complementos | `NOT_STARTED` | Adiado por decisão do usuário; não iniciar nesta etapa da migração.                                                                                                                                                                                                                                                                              |
-| 7 — Distribuição                  | `IN_PROGRESS` | `pnpm package` produziu pacote Windows x64. Sem instalador/release, assinatura, atualização ou QA de outras plataformas.                                                                                                                                                                                                                         |
+| 7 — Distribuição                  | `IN_PROGRESS` | Existe artefato de validação Windows x64, sem instalador/release. A direção agora é incluir a Anivexa no bundle Electron; o mecanismo de execução/integração ainda está pendente, assim como assinatura, atualização e QA de outras plataformas.                                                                                                 |
 | 8 — Paridade visual e QA          | `COMPLETED`   | Aceite explícito do usuário em 16/11/2026 após ajustes de scrollbar, catálogo e paginação; dispensou novas capturas/controle da janela. Fechada por aceite, sem novo smoke visual do pacote. Captions, timestamps e previews ainda não foram revalidados com fonte real.                                                                         |
 
 ## Trilha de modernização de player e arquitetura
@@ -200,12 +206,14 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 ## Próximos passos
 
-1. Opcional em uma etapa futura: retomar QA visual do pacote em `/anime/21` e `/watch/21` e validar captions sincronizadas, timestamps intro/outro e previews da timeline com fonte real; a Fase 8 foi aceita pelo usuário sem esse smoke adicional.
-2. Confirmar endpoint HTTPS Anivexa para release e seguir a fase de distribuição conforme inventário.
-3. Watch Together e complementos permanecem adiados (`NOT_STARTED`) por decisão do usuário.
+1. Definir o mecanismo para empacotar e operar a Anivexa junto com o Electron, respeitando a separação de responsabilidades antes de implementar.
+2. Após a decisão arquitetural, seguir com implementação e smoke de instalação limpa/upgrade da Fase 7.
+3. Opcional: retomar QA visual de `/anime/21` e `/watch/21` e validar captions, timestamps intro/outro e previews com fonte real; a Fase 8 foi aceita pelo usuário sem esse smoke adicional.
+4. Watch Together e complementos permanecem adiados (`NOT_STARTED`) por decisão do usuário.
 
 ## Commits por etapa
 
+- `bf6be46 docs: record phase 8 acceptance` — fase 8 fechada por aceite do usuário, sem novo smoke visual do pacote; itens não revalidados preservados como acompanhamento opcional.
 - `230554b fix: compact episode pagination` — paginação limitada no detalhe e player, com `getPaginationItems`; `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` aprovados.
 - `53779b9 feat: improve full-width visual parity` — shell full-bleed, detalhe/player ajustados, relacionados/recomendações no player, CSP permite somente a origem Supabase pública configurada. `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `git diff --check`, `pnpm package` Windows x64 e inspeção da CSP empacotada aprovados; comparação visual lado a lado continua pendente.
 - `1f9f3f0 fix: repair desktop activity and profile UX` — trigger idempotente para progresso preexistente, refresh de feed, avatar real no topo/feed e avaliação reposicionada; migration `20261111222217` aplicada e verificada no Supabase. Typecheck, lint, formatação, diff check e package Windows x64 aprovados.

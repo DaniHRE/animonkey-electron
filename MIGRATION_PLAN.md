@@ -267,6 +267,7 @@ Regras da fronteira Electron:
 3. Quais sistemas operacionais e canais de update são alvo do primeiro release?
 4. Deve haver importação explícita de dados do browser e perfil local ou perfil único desktop?
 5. Admin, Analytics, Speed Insights, termos/DMCA e notificações devem ter equivalência desktop literal ou adaptação de produto?
+6. Como incluir a Anivexa no bundle de distribuição do Electron? **Direção do usuário em 16/11/2026: distribuir junto com o Electron; mecanismo de execução e integração ainda pendente.**
 
 As decisões acima não bloqueiam a fundação visual nem a migração inicial de catálogo. Elas bloqueiam qualquer remoção de endpoints Next ou distribuição de funcionalidades que dependam de segredos server-side.
 
