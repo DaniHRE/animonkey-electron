@@ -272,3 +272,8 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 - A correção `73e1dc1` filtrava buffering apenas quando o seek começava pausado. A sequência relatada também pode receber `waiting` em outra ordem ou durante seek sem pausa. O player agora marca cada operação `seeking` até o próximo `playing`, limpa o carregamento em `seeked` e ignora `waiting` tardio durante o seek. Isso impede que um evento atrasado prenda o overlay depois que a posição solicitada foi alcançada.
 - Typecheck e lint passaram. O fluxo do player empacotado ainda precisa de confirmação no runtime.
+
+## Corrida entre pausa e seek futuro em 16/11/2026
+
+- O relato especificou a ordem `play` → `pause` → seek futuro. O handler anterior limpava a marca do seek em qualquer `playing`, inclusive evento atrasado da reprodução anterior. Agora eventos `waiting` só mostram o indicador quando o app registrou intenção atual de reprodução; a pausa encerra essa intenção; `playing` atrasado não libera um seek se o player já está pausado.
+- Confirmado que a janela testada antes desta rodada usava o pacote de 09:17, anterior aos commits mais recentes. O pacote atualizado foi gerado às 10:00. Typecheck e lint passaram para esta correção. A fonte de `212888` falhou neste smoke antes de permitir repetir o seek, apesar de a API local listar DASH/HLS para os servidores. Não marcar o smoke funcional como aprovado.
