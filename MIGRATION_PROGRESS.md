@@ -1,5 +1,11 @@
 # Progresso da migração
 
+## Ações do hero e contador da próxima estreia em 16/11/2026
+
+- As ações Assistir, avaliar, compartilhar e trailer permanecem na mesma linha logo após a sinopse. O próximo episódio ganhou um módulo independente antes das abas, com número, data/hora local e contagem regressiva atualizada a cada minuto.
+- A lista de episódios usa uma linha compacta, com número em coluna própria e sem repetir o número no título.
+- `pnpm typecheck`, `pnpm lint`, Prettier nos arquivos editados e `git diff --check` passaram. Por orientação do usuário, não houve nova comparação visual nem controle de janelas nesta etapa. O pacote não foi reconstruído; QA empacotado de captions, timestamps intro/outro e miniaturas segue pendente.
+
 ## QA empacotado em 16/11/2026
 
 - Retomada em `f73adf1` na `main`, com árvore limpa. Node 26 encerrou o Forge durante a extração do Electron com código zero e sem executável. Com Node 22, o Forge concluiu e gerou `out/Animonkey-win32-x64/Animonkey.exe`. O deep link abriu `/anime/212888` no pacote.

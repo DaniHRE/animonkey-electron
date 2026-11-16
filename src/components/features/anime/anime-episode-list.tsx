@@ -1,4 +1,4 @@
-import { Captions, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Captions, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -88,14 +88,13 @@ export function AnimeEpisodeList({
             <Link
               key={episode.id}
               to={`/watch/${animeId}?ep=${encodeURIComponent(episode.id)}`}
-              className={`group flex min-w-0 items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.025] p-3 transition hover:bg-white/[0.06] ${viewMode === 'grid' ? 'min-h-20' : ''}`}
+              className={`group flex min-w-0 items-center gap-4 rounded-md border border-white/[0.06] bg-white/[0.025] px-4 py-3 transition hover:bg-white/[0.06] ${viewMode === 'grid' ? 'min-h-20' : ''}`}
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-white/[0.06] text-xs font-bold tabular-nums text-white/65 transition group-hover:bg-white/[0.1]">
+              <span className="w-8 shrink-0 text-center text-sm font-semibold text-white/60">
                 {episode.number}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-xs font-semibold text-white/85 group-hover:text-white">
-                  {episode.number}.{' '}
+                <span className="block truncate text-sm font-medium text-white group-hover:text-white">
                   {episode.title ?? `Episódio ${episode.number}`}
                 </span>
                 {viewMode === 'grid' && episode.description && (
@@ -104,13 +103,12 @@ export function AnimeEpisodeList({
                   </span>
                 )}
               </span>
-              {episode.isSubbed && (
-                <Captions
-                  size={15}
-                  aria-label="Episódio legendado"
-                  className="shrink-0 text-white/30"
-                />
-              )}
+              <span className="flex shrink-0 items-center gap-2 text-white/40">
+                {episode.isSubbed && (
+                  <Captions size={16} aria-label="Episódio legendado" />
+                )}
+                <Heart size={16} aria-hidden="true" />
+              </span>
             </Link>
           ))}
         </div>

@@ -2,9 +2,9 @@ import {
   ArrowUpRight,
   Bookmark,
   BookmarkCheck,
-  CalendarClock,
   Check,
   Clapperboard,
+  Clock,
   Maximize2,
   Network,
   Play,
@@ -38,6 +38,7 @@ export function AnimePage() {
   }>({ id: '', anime: null, error: null });
   const { isInList, toggle } = useWatchLater();
   const userRating = useAnimeRating(id);
+  const [currentTime, setCurrentTime] = useState(0);
   const [reviewDraft, setReviewDraft] = useState<string | null>(null);
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [ratingOpen, setRatingOpen] = useState(false);
@@ -59,6 +60,17 @@ export function AnimePage() {
     const timeout = window.setTimeout(() => setFeedback(null), 2500);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
+
+  useEffect(() => {
+    const updateCurrentTime = () =>
+      setCurrentTime(Math.floor(Date.now() / 1000));
+    const initialUpdate = window.setTimeout(updateCurrentTime, 0);
+    const interval = window.setInterval(updateCurrentTime, 60_000);
+    return () => {
+      window.clearTimeout(initialUpdate);
+      window.clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (!copied) return;
@@ -159,7 +171,7 @@ export function AnimePage() {
           } as React.CSSProperties
         }
       >
-        <div className="relative -mt-[76px] min-h-[436px] overflow-hidden pt-[76px] lg:min-h-[496px]">
+        <div className="relative -mt-[76px] min-h-[436px] overflow-hidden pt-[76px] lg:min-h-0">
           {anime.banner && (
             <img
               src={anime.banner}
@@ -169,222 +181,203 @@ export function AnimePage() {
           )}
           <div className="absolute inset-0 bg-gradient-to-r from-[#111113]/90 via-[#111113]/55 to-[#111113]/15" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#111113] via-[#111113]/45 to-transparent" />
-          <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] items-end gap-4 px-4 py-6 sm:gap-6 sm:px-6 sm:py-8 lg:min-h-[420px] lg:px-8 lg:py-10">
-            {image && (
-              <button
-                type="button"
-                onClick={() => setPosterOpen(true)}
-                aria-label={`Ampliar pôster de ${title}`}
-                className="group relative aspect-[2/3] h-[250px] w-[167px] shrink-0 cursor-zoom-in overflow-hidden rounded-md shadow-2xl shadow-black/60 sm:h-[300px] sm:w-[200px]"
-              >
-                <img
-                  src={image}
-                  alt={title}
-                  className="size-full object-cover"
-                />
-                <span className="absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100 group-focus-visible:bg-black/45 group-focus-visible:opacity-100">
-                  <Maximize2 size={25} />
-                </span>
-              </button>
-            )}
-            <div className="max-w-2xl pb-2">
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-black/90">
-                {anime.totalEpisodes != null && (
-                  <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1">
-                    {anime.totalEpisodes} EP
+          <div className="relative mx-auto flex min-h-[360px] w-full max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8 lg:min-h-0 lg:px-8 lg:pt-[68px] lg:pb-0">
+            <div className="flex w-full items-start gap-3 pt-4 md:items-end md:gap-5 md:pt-8 lg:pt-0">
+              {image && (
+                <button
+                  type="button"
+                  onClick={() => setPosterOpen(true)}
+                  aria-label={`Ampliar pôster de ${title}`}
+                  className="group relative aspect-[2/3] h-[175px] w-[125px] shrink-0 cursor-zoom-in overflow-hidden rounded-md shadow-2xl shadow-black/60 md:h-[256px] md:w-[180px]"
+                >
+                  <img
+                    src={image}
+                    alt={title}
+                    className="size-full object-cover"
+                  />
+                  <span className="absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100 group-focus-visible:bg-black/45 group-focus-visible:opacity-100">
+                    <Maximize2 size={25} />
                   </span>
-                )}
-                <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1">
-                  ANIME
-                </span>
-                {anime.isAdult && (
-                  <span className="rounded bg-red-500 px-2.5 py-1 text-white">
-                    18+
-                  </span>
-                )}
-                {anime.type && (
-                  <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1">
-                    {anime.type}
-                  </span>
-                )}
-                {anime.status && (
-                  <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1">
-                    {anime.status.replaceAll('_', ' ')}
-                  </span>
-                )}
-                {(anime.season || anime.releaseDate) && (
-                  <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1 capitalize">
-                    {anime.season?.toLowerCase()}
-                    {anime.season && anime.releaseDate ? ' ' : ''}
-                    {anime.releaseDate}
-                  </span>
-                )}
-                {anime.rating != null && (
-                  <span className="rounded bg-white/80 px-2.5 py-1">
-                    ★ {anime.rating.toFixed(1)}
-                  </span>
-                )}
-                {anime.duration && (
-                  <span className="rounded bg-[var(--anime-accent)] px-2.5 py-1">
-                    {anime.duration} min
-                  </span>
-                )}
-              </div>
-              {anime.title.native && (
-                <p className="mt-2 line-clamp-1 text-sm font-light text-white/60 md:text-base">
-                  {anime.title.native}
-                </p>
+                </button>
               )}
-              <h1 className="mt-1 line-clamp-2 text-xl font-black leading-tight tracking-tight sm:text-3xl">
-                {title}
-              </h1>
-              {anime.nextAiringEpisode && (
-                <p className="mt-2 inline-flex w-fit items-center gap-2 rounded-md border border-sky-300/20 bg-sky-400/10 px-3 py-1.5 text-xs font-semibold text-sky-100">
-                  <CalendarClock size={15} className="shrink-0 text-sky-300" />
-                  <span>
-                    Próximo episódio {anime.nextAiringEpisode.episode}
-                    {' · '}
-                    {new Date(
-                      anime.nextAiringEpisode.airingAt * 1000,
-                    ).toLocaleString('pt-BR', {
-                      dateStyle: 'short',
-                      timeStyle: 'short',
-                      timeZone: 'America/Sao_Paulo',
-                    })}
-                  </span>
-                </p>
-              )}
-              {anime.genres.length > 0 && (
-                <div className="mt-2 hidden flex-wrap gap-2 md:flex">
-                  {anime.genres.map((genre) => (
-                    <span
-                      key={genre}
-                      className="inline-flex h-7 items-center rounded-md bg-white/[0.1] px-3 text-xs font-medium text-white/85"
-                    >
-                      {genre}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold text-black/90 md:gap-3">
+                  {anime.totalEpisodes != null && (
+                    <span className="flex h-5 items-center rounded bg-[var(--anime-accent)] px-2 md:h-6 md:px-3.5 md:text-base">
+                      {anime.totalEpisodes} EP
                     </span>
-                  ))}
-                </div>
-              )}
-              <p className="mt-3 line-clamp-3 max-w-3xl text-xs leading-relaxed text-white/60 sm:text-sm">
-                {stripHtml(anime.description) || 'Sem sinopse disponível.'}
-              </p>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <div className="inline-flex h-10 items-center overflow-hidden rounded-md">
-                  <Link
-                    to={`/watch/${anime.id}`}
-                    className="inline-flex h-10 items-center gap-2 bg-[#49d77a] px-5 text-xs font-bold text-[#07110a] transition hover:bg-[#6ce995]"
-                  >
-                    <Play size={14} fill="currentColor" /> Assistir
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      void toggle(anime).catch(() =>
-                        setFeedback(
-                          'Não foi possível atualizar sua lista. Tente novamente.',
-                        ),
-                      )
-                    }
-                    aria-pressed={isInList(anime.id)}
-                    aria-label={
-                      isInList(anime.id)
-                        ? 'Remover de Assistir Depois'
-                        : 'Adicionar a Assistir Depois'
-                    }
-                    className="inline-flex h-10 w-11 items-center justify-center bg-white/75 text-black/80 transition hover:bg-white/90"
-                  >
-                    {isInList(anime.id) ? (
-                      <BookmarkCheck size={17} />
-                    ) : (
-                      <Bookmark size={17} />
-                    )}
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  aria-label={
-                    userRating.rating
-                      ? `Sua nota: ${userRating.rating.score}/10`
-                      : 'Avaliar este anime'
-                  }
-                  onClick={() => {
-                    setRatingError(null);
-                    if (!userRating.isAuthenticated) {
-                      setFeedback(
-                        'Entre para avaliar. Faça login nas configurações para salvar sua nota.',
-                      );
-                      return;
-                    }
-                    setRatingOpen(true);
-                  }}
-                  className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"
-                >
-                  <Star size={14} />
-                  {userRating.rating
-                    ? `${userRating.rating.score}/10`
-                    : 'Avaliar'}
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const url = `app:run://anime/${encodeURIComponent(anime.id)}`;
-                      if (navigator.share)
-                        await navigator.share({ title, text: url });
-                      else {
-                        await navigator.clipboard.writeText(url);
-                        setCopied(true);
-                        setFeedback(
-                          'Link copiado para a área de transferência.',
-                        );
-                      }
-                    } catch (cause) {
-                      if (
-                        cause instanceof DOMException &&
-                        cause.name === 'AbortError'
-                      )
-                        return;
-                      setFeedback(
-                        'Não foi possível compartilhar. Verifique a permissão da área de transferência.',
-                      );
-                    }
-                  }}
-                  className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"
-                >
-                  {copied ? <Check size={14} /> : <Share2 size={14} />}
-                  <span className="sr-only">
-                    {copied ? 'Link copiado!' : 'Compartilhar'}
+                  )}
+                  <span className="flex h-5 items-center rounded bg-[var(--anime-accent)] px-2 md:h-6 md:px-3.5 md:text-base">
+                    ANIME
                   </span>
-                </button>
-                {anime.trailer?.site === 'youtube' &&
-                /^[\w-]{11}$/.test(anime.trailer.id) ? (
+                  {anime.isAdult && (
+                    <span className="flex h-5 items-center rounded bg-red-500 px-2 text-white md:h-6 md:px-3.5 md:text-base">
+                      18+
+                    </span>
+                  )}
+                  {anime.type && (
+                    <span className="flex h-5 items-center rounded bg-[var(--anime-accent)] px-2 md:h-6 md:px-3.5 md:text-base">
+                      {anime.type}
+                    </span>
+                  )}
+                  {anime.status && (
+                    <span className="flex h-5 items-center rounded bg-[var(--anime-accent)] px-2 md:h-6 md:px-3.5 md:text-base">
+                      {anime.status.replaceAll('_', ' ')}
+                    </span>
+                  )}
+                  {(anime.season || anime.releaseDate) && (
+                    <span className="flex h-5 items-center rounded bg-[var(--anime-accent)] px-2 capitalize md:h-6 md:px-3.5 md:text-base">
+                      {anime.season?.toLowerCase()}
+                      {anime.season && anime.releaseDate ? ' ' : ''}
+                      {anime.releaseDate}
+                    </span>
+                  )}
+                  {anime.rating != null && (
+                    <span className="flex h-5 items-center rounded bg-white/80 px-2 md:h-6 md:px-3.5 md:text-base">
+                      {anime.rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+                {anime.title.native && (
+                  <p className="mt-2 line-clamp-1 text-sm font-light text-white/60 md:text-lg">
+                    {anime.title.native}
+                  </p>
+                )}
+                <h1 className="mt-1 line-clamp-2 text-xl font-black leading-tight tracking-tight sm:text-3xl md:text-4xl">
+                  {title}
+                </h1>
+                {anime.genres.length > 0 && (
+                  <div className="mt-2 hidden flex-wrap gap-2 md:flex">
+                    {anime.genres.map((genre) => (
+                      <span
+                        key={genre}
+                        className="inline-flex h-7 items-center rounded-md bg-white/[0.1] px-3 text-xs font-medium text-white/85 md:text-sm"
+                      >
+                        {genre}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-white/60 sm:text-sm">
+                  {stripHtml(anime.description) || 'Sem sinopse disponível.'}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <div className="inline-flex h-10 items-center overflow-hidden rounded-md">
+                    <Link
+                      to={`/watch/${anime.id}`}
+                      className="inline-flex h-10 items-center gap-2 bg-[#49d77a] px-5 text-xs font-bold text-[#07110a] transition hover:bg-[#6ce995]"
+                    >
+                      <Play size={14} fill="currentColor" /> Assistir
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void toggle(anime).catch(() =>
+                          setFeedback(
+                            'Não foi possível atualizar sua lista. Tente novamente.',
+                          ),
+                        )
+                      }
+                      aria-pressed={isInList(anime.id)}
+                      aria-label={
+                        isInList(anime.id)
+                          ? 'Remover de Assistir Depois'
+                          : 'Adicionar a Assistir Depois'
+                      }
+                      className="inline-flex h-10 w-11 items-center justify-center bg-white/75 text-black/80 transition hover:bg-white/90"
+                    >
+                      {isInList(anime.id) ? (
+                        <BookmarkCheck size={17} />
+                      ) : (
+                        <Bookmark size={17} />
+                      )}
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setTrailerOpen(true)}
-                    aria-label="Assistir trailer"
+                    aria-label={
+                      userRating.rating
+                        ? `Sua nota: ${userRating.rating.score}/10`
+                        : 'Avaliar este anime'
+                    }
+                    onClick={() => {
+                      setRatingError(null);
+                      if (!userRating.isAuthenticated) {
+                        setFeedback(
+                          'Entre para avaliar. Faça login nas configurações para salvar sua nota.',
+                        );
+                        return;
+                      }
+                      setRatingOpen(true);
+                    }}
                     className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"
                   >
-                    <Clapperboard size={14} />
-                    <span className="sr-only">Assistir trailer</span>
+                    <Star size={14} />
+                    {userRating.rating
+                      ? `${userRating.rating.score}/10`
+                      : 'Avaliar'}
                   </button>
-                ) : (
                   <button
                     type="button"
-                    disabled
-                    aria-label="Trailer indisponível"
-                    className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/35"
+                    onClick={async () => {
+                      try {
+                        const url = `app:run://anime/${encodeURIComponent(anime.id)}`;
+                        if (navigator.share)
+                          await navigator.share({ title, text: url });
+                        else {
+                          await navigator.clipboard.writeText(url);
+                          setCopied(true);
+                          setFeedback(
+                            'Link copiado para a área de transferência.',
+                          );
+                        }
+                      } catch (cause) {
+                        if (
+                          cause instanceof DOMException &&
+                          cause.name === 'AbortError'
+                        )
+                          return;
+                        setFeedback(
+                          'Não foi possível compartilhar. Verifique a permissão da área de transferência.',
+                        );
+                      }
+                    }}
+                    className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"
                   >
-                    <Clapperboard size={14} />
-                    <span className="sr-only">Trailer indisponível</span>
+                    {copied ? <Check size={14} /> : <Share2 size={14} />}
+                    <span className="sr-only">
+                      {copied ? 'Link copiado!' : 'Compartilhar'}
+                    </span>
                   </button>
+                  {anime.trailer?.site === 'youtube' &&
+                  /^[\w-]{11}$/.test(anime.trailer.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => setTrailerOpen(true)}
+                      aria-label="Assistir trailer"
+                      className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"
+                    >
+                      <Clapperboard size={14} />
+                      <span className="sr-only">Assistir trailer</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      aria-label="Trailer indisponível"
+                      className="inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/35"
+                    >
+                      <Clapperboard size={14} />
+                      <span className="sr-only">Trailer indisponível</span>
+                    </button>
+                  )}
+                </div>
+                {feedback && (
+                  <p role="status" className="mt-2 text-xs text-white/70">
+                    {feedback}
+                  </p>
                 )}
               </div>
-              {feedback && (
-                <p role="status" className="mt-2 text-xs text-white/70">
-                  {feedback}
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -400,8 +393,52 @@ export function AnimePage() {
             ))}
           </div>
         )}
+        {anime.nextAiringEpisode && (
+          <div className="mx-auto mt-4 w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col gap-3 rounded-xl border border-white/[0.08] bg-[#171719] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-white/65">
+                  <Clock size={18} aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-white/85">
+                    Próximo episódio {anime.nextAiringEpisode.episode}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-white/45">
+                    {new Date(
+                      anime.nextAiringEpisode.airingAt * 1000,
+                    ).toLocaleString('pt-BR', {
+                      dateStyle: 'short',
+                      timeStyle: 'short',
+                      timeZone: 'America/Sao_Paulo',
+                    })}
+                  </p>
+                </div>
+              </div>
+              <p
+                role="timer"
+                aria-label={
+                  currentTime > 0
+                    ? `Próximo episódio em ${formatAiringCountdown(
+                        anime.nextAiringEpisode.airingAt - currentTime,
+                      )}`
+                    : 'Calculando a estreia do próximo episódio'
+                }
+                className="text-sm font-bold text-[#70e793] sm:text-right"
+              >
+                {currentTime > 0
+                  ? formatAiringCountdown(
+                      anime.nextAiringEpisode.airingAt - currentTime,
+                    )
+                  : 'Calculando estreia…'}
+              </p>
+            </div>
+          </div>
+        )}
         <section>
-          <div className="mx-auto w-full max-w-[1440px] px-4 py-7 sm:px-6 lg:px-8">
+          <div
+            className={`mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8 ${anime.nextAiringEpisode ? 'pt-4 pb-7' : 'py-7'}`}
+          >
             <div
               role="tablist"
               aria-label="Informações do anime"
@@ -781,4 +818,16 @@ function formatRelationStatus(status: string): string {
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function formatAiringCountdown(seconds: number): string {
+  const remaining = Math.max(0, Math.floor(seconds));
+  const days = Math.floor(remaining / 86_400);
+  const hours = Math.floor((remaining % 86_400) / 3_600);
+  const minutes = Math.floor((remaining % 3_600) / 60);
+
+  if (days > 0) return `${days} dia${days === 1 ? '' : 's'} e ${hours} h`;
+  if (hours > 0) return `${hours} h e ${minutes} min`;
+  if (minutes > 0) return `${minutes} min`;
+  return 'em breve';
 }
