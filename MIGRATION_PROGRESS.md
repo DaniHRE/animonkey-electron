@@ -267,3 +267,8 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 
 - O ajuste `b9c5d62` não cobria a corrida em que `waiting` podia chegar depois de `seeked` durante seek pausado no carregamento inicial. O player agora mantém esse seek identificado como pausado até `can-play` ou `playing`, ignora `waiting` nesse intervalo e reinicia a identificação ao trocar de fonte. Isso evita reexibir um estado de carregamento sem interação, enquanto aguarda a rede.
 - Typecheck passou. Lint passou depois de formatar o arquivo. Confirmação no pacote Windows permanece pendente.
+
+## Seek futuro ainda preso no carregamento em 16/11/2026
+
+- A correção `73e1dc1` filtrava buffering apenas quando o seek começava pausado. A sequência relatada também pode receber `waiting` em outra ordem ou durante seek sem pausa. O player agora marca cada operação `seeking` até o próximo `playing`, limpa o carregamento em `seeked` e ignora `waiting` tardio durante o seek. Isso impede que um evento atrasado prenda o overlay depois que a posição solicitada foi alcançada.
+- Typecheck e lint passaram. O fluxo do player empacotado ainda precisa de confirmação no runtime.
