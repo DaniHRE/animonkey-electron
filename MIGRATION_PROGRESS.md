@@ -400,4 +400,4 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - Não alterei o checkout `../Anivexa-API`. Li os componentes legados de watch, lista de episódios, providers e player CSS em `../animonkey/components/features/anime/`; IDs, dados de catálogo, seleção de fonte/legenda/capítulos e navegação lateral não foram alterados.
 - Capturas confirmam visualmente o estado renderizado em desenvolvimento e a remoção da linha; a página carregada não chegou a reproduzir vídeo. Não foi executado smoke empacotado, QA audiovisual, verificação manual de teclado/touch em janelas estreitas ou aceite final do pacote. Paridade visual e de player seguem pendentes de confirmação do usuário no runtime/pacote.
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram após a implementação e atualização dos documentos. Não rodei testes automatizados.
-- Commit local de implementação: pendente. O hash será registrado no tracker em commit documental separado, conforme a regra de não referenciar o próprio hash.
+- Commit local da implementação: `e80dc4f` (`fix(watch): refine spacing and remove duplicate heading`).
