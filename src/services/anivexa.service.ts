@@ -316,19 +316,33 @@ export const AnivexaCatalog = {
     const index = await getEpisodeIndex(animeId, signal);
     const episodes = new Map<number, AnimeEpisode>();
     for (const provider of orderedProviders(index)) {
-      for (const episode of index[provider]?.episodes?.sub ?? []) {
-        const number = Number(episode.number);
-        if (!Number.isSafeInteger(number) || number < 0) continue;
-        const previous = episodes.get(number);
-        episodes.set(number, {
-          id: `${animeId}:sub:${number}`,
-          number,
-          title: episode.title ?? previous?.title,
-          description: episode.description ?? previous?.description,
-          image: episode.image ?? previous?.image,
-          isSubbed: true,
-          isDubbed: false,
-        });
+      for (const audio of ['sub', 'dub'] as const) {
+        for (const episode of index[provider]?.episodes?.[audio] ?? []) {
+          const number = Number(episode.number);
+          if (!Number.isSafeInteger(number) || number < 0) continue;
+          const episodeId = `${animeId}:${audio}:${number}`;
+          const existing = episodes.get(number);
+          const entry: AnimeEpisode = existing ?? {
+            id: episodeId,
+            number,
+            isSubbed: false,
+            isDubbed: false,
+          };
+
+          if (audio === 'sub') {
+            entry.subEpisodeId ??= episodeId;
+            entry.id = entry.subEpisodeId;
+            entry.isSubbed = true;
+          } else {
+            entry.dubEpisodeId ??= episodeId;
+            if (!entry.subEpisodeId) entry.id = entry.dubEpisodeId;
+            entry.isDubbed = true;
+          }
+          entry.title ??= episode.title;
+          entry.description ??= episode.description;
+          entry.image ??= episode.image;
+          episodes.set(number, entry);
+        }
       }
     }
     return [...episodes.values()].sort(

@@ -1,5 +1,7 @@
 export interface AnimeEpisode {
   id: string;
+  subEpisodeId?: string;
+  dubEpisodeId?: string;
   number: number;
   title?: string;
   description?: string;

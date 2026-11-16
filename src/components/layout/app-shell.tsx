@@ -10,7 +10,9 @@ import {
   Flame,
   History,
   House,
+  MoreHorizontal,
   Search,
+  Settings,
   Sparkles,
   Languages,
 } from 'lucide-react';
@@ -25,13 +27,13 @@ import './app-shell.css';
 const navItems = [
   { label: 'Início', path: '/', icon: House, end: true },
   { label: 'Explorar', path: '/search', icon: Compass },
-  { label: 'Em alta', path: '/trending', icon: Flame },
-  { label: 'Lançamentos', path: '/updates', icon: Sparkles },
   { label: 'Agenda', path: '/schedule', icon: CalendarDays },
   { label: 'Feed', path: '/activity', icon: Activity },
+  { label: 'Lançamentos', path: '/updates', icon: Sparkles },
 ];
 
-const libraryItems = [
+const moreItems = [
+  { label: 'Em alta', icon: Flame, path: '/trending' },
   { label: 'Continuar assistindo', icon: History, path: '/continue-watching' },
   { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
 ];
@@ -41,9 +43,14 @@ export function AppShell() {
   const [searchVisible, setSearchVisible] = useState(true);
   const [headerVisible, setHeaderVisible] = useState(true);
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [moreExpanded, setMoreExpanded] = useState(false);
   const searchFormRef = useRef<HTMLFormElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
+  const moreRouteActive = moreItems.some(
+    ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+  const showMoreItems = moreExpanded || moreRouteActive;
   const navigate = useNavigate();
   const { session } = useAccount();
   const { titleLanguage, toggleTitleLanguage } = useTitleLanguage();
@@ -93,7 +100,7 @@ export function AppShell() {
         id="app-sidebar"
         aria-label="Navegação do aplicativo"
         data-collapsed={!sidebarExpanded ? 'true' : undefined}
-        className="app-sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r border-white/[0.06] bg-[#08090a] py-6"
+        className="app-sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r border-white/[0.06] bg-[#08090a]"
       >
         <div className="app-sidebar__brand-row mb-10 flex items-center gap-2">
           <NavLink
@@ -129,7 +136,7 @@ export function AppShell() {
               aria-label={label}
               title={!sidebarExpanded ? label : undefined}
               className={({ isActive }) =>
-                `flex h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
+                `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
                   isActive
                     ? 'relative bg-white/[0.04] text-[#67e58f]'
                     : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
@@ -147,63 +154,58 @@ export function AppShell() {
           ))}
         </nav>
 
-        <p
-          aria-hidden={!sidebarExpanded}
-          className="app-sidebar__section-label mt-9 px-3 pb-3 text-[10px] font-bold tracking-[0.2em] text-white/35 uppercase"
+        <button
+          type="button"
+          data-sidebar-link="true"
+          aria-label="Mais seções"
+          aria-expanded={showMoreItems}
+          aria-controls="app-sidebar-more"
+          title={!sidebarExpanded ? 'Mais seções' : undefined}
+          onClick={() => setMoreExpanded((expanded) => !expanded)}
+          className={`app-sidebar__more-toggle mt-2 flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${showMoreItems ? 'bg-white/[0.05] text-[#67e58f]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}
         >
-          Minha biblioteca
-        </p>
-        <nav className="space-y-1" aria-label="Biblioteca">
-          {libraryItems.map(({ label, icon: Icon, path }) =>
-            path ? (
-              <NavLink
-                key={label}
-                to={path}
-                data-sidebar-link="true"
-                aria-label={label}
-                title={!sidebarExpanded ? label : undefined}
-                className={({ isActive }) =>
-                  `flex h-11 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
-                    isActive
-                      ? 'relative bg-white/[0.04] text-[#67e58f]'
-                      : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-                  }`
-                }
+          <MoreHorizontal size={18} strokeWidth={1.8} />
+          <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
+            Mais
+          </span>
+          <ChevronDown
+            size={15}
+            aria-hidden="true"
+            className={`app-sidebar__more-chevron ml-auto transition-transform ${showMoreItems ? 'rotate-180' : ''}`}
+          />
+        </button>
+        <nav
+          id="app-sidebar-more"
+          aria-label="Mais seções"
+          aria-hidden={!showMoreItems}
+          inert={!showMoreItems}
+          data-expanded={showMoreItems}
+          className="app-sidebar__more-list space-y-1"
+        >
+          {moreItems.map(({ label, icon: Icon, path }) => (
+            <NavLink
+              key={label}
+              to={path}
+              data-sidebar-link="true"
+              aria-label={label}
+              title={!sidebarExpanded ? label : undefined}
+              className={({ isActive }) =>
+                `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
+                  isActive
+                    ? 'relative bg-white/[0.04] text-[#67e58f]'
+                    : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
+                }`
+              }
+            >
+              <Icon size={18} strokeWidth={1.8} />
+              <span
+                aria-hidden={!sidebarExpanded}
+                className="app-sidebar__label"
               >
-                <Icon size={18} strokeWidth={1.8} />
-                <span
-                  aria-hidden={!sidebarExpanded}
-                  className="app-sidebar__label"
-                >
-                  {label}
-                </span>
-              </NavLink>
-            ) : (
-              <button
-                key={label}
-                type="button"
-                disabled
-                data-sidebar-link="true"
-                aria-label={label + ' — em breve'}
-                title="Esta seção será conectada na próxima etapa da migração"
-                className="flex h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-[13px] font-medium text-white/35"
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                <span
-                  aria-hidden={!sidebarExpanded}
-                  className="app-sidebar__label"
-                >
-                  {label}
-                </span>
-                <span
-                  aria-hidden={!sidebarExpanded}
-                  className="app-sidebar__soon ml-auto text-[9px] text-white/25"
-                >
-                  EM BREVE
-                </span>
-              </button>
-            ),
-          )}
+                {label}
+              </span>
+            </NavLink>
+          ))}
         </nav>
 
         <button
@@ -233,7 +235,26 @@ export function AppShell() {
           </span>
         </button>
 
-        <div className="app-sidebar__footer mt-auto rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
+        <NavLink
+          to="/settings"
+          data-sidebar-link="true"
+          aria-label="Configurações"
+          title={!sidebarExpanded ? 'Configurações' : undefined}
+          className={({ isActive }) =>
+            `app-sidebar__settings-link mt-auto flex h-10 w-full shrink-0 items-center gap-3 rounded-lg px-3 text-[12px] font-semibold transition ${
+              isActive
+                ? 'relative bg-white/[0.05] text-[#67e58f]'
+                : 'text-white/50 hover:bg-white/[0.06] hover:text-white'
+            }`
+          }
+        >
+          <Settings size={17} strokeWidth={1.8} />
+          <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
+            Configurações
+          </span>
+        </NavLink>
+
+        <div className="app-sidebar__footer mt-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
           <div className="app-sidebar__footer-heading mb-2 flex items-center gap-2 text-xs font-bold text-white/80">
             <Clapperboard size={15} className="text-[#49d77a]" />
             <span
