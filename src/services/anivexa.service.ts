@@ -163,23 +163,12 @@ function matchingEpisodes(
   audio: 'sub' | 'dub',
   number: number,
 ) {
-  const matches = orderedProviders(index).flatMap((provider) => {
+  return orderedProviders(index).flatMap((provider) => {
     const episode = index[provider]?.episodes?.[audio]?.find(
       (item) => Number(item.number) === number,
     );
     return episode ? [{ provider, episode }] : [];
   });
-  if (
-    audio !== 'sub' ||
-    !('reanime' in index) ||
-    matches.some((candidate) => candidate.provider === 'reanime')
-  )
-    return matches;
-
-  return [
-    { provider: 'reanime', episode: { id: `reanime-${number}`, number } },
-    ...matches,
-  ];
 }
 
 function watchPath(
