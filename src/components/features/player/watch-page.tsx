@@ -19,6 +19,7 @@ import type {
 } from '@/types/player';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { filterAndSortEpisodes } from '@/lib/episode-filter';
+import { getPaginationItems } from '@/lib/pagination';
 
 const PLAYER_EPISODE_PAGE_SIZE = 50;
 
@@ -118,6 +119,10 @@ function WatchPageContent() {
   );
   const episodePageCount = Math.ceil(
     filteredEpisodes.length / PLAYER_EPISODE_PAGE_SIZE,
+  );
+  const episodePageItems = getPaginationItems(
+    episodePage + 1,
+    episodePageCount,
   );
   const visibleEpisodes = filteredEpisodes.slice(
     episodePage * PLAYER_EPISODE_PAGE_SIZE,
@@ -409,26 +414,44 @@ function WatchPageContent() {
               }}
             />
             {episodePageCount > 1 && (
-              <div className="flex shrink-0 flex-wrap gap-1 border-b border-white/[0.05] px-1 py-2">
-                {Array.from({ length: episodePageCount }, (_, index) => {
-                  const first = index * PLAYER_EPISODE_PAGE_SIZE + 1;
+              <nav
+                aria-label="Páginas de episódios"
+                className="flex min-w-0 shrink-0 flex-wrap items-center justify-center gap-1 border-b border-white/[0.05] px-1 py-2"
+              >
+                {episodePageItems.map((item, index) => {
+                  if (item === 'ellipsis')
+                    return (
+                      <span
+                        key={`ellipsis-${index}`}
+                        aria-hidden="true"
+                        className="grid h-7 min-w-3 place-items-center text-[10px] text-white/35"
+                      >
+                        …
+                      </span>
+                    );
+
+                  const pageIndex = item - 1;
+                  const first = pageIndex * PLAYER_EPISODE_PAGE_SIZE + 1;
                   const last = Math.min(
-                    (index + 1) * PLAYER_EPISODE_PAGE_SIZE,
+                    (pageIndex + 1) * PLAYER_EPISODE_PAGE_SIZE,
                     filteredEpisodes.length,
                   );
                   return (
                     <button
-                      key={index}
+                      key={item}
                       type="button"
-                      aria-current={episodePage === index ? 'page' : undefined}
-                      onClick={() => setEpisodePage(index)}
-                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${episodePage === index ? 'bg-[#49d77a] text-[#07110a]' : 'bg-white/[0.04] text-white/45 hover:bg-white/[0.08] hover:text-white'}`}
+                      aria-label={`Episódios ${first} a ${last}`}
+                      aria-current={
+                        episodePage === pageIndex ? 'page' : undefined
+                      }
+                      onClick={() => setEpisodePage(pageIndex)}
+                      className={`rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors ${episodePage === pageIndex ? 'bg-[#49d77a] text-[#07110a]' : 'bg-white/[0.04] text-white/45 hover:bg-white/[0.08] hover:text-white'}`}
                     >
                       {first}–{last}
                     </button>
                   );
                 })}
-              </div>
+              </nav>
             )}
             {loadingEpisodes ? (
               <div

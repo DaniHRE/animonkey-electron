@@ -7,6 +7,7 @@ import {
 } from './episode-list-controls';
 import { filterAndSortEpisodes } from '@/lib/episode-filter';
 import { stripHtml } from '@/lib/anime';
+import { getPaginationItems } from '@/lib/pagination';
 import type { AnimeEpisode } from '@/types/player';
 
 const PAGE_SIZE = 8;
@@ -36,6 +37,7 @@ export function AnimeEpisodeList({
     [ascending, episodes, search],
   );
   const totalPages = Math.ceil(filteredEpisodes.length / PAGE_SIZE);
+  const paginationItems = getPaginationItems(page, totalPages);
   const visibleEpisodes = filteredEpisodes.slice(
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
@@ -141,7 +143,7 @@ export function AnimeEpisodeList({
       {totalPages > 1 && (
         <nav
           aria-label="Paginação dos episódios"
-          className="flex items-center justify-center gap-1.5 pt-1"
+          className="flex min-w-0 flex-wrap items-center justify-center gap-1 pt-1"
         >
           <button
             type="button"
@@ -151,16 +153,25 @@ export function AnimeEpisodeList({
           >
             <ChevronLeft size={15} /> Anterior
           </button>
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-            (pageNumber) => (
-              <button
-                key={pageNumber}
-                type="button"
-                aria-current={page === pageNumber ? 'page' : undefined}
-                onClick={() => setPage(pageNumber)}
-                className={`grid size-8 place-items-center rounded-md text-xs font-semibold transition ${page === pageNumber ? 'bg-[#49d77a] text-[#07110a]' : 'text-white/55 hover:bg-white/[0.06] hover:text-white'}`}
+          {paginationItems.map((item, index) =>
+            item === 'ellipsis' ? (
+              <span
+                key={`ellipsis-${index}`}
+                aria-hidden="true"
+                className="grid h-8 min-w-4 place-items-center text-xs text-white/35"
               >
-                {pageNumber}
+                …
+              </span>
+            ) : (
+              <button
+                key={item}
+                type="button"
+                aria-label={`Página ${item}`}
+                aria-current={page === item ? 'page' : undefined}
+                onClick={() => setPage(item)}
+                className={`grid size-8 place-items-center rounded-md text-xs font-semibold transition ${page === item ? 'bg-[#49d77a] text-[#07110a]' : 'text-white/55 hover:bg-white/[0.06] hover:text-white'}`}
+              >
+                {item}
               </button>
             ),
           )}
