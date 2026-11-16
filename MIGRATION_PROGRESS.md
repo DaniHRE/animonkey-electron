@@ -1,5 +1,11 @@
 # Progresso da migração
 
+## QA empacotado em 16/11/2026
+
+- Retomada em `f73adf1` na `main`, com árvore limpa. Node 26 encerrou o Forge durante a extração do Electron com código zero e sem executável. Com Node 22, o Forge concluiu e gerou `out/Animonkey-win32-x64/Animonkey.exe`. O deep link abriu `/anime/212888` no pacote.
+- Comparação diagnóstica do topo com títulos JP e oito episódios, web em viewport CSS 1296×778 e captura da janela Electron em 1426×914 incluindo moldura/menu. A equivalência exata em CSS do Electron ficou sem medição. O site sobrepõe navegação e busca ao banner, coloca as ações abaixo do pôster e mostra a contagem regressiva numa faixa própria. O Electron mantém sidebar/topbar, coloca ações ao lado do pôster e mostra data local do próximo episódio junto ao título. As sessões estavam diferentes. Sinopse em inglês nas duas interfaces. Abas adicionais e estados rolados seguem pendentes. Referências legadas: `app/(site)/anime/[id]/page.tsx`, `components/features/anime/anime-page-client.tsx` e `docs/player-subtitles.md`.
+- Episódio 1: fonte real reproduziu vídeo no pacote e exibiu texto em português durante a reprodução. O seek mudou o quadro e o episódio 2 iniciou nova busca de servidores. Ainda falta comprovar áudio, sincronização e formato das legendas, marcadores intro/outro com metadados reais e prévias da timeline. As listas observadas mostraram números sem miniaturas.
+
 ## Fechamento da sessão e handoff em 15/11/2026
 
 - Branch `main`; working tree limpo ao iniciar esta conferência. Etapa de UI mais recente no HEAD: `6cca601` (`feat: add character carousel and compact relations grid`).
