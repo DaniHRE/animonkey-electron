@@ -1,5 +1,10 @@
 # Progresso da migração
 
+## Ampliação do seletor de idioma — 17/11/2026
+
+- Etapa anterior: `a171e11`. EN/JP ampliado para 88×36 px e fonte de 12 px por solicitação do usuário; mantém indicador, foco e estado acessível.
+- Validação: Prettier e diff; lint e typecheck no hook do commit. Sem QA visual nesta etapa.
+
 ## Ajuste de tamanho da sidebar e EN/JP — 17/11/2026
 
 - Etapa anterior: `7de295f`. Sidebar de 64 para 72 px, recuo e backdrop sincronizados, ícones centralizados e fundo preto adicional de 12%. EN/JP de 64×24 para 72×28 px.
