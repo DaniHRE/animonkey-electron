@@ -29,7 +29,8 @@ interface ArtworkCacheEntry {
 interface TaizenAnime {
   id?: unknown;
   title?: unknown;
-  artwork?: unknown;
+  clearlogos?: unknown;
+  hdtvlogos?: unknown;
 }
 
 interface CacheRead {
@@ -170,13 +171,16 @@ function hasExactTitleMatch(
   });
 }
 
-function getEnglishClearLogo(artworkValue: unknown): string | null {
-  if (!Array.isArray(artworkValue)) return null;
-  for (const artwork of artworkValue) {
+function getEnglishLogo(anime: TaizenAnime): string | null {
+  const artworks = [
+    ...(Array.isArray(anime.clearlogos) ? anime.clearlogos : []),
+    ...(Array.isArray(anime.hdtvlogos) ? anime.hdtvlogos : []),
+  ];
+  for (const artwork of artworks) {
     if (
       !isRecord(artwork) ||
       typeof artwork.type !== 'string' ||
-      artwork.type.toUpperCase() !== 'CLEARLOGO' ||
+      !['CLEARLOGO', 'HDTVLOGO'].includes(artwork.type.toUpperCase()) ||
       artwork.lang !== 'en' ||
       typeof artwork.url !== 'string'
     )
@@ -208,12 +212,14 @@ async function requestClearLogos(
   const ids = [
     ...new Set(identities.map((identity) => Number(identity.animeId))),
   ];
+  // Taizen's gallery also stores genuine English logos as HDTVLOGO.
   const query = `{
     animePage(filter: { ids: [${ids.join(', ')}] }, perPage: ${ids.length}) {
       items {
         id
         title { english romaji native }
-        artwork(type: CLEARLOGO, limit: 100) { type url lang }
+        clearlogos: artwork(type: CLEARLOGO, limit: 100) { type url lang }
+        hdtvlogos: artwork(type: HDTVLOGO, limit: 100) { type url lang }
       }
     }
   }`;
@@ -253,7 +259,7 @@ async function requestClearLogos(
       const item = items.get(Number(identity.animeId));
       const url =
         item && hasExactTitleMatch(item.title, identity.expectedTitles)
-          ? getEnglishClearLogo(item.artwork)
+          ? getEnglishLogo(item)
           : null;
       return [makeCacheKey(identity), url];
     }),
