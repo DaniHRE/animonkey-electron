@@ -41,13 +41,18 @@
   .vds-time-slider
   .vds-slider-chapter:not(:first-child)::before {
   position: absolute;
-  top: 0;
-  left: -1px;
+  top: 50%;
+  left: -3px;
   z-index: 1;
-  width: 2px;
-  height: 100%;
-  border-radius: 1px;
-  background: rgb(245 245 245 / 75%);
+  width: 6px;
+  height: 6px;
+  transform: translateY(-50%);
+  border: 1px solid #0b0b0c;
+  border-radius: 50%;
+  background: #d8ffe2;
+  box-shadow:
+    0 0 0 1px rgb(73 215 122 / 85%),
+    0 0 6px rgb(73 215 122 / 55%);
   content: '';
   pointer-events: none;
 }
