@@ -1,8 +1,4 @@
 @media (prefers-reduced-motion: no-preference) {
-  .home-hero-clear-logo {
-    animation: home-hero-fade-in 320ms ease-out both;
-  }
-
   .home-hero-title-label {
     animation: home-hero-fade-in 220ms ease-out both;
   }

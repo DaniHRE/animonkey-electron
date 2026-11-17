@@ -5,10 +5,17 @@ export interface AnimeTitle {
 }
 
 export interface AnimeArtworkBridge {
-  getClearLogo(
-    animeId: string,
-    expectedTitles: string[],
-  ): Promise<string | null>;
+  getClearLogos(identities: AnimeArtworkIdentity[]): Promise<AnimeClearLogo[]>;
+}
+
+export interface AnimeArtworkIdentity {
+  animeId: string;
+  expectedTitles: string[];
+}
+
+export interface AnimeClearLogo {
+  animeId: string;
+  url: string | null;
 }
 
 export interface AnimeResult {

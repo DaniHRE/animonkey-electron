@@ -76,10 +76,7 @@ contextBridge.exposeInMainWorld('animonkey', {
       }),
   } satisfies AccountBridge,
   artwork: {
-    getClearLogo: (animeId: string, expectedTitles: string[]) =>
-      ipcRenderer.invoke('anime:artwork:clear-logo', {
-        animeId,
-        expectedTitles,
-      }),
+    getClearLogos: (identities) =>
+      ipcRenderer.invoke('anime:artwork:clear-logos', identities),
   } satisfies AnimeArtworkBridge,
 });
