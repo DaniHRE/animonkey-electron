@@ -10,16 +10,17 @@ import {
   Flame,
   History,
   House,
-  MoreHorizontal,
+  Menu,
   Search,
   Settings,
   Sparkles,
 } from 'lucide-react';
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties, FormEvent } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAccount } from '@/context/account-state';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import './app-shell.css';
 
@@ -39,8 +40,11 @@ const moreItems = [
 
 export function AppShell() {
   const [search, setSearch] = useState('');
-  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const showSidebarRef = useRef<HTMLButtonElement | null>(null);
+  const previousSidebarVisibility = useRef(sidebarVisible);
   const { pathname } = useLocation();
   const moreRouteActive = moreItems.some(
     ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
@@ -54,6 +58,27 @@ export function AppShell() {
     !pathname.startsWith('/anime/') &&
     !pathname.startsWith('/watch/');
 
+  useEffect(() => {
+    const wasVisible = previousSidebarVisibility.current;
+    if (wasVisible === sidebarVisible) return;
+
+    if (sidebarVisible) {
+      const activeLink = sidebarRef.current?.querySelector<HTMLElement>(
+        '[aria-current="page"]',
+      );
+      (
+        activeLink ??
+        sidebarRef.current?.querySelector<HTMLElement>('[data-sidebar-link]')
+      )?.focus({
+        preventScroll: true,
+      });
+    } else {
+      showSidebarRef.current?.focus({ preventScroll: true });
+    }
+
+    previousSidebarVisibility.current = sidebarVisible;
+  }, [sidebarVisible]);
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = search.trim();
@@ -63,144 +88,138 @@ export function AppShell() {
   return (
     <div className="min-h-screen bg-[#0b0b0c] text-[#f5f5f5]">
       <aside
+        ref={sidebarRef}
         id="app-sidebar"
         aria-label="Navegação do aplicativo"
-        data-collapsed={!sidebarExpanded ? 'true' : undefined}
-        className="app-sidebar fixed top-[81px] bottom-0 left-0 z-30 flex flex-col border-r border-white/[0.045] bg-[#0b0b0c]"
+        aria-hidden={!sidebarVisible}
+        inert={!sidebarVisible}
+        data-visible={sidebarVisible}
+        className="app-sidebar fixed top-[81px] bottom-0 left-0 z-30 border-r border-white/[0.045] bg-[#0b0b0c]"
       >
         <div className="app-sidebar__nav-stack">
-          <nav className="space-y-2" aria-label="Navegação principal">
+          <nav
+            className="app-sidebar__main-nav"
+            aria-label="Navegação principal"
+          >
             {navItems.map(({ label, path, icon: Icon, end }) => (
-              <NavLink
-                key={label}
-                to={path}
-                end={end}
-                data-sidebar-link="true"
-                aria-label={label}
-                title={!sidebarExpanded ? label : undefined}
-                className={({ isActive }) =>
-                  `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${
-                    isActive
-                      ? 'relative bg-white/[0.06] text-[#67e58f]'
-                      : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-                  }`
-                }
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                <span
-                  aria-hidden={!sidebarExpanded}
-                  className="app-sidebar__label"
+              <SidebarTooltip key={label} label={label}>
+                <NavLink
+                  to={path}
+                  end={end}
+                  data-sidebar-link="true"
+                  aria-label={label}
+                  className={({ isActive }) =>
+                    `app-sidebar__nav-link ${isActive ? 'is-active' : ''}`
+                  }
                 >
-                  {label}
-                </span>
-              </NavLink>
+                  <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                </NavLink>
+              </SidebarTooltip>
             ))}
           </nav>
 
-          <button
-            type="button"
-            data-sidebar-link="true"
-            aria-label="Mais seções"
-            aria-expanded={showMoreItems}
-            aria-controls="app-sidebar-more"
-            title={!sidebarExpanded ? 'Mais seções' : undefined}
-            onClick={() => setMoreExpanded((expanded) => !expanded)}
-            className={`app-sidebar__more-toggle mt-2 flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[13px] font-semibold transition ${showMoreItems ? 'bg-white/[0.05] text-[#67e58f]' : 'text-white/55 hover:bg-white/[0.05] hover:text-white'}`}
+          <SidebarTooltip
+            label={
+              showMoreItems ? 'Recolher mais seções' : 'Mostrar mais seções'
+            }
           >
-            <MoreHorizontal size={18} strokeWidth={1.8} />
-            <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
-              Mais
-            </span>
-            <ChevronDown
-              size={15}
-              aria-hidden="true"
-              className={`app-sidebar__more-chevron ml-auto transition-transform ${showMoreItems ? 'rotate-180' : ''}`}
-            />
-          </button>
+            <button
+              type="button"
+              data-sidebar-link="true"
+              aria-label={
+                showMoreItems ? 'Recolher mais seções' : 'Mostrar mais seções'
+              }
+              aria-expanded={showMoreItems}
+              aria-controls="app-sidebar-more"
+              onClick={() => setMoreExpanded((expanded) => !expanded)}
+              className={`app-sidebar__more-toggle ${showMoreItems ? 'is-active' : ''}`}
+            >
+              <ChevronDown
+                size={19}
+                strokeWidth={1.8}
+                aria-hidden="true"
+                className={`app-sidebar__more-chevron ${showMoreItems ? 'is-open' : ''}`}
+              />
+            </button>
+          </SidebarTooltip>
           <nav
             id="app-sidebar-more"
             aria-label="Mais seções"
             aria-hidden={!showMoreItems}
             inert={!showMoreItems}
             data-expanded={showMoreItems}
-            className="app-sidebar__more-list space-y-2"
+            className="app-sidebar__more-list"
           >
-            {moreItems.map(({ label, icon: Icon, path }) => (
-              <NavLink
-                key={label}
-                to={path}
-                data-sidebar-link="true"
-                aria-label={label}
-                title={!sidebarExpanded ? label : undefined}
-                className={({ isActive }) =>
-                  `flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition ${
-                    isActive
-                      ? 'relative bg-white/[0.04] text-[#67e58f]'
-                      : 'text-white/55 hover:bg-white/[0.05] hover:text-white'
-                  }`
-                }
-              >
-                <Icon size={18} strokeWidth={1.8} />
-                <span
-                  aria-hidden={!sidebarExpanded}
-                  className="app-sidebar__label"
-                >
-                  {label}
-                </span>
-              </NavLink>
-            ))}
+            <div className="app-sidebar__more-list-inner">
+              {moreItems.map(({ label, icon: Icon, path }, index) => (
+                <SidebarTooltip key={label} label={label}>
+                  <NavLink
+                    to={path}
+                    data-sidebar-link="true"
+                    aria-label={label}
+                    style={{ '--sidebar-index': index } as CSSProperties}
+                    className={({ isActive }) =>
+                      `app-sidebar__nav-link app-sidebar__more-link ${
+                        isActive ? 'is-active' : ''
+                      }`
+                    }
+                  >
+                    <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                  </NavLink>
+                </SidebarTooltip>
+              ))}
+            </div>
           </nav>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setSidebarExpanded((expanded) => !expanded)}
-          aria-label={
-            sidebarExpanded
-              ? 'Recolher navegação lateral'
-              : 'Expandir navegação lateral'
-          }
-          aria-expanded={sidebarExpanded}
-          aria-controls="app-sidebar"
-          title={
-            sidebarExpanded
-              ? 'Recolher navegação lateral'
-              : 'Expandir navegação lateral'
-          }
-          className="app-sidebar__toggle mt-4 flex h-10 w-full shrink-0 items-center gap-3 rounded-xl px-3 text-[12px] font-semibold text-white/45 transition-colors hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a]"
-        >
-          {sidebarExpanded ? (
-            <ChevronLeft size={18} aria-hidden="true" />
-          ) : (
-            <ChevronRight size={18} aria-hidden="true" />
-          )}
-          <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
-            {sidebarExpanded ? 'Recolher menu' : 'Expandir menu'}
-          </span>
-        </button>
-
-        <NavLink
-          to="/settings"
-          data-sidebar-link="true"
-          aria-label="Configurações"
-          title={!sidebarExpanded ? 'Configurações' : undefined}
-          className={({ isActive }) =>
-            `app-sidebar__settings-link mt-auto flex h-10 w-full shrink-0 items-center gap-3 rounded-lg px-3 text-[12px] font-semibold transition ${
-              isActive
-                ? 'relative bg-white/[0.05] text-[#67e58f]'
-                : 'text-white/50 hover:bg-white/[0.06] hover:text-white'
-            }`
-          }
-        >
-          <Settings size={17} strokeWidth={1.8} />
-          <span aria-hidden={!sidebarExpanded} className="app-sidebar__label">
-            Configurações
-          </span>
-        </NavLink>
+        <div className="app-sidebar__foot" aria-label="Controles da navegação">
+          <SidebarTooltip label="Configurações">
+            <NavLink
+              to="/settings"
+              data-sidebar-link="true"
+              aria-label="Configurações"
+              className={({ isActive }) =>
+                `app-sidebar__nav-link ${isActive ? 'is-active' : ''}`
+              }
+            >
+              <Settings size={19} strokeWidth={1.8} aria-hidden="true" />
+            </NavLink>
+          </SidebarTooltip>
+          <span className="app-sidebar__divider" aria-hidden="true" />
+          <SidebarTooltip label="Ocultar navegação">
+            <button
+              type="button"
+              data-sidebar-link="true"
+              aria-label="Ocultar navegação lateral"
+              aria-expanded={sidebarVisible}
+              aria-controls="app-sidebar"
+              onClick={() => setSidebarVisible(false)}
+              className="app-sidebar__nav-link app-sidebar__hide-toggle"
+            >
+              <ChevronLeft size={19} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </SidebarTooltip>
+        </div>
       </aside>
 
+      {!sidebarVisible && (
+        <SidebarTooltip label="Mostrar navegação">
+          <button
+            ref={showSidebarRef}
+            type="button"
+            aria-label="Mostrar navegação lateral"
+            aria-expanded={sidebarVisible}
+            aria-controls="app-sidebar"
+            onClick={() => setSidebarVisible(true)}
+            className="app-sidebar__show-handle"
+          >
+            <ChevronRight size={19} strokeWidth={1.8} aria-hidden="true" />
+          </button>
+        </SidebarTooltip>
+      )}
+
       <div
-        data-collapsed={!sidebarExpanded ? 'true' : undefined}
+        data-sidebar-visible={sidebarVisible}
         className="app-shell-content min-h-screen"
       >
         <a
@@ -210,6 +229,20 @@ export function AppShell() {
           Pular para o conteúdo
         </a>
         <header className="app-header fixed inset-x-0 top-0 z-40 flex h-[81px] items-center gap-8 border-b border-white/[0.06] bg-[#0b0b0c] px-6">
+          {!sidebarVisible && (
+            <SidebarTooltip label="Mostrar navegação">
+              <button
+                type="button"
+                aria-label="Mostrar navegação lateral"
+                aria-expanded={sidebarVisible}
+                aria-controls="app-sidebar"
+                onClick={() => setSidebarVisible(true)}
+                className="app-header__show-sidebar"
+              >
+                <Menu size={19} strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            </SidebarTooltip>
+          )}
           <NavLink
             to="/"
             aria-label="Ir para o início do Animonkey"
