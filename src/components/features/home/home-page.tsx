@@ -6,6 +6,7 @@ import {
   Flame,
   Play,
   Sparkles,
+  Star,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -22,6 +23,21 @@ import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeResult } from '@/types/anime';
 
 type HomeData = Awaited<ReturnType<typeof AniListCatalog.home>>;
+
+const HERO_FORMAT_LABELS: Record<string, string> = {
+  TV: 'TV',
+  TV_SHORT: 'TV curta',
+  MOVIE: 'Filme',
+  SPECIAL: 'Especial',
+  OVA: 'OVA',
+  ONA: 'ONA',
+  MUSIC: 'Música',
+};
+
+function getHeroFormatLabel(format: string | undefined): string | undefined {
+  if (!format) return undefined;
+  return HERO_FORMAT_LABELS[format] ?? format.replaceAll('_', ' ');
+}
 
 export function HomePage() {
   const [home, setHome] = useState<HomeData | null>(null);
@@ -72,6 +88,23 @@ export function HomePage() {
   const featured = home?.banner[activeSlide] ?? home?.banner[0];
   const banner =
     featured?.banner ?? (featured ? getAnimeImage(featured) : undefined);
+  const featuredRating =
+    featured?.rating !== undefined &&
+    Number.isFinite(featured.rating) &&
+    featured.rating > 0
+      ? featured.rating
+      : undefined;
+  const featuredYear =
+    typeof featured?.releaseDate === 'number' &&
+    Number.isInteger(featured.releaseDate) &&
+    featured.releaseDate >= 1000 &&
+    featured.releaseDate <= 9999
+      ? featured.releaseDate
+      : undefined;
+  const featuredDetails = [
+    getHeroFormatLabel(featured?.type),
+    featuredYear?.toString(),
+  ].filter((value): value is string => Boolean(value));
   const homeTabItems =
     activeTab === 'completed'
       ? home?.completed
@@ -81,110 +114,144 @@ export function HomePage() {
 
   return (
     <div>
-      <section className="relative isolate -mt-[76px] h-[85vh] min-h-[560px] max-h-[920px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]">
-        {banner && (
-          <img
-            key={featured?.id}
-            src={banner}
-            alt=""
-            aria-hidden="true"
-            fetchPriority="high"
-            className={`home-banner-image absolute inset-0 -z-20 size-full object-cover ${featured?.banner ? 'object-[center_42%]' : 'object-[center_28%]'}`}
-          />
-        )}
-        <div className="pointer-events-none absolute inset-0 -z-10 shadow-[inset_0_0_150px_rgba(0,0,0,0.36)]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#080809]/92 via-[#080809]/62 via-42% to-[#080809]/5" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#080809] via-[#080809]/35 via-40% to-[#080809]/20" />
-        <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col justify-center px-6 pb-2 2xl:px-10">
-          <div className="max-w-2xl space-y-4 sm:space-y-5 [text-shadow:0_2px_18px_rgba(0,0,0,0.75)]">
-            <div className="flex flex-wrap items-center gap-2">
-              {(featured?.genres ?? []).slice(0, 3).map((genre) => (
-                <span
-                  key={genre}
-                  className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/90 backdrop-blur-sm"
-                >
-                  {genre}
-                </span>
-              ))}
-            </div>
-            <h1 className="line-clamp-2 max-w-[720px] text-3xl leading-tight font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
-              {featured
-                ? resolveAnimeTitle(featured.title, titleLanguage)
-                : 'Descubra seu próximo anime'}
-            </h1>
-            <p className="line-clamp-2 max-w-[620px] text-sm leading-relaxed text-white/70 sm:line-clamp-3 sm:text-base">
-              {featured
-                ? stripHtml(featured.description) ||
-                  'Explore os animes mais populares da temporada.'
-                : 'Explore um catálogo completo de animes, temporadas e descobertas.'}
-            </p>
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              {featured && (
+      {loading && !home ? (
+        <HomeHeroSkeleton />
+      ) : (
+        <section className="relative isolate -mt-[76px] h-[70vh] min-h-[500px] max-h-[820px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]">
+          {banner && (
+            <img
+              key={featured?.id}
+              src={banner}
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              className={`home-banner-image absolute inset-0 -z-20 size-full object-cover ${featured?.banner ? 'object-[center_42%]' : 'object-[center_28%]'}`}
+            />
+          )}
+          <div className="pointer-events-none absolute inset-0 -z-10 shadow-[inset_0_0_150px_rgba(0,0,0,0.36)]" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#080809]/92 via-[#080809]/62 via-42% to-[#080809]/5" />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#080809] via-[#080809]/35 via-40% to-[#080809]/20" />
+          <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col justify-end px-6 pb-16 sm:pb-20 2xl:px-10">
+            <div className="max-w-2xl space-y-4 sm:space-y-5 [text-shadow:0_2px_18px_rgba(0,0,0,0.75)]">
+              {(featuredRating !== undefined || featuredDetails.length > 0) && (
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs font-semibold text-white/85">
+                  {featuredRating !== undefined && (
+                    <span
+                      className="inline-flex items-center gap-1.5"
+                      aria-label={`Nota AniList ${featuredRating.toFixed(1)} de 10`}
+                    >
+                      <Star
+                        size={14}
+                        className="fill-current text-amber-300"
+                        aria-hidden="true"
+                      />
+                      {featuredRating.toFixed(1)}
+                    </span>
+                  )}
+                  {featuredDetails.map((detail, index) => (
+                    <span
+                      key={detail}
+                      className="inline-flex items-center gap-2.5"
+                    >
+                      {(featuredRating !== undefined || index > 0) && (
+                        <span className="text-white/40" aria-hidden="true">
+                          ·
+                        </span>
+                      )}
+                      {detail}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                {(featured?.genres ?? []).slice(0, 3).map((genre) => (
+                  <span
+                    key={genre}
+                    className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/90 backdrop-blur-sm"
+                  >
+                    {genre}
+                  </span>
+                ))}
+              </div>
+              <h1 className="line-clamp-2 max-w-[720px] text-3xl leading-tight font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
+                {featured
+                  ? resolveAnimeTitle(featured.title, titleLanguage)
+                  : 'Descubra seu próximo anime'}
+              </h1>
+              <p className="line-clamp-2 max-w-[620px] text-sm leading-relaxed text-white/70 sm:line-clamp-3 sm:text-base">
+                {featured
+                  ? stripHtml(featured.description) ||
+                    'Explore os animes mais populares da temporada.'
+                  : 'Explore um catálogo completo de animes, temporadas e descobertas.'}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                {featured && (
+                  <Link
+                    to={`/anime/${featured.id}`}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#2caf57] px-7 text-sm font-semibold text-[#0d0d0d] shadow-lg shadow-black/25 transition hover:scale-[1.02] hover:bg-[#39bd65]"
+                  >
+                    <Play size={18} fill="currentColor" /> Assistir Agora
+                  </Link>
+                )}
+                {featured && (
+                  <button
+                    type="button"
+                    onClick={() => void toggle(featured)}
+                    aria-pressed={isInList(featured.id)}
+                    className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
+                  >
+                    {isInList(featured.id) ? 'Na lista' : 'Assistir Depois'}
+                  </button>
+                )}
                 <Link
-                  to={`/anime/${featured.id}`}
-                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#2caf57] px-7 text-sm font-semibold text-[#0d0d0d] shadow-lg shadow-black/25 transition hover:scale-[1.02] hover:bg-[#39bd65]"
+                  to="/search"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/20 bg-black/20 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10"
                 >
-                  <Play size={18} fill="currentColor" /> Assistir Agora
+                  Explorar catálogo <ArrowRight size={14} />
                 </Link>
-              )}
-              {featured && (
-                <button
-                  type="button"
-                  onClick={() => void toggle(featured)}
-                  aria-pressed={isInList(featured.id)}
-                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-6 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/20"
-                >
-                  {isInList(featured.id) ? 'Na lista' : 'Assistir Depois'}
-                </button>
-              )}
-              <Link
-                to="/search"
-                className="inline-flex h-11 items-center gap-2 rounded-lg border border-white/20 bg-black/20 px-5 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10"
-              >
-                Explorar catálogo <ArrowRight size={14} />
-              </Link>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="absolute right-8 bottom-8 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              setActiveSlide(
-                (index) =>
-                  (index - 1 + (home?.banner.length ?? 1)) %
-                  (home?.banner.length ?? 1),
-              )
-            }
-            aria-label="Anime em destaque anterior"
-            className="grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white/80 backdrop-blur hover:bg-black/60"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          {home?.banner.map((slide, index) => (
+          <div className="absolute right-8 bottom-8 flex items-center gap-2">
             <button
-              key={slide.id}
               type="button"
-              onClick={() => setActiveSlide(index)}
-              aria-label={`Mostrar ${resolveAnimeTitle(slide.title, titleLanguage)}`}
-              aria-current={activeSlide === index ? 'true' : undefined}
-              className={`h-1 rounded-full transition-all ${activeSlide === index ? 'w-10 bg-[#2caf57]' : 'w-6 bg-white/35 hover:bg-white/70'}`}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={() =>
-              setActiveSlide(
-                (index) => (index + 1) % (home?.banner.length ?? 1),
-              )
-            }
-            aria-label="Próximo anime em destaque"
-            className="grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white/80 backdrop-blur hover:bg-black/60"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-      </section>
+              onClick={() =>
+                setActiveSlide(
+                  (index) =>
+                    (index - 1 + (home?.banner.length ?? 1)) %
+                    (home?.banner.length ?? 1),
+                )
+              }
+              aria-label="Anime em destaque anterior"
+              className="grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white/80 backdrop-blur hover:bg-black/60"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {home?.banner.map((slide, index) => (
+              <button
+                key={slide.id}
+                type="button"
+                onClick={() => setActiveSlide(index)}
+                aria-label={`Mostrar ${resolveAnimeTitle(slide.title, titleLanguage)}`}
+                aria-current={activeSlide === index ? 'true' : undefined}
+                className={`h-1 rounded-full transition-all ${activeSlide === index ? 'w-10 bg-[#2caf57]' : 'w-6 bg-white/35 hover:bg-white/70'}`}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setActiveSlide(
+                  (index) => (index + 1) % (home?.banner.length ?? 1),
+                )
+              }
+              aria-label="Próximo anime em destaque"
+              className="grid size-9 place-items-center rounded-full border border-white/15 bg-black/30 text-white/80 backdrop-blur hover:bg-black/60"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+      )}
 
       {error ? (
         <div
@@ -270,6 +337,36 @@ export function HomePage() {
         </main>
       ) : null}
     </div>
+  );
+}
+
+function HomeHeroSkeleton() {
+  return (
+    <section
+      aria-label="Carregando destaques da página inicial"
+      aria-busy="true"
+      className="relative isolate -mt-[76px] h-[70vh] min-h-[500px] max-h-[820px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#080809]/95 via-[#080809]/75 to-[#080809]/35"
+        aria-hidden="true"
+      />
+      <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col justify-end px-6 pb-16 sm:pb-20 2xl:px-10">
+        <div className="max-w-2xl space-y-4 sm:space-y-5" aria-hidden="true">
+          <div className="motion-safe:animate-pulse h-4 w-44 rounded-full bg-white/[0.1]" />
+          <div className="motion-safe:animate-pulse h-12 w-full max-w-xl rounded-lg bg-white/[0.1] sm:h-16" />
+          <div className="max-w-xl space-y-2">
+            <div className="motion-safe:animate-pulse h-3 w-full rounded-full bg-white/[0.08]" />
+            <div className="motion-safe:animate-pulse h-3 w-5/6 rounded-full bg-white/[0.08]" />
+            <div className="motion-safe:animate-pulse h-3 w-2/3 rounded-full bg-white/[0.08]" />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <div className="motion-safe:animate-pulse h-11 w-40 rounded-lg bg-[#49d77a]/20" />
+            <div className="motion-safe:animate-pulse h-11 w-40 rounded-lg bg-white/[0.08]" />
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
