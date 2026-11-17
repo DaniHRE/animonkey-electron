@@ -1,5 +1,14 @@
 # Progresso da migração
 
+## Troca sem flick entre título e Clearlogo na Home — 17/11/2026
+
+- Comparei manualmente a Home do ReAnime em `https://reanime.cz/home` com o pedido: a Clearlogo ocupa o espaço do nome sem rótulo/crédito; sem logo, o título usa `line-clamp-1` e termina em reticências. A inspeção de DOM/CSSOM mostrou o título em 48/60 px no viewport amplo e entrada de conteúdo via opacidade/transform; não copiei CSS, assets ou bundles da referência.
+- Removi do hero a linha que repetia o nome e “Logo: fanart.tv”. O título visível agora fica limitado a uma linha, enquanto o `h1` mantém o nome completo acessível.
+- Texto e imagem compartilham uma célula grid com altura mínima estável (64/80/96 px). O texto permanece visível enquanto a URL e o download são preparados; após `onLoad`, texto e imagem fazem crossfade sincronizado de 150 ms sem skeleton, deslocamento do logo para o fluxo ou espaço extra de título/crédito. O timeout de 10 s e o fallback AniList continuam; falha no download não oculta o título.
+- `prefers-reduced-motion` desativa a transição. Removi a folha `home-page.css`, que só continha a animação da linha de crédito retirada.
+- Caminhos revisados: `src/components/features/home/home-page.tsx`, `src/components/features/home/home-page.css`, `../animonkey/components/features/anime/hero-banner.tsx`; referência visual consultada em `https://reanime.cz/home`. Não fiz alterações no checkout web ou na API Anivexa.
+- Validações: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Não executei testes automatizados nem abri o Electron nesta etapa; a comparação manual da referência ReAnime está registrada acima. O hash deste commit será anotado na próxima atualização do tracker.
+
 ## Taizen: suportar HDTVLOGO como logo inglesa — 17/11/2026
 
 - Etapa anterior: `f4c094f` (`feat(home): use Taizen clear logos`). Branch `main`; worktree limpa antes desta correção.

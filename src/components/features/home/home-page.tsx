@@ -21,7 +21,6 @@ import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeArtworkIdentity, AnimeResult } from '@/types/anime';
-import './home-page.css';
 
 type HomeData = Awaited<ReturnType<typeof AniListCatalog.home>>;
 const CLEARLOGO_IMAGE_TIMEOUT_MS = 10_000;
@@ -256,26 +255,12 @@ export function HomePage() {
                   ))}
                 </div>
               )}
-              <div className="home-hero-title-block relative max-w-[720px]">
+              <div className="grid min-h-16 max-w-[720px] grid-cols-1 items-center sm:min-h-20 lg:min-h-24">
                 <h1
                   aria-label={featuredTitle}
-                  aria-busy={isFeaturedLogoPreloading}
-                  className={`text-3xl leading-tight font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem] ${isFeaturedLogoLoaded ? 'sr-only' : shouldShowFeaturedLogo ? 'relative min-h-[4rem] sm:min-h-[5rem]' : ''}`}
+                  className={`col-start-1 row-start-1 mb-0 line-clamp-1 text-3xl leading-tight font-bold tracking-tight text-white transition-opacity duration-150 ease-out motion-reduce:transition-none sm:text-5xl lg:text-[3.25rem] ${isFeaturedLogoLoaded ? 'opacity-0' : 'opacity-100'}`}
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`line-clamp-2 block transition-opacity duration-200 motion-reduce:transition-none ${isFeaturedLogoPreloading || isFeaturedLogoLoaded ? 'opacity-0' : 'opacity-100'}`}
-                  >
-                    {featuredTitle}
-                  </span>
-                  {isFeaturedLogoPreloading && (
-                    <span
-                      aria-hidden="true"
-                      className="pointer-events-none absolute top-0 left-0 h-16 w-[min(420px,85vw)] overflow-hidden rounded-lg bg-white/[0.08] motion-safe:animate-pulse sm:h-20"
-                    >
-                      <span className="absolute inset-y-0 -left-1/2 w-1/2 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
-                    </span>
-                  )}
+                  {featuredTitle}
                 </h1>
                 {shouldShowFeaturedLogo && (
                   <img
@@ -297,16 +282,8 @@ export function HomePage() {
                           [featuredLogoLoadKey]: 'failed',
                         }));
                     }}
-                    className={`home-hero-clear-logo max-h-16 max-w-[min(560px,85vw)] object-contain object-left transition-opacity duration-300 motion-reduce:transition-none sm:max-h-20 ${isFeaturedLogoLoaded ? 'relative block opacity-100' : 'absolute top-0 left-0 opacity-0'}`}
+                    className={`col-start-1 row-start-1 block h-auto w-auto max-h-16 max-w-[min(560px,85vw)] self-center justify-self-start object-contain object-left transition-opacity duration-150 ease-out motion-reduce:transition-none sm:max-h-20 lg:max-h-24 ${isFeaturedLogoLoaded ? 'opacity-100' : 'opacity-0'}`}
                   />
-                )}
-                {isFeaturedLogoLoaded && (
-                  <p className="home-hero-title-label mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm font-semibold text-[#d7ffe2] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] sm:text-base">
-                    <span>{featuredTitle}</span>
-                    <span className="text-xs font-normal text-white/65">
-                      Logo: fanart.tv
-                    </span>
-                  </p>
                 )}
               </div>
               <p className="line-clamp-2 max-w-[620px] text-sm leading-relaxed text-white/70 sm:line-clamp-3 sm:text-base">
