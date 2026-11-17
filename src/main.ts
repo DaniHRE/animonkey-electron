@@ -9,6 +9,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
+import { getAniZipClearLogo } from './electron/anizip-artwork';
 import type {
   AccountCredentials,
   ActivityFeedCursor,
@@ -310,6 +311,23 @@ function registerAccountIpc(): void {
   });
 }
 
+function registerAnimeArtworkIpc(): void {
+  ipcMain.handle('anime:artwork:clear-logo', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+      return null;
+    const input = value as Record<string, unknown>;
+    if (
+      typeof input.animeId !== 'string' ||
+      !/^\d{1,10}$/.test(input.animeId) ||
+      !Array.isArray(input.expectedTitles) ||
+      input.expectedTitles.length > 8
+    )
+      return null;
+    return getAniZipClearLogo(input.animeId, input.expectedTitles);
+  });
+}
+
 function isAllowedExternalUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -372,6 +390,7 @@ const createWindow = () => {
 };
 
 registerAccountIpc();
+registerAnimeArtworkIpc();
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

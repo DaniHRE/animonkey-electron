@@ -7,7 +7,7 @@ import type {
   EpisodeProgressInput,
   WatchLaterRemoteItem,
 } from './types/account';
-import type { AnimeRating } from './types/anime';
+import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -75,4 +75,11 @@ contextBridge.exposeInMainWorld('animonkey', {
         newPassword,
       }),
   } satisfies AccountBridge,
+  artwork: {
+    getClearLogo: (animeId: string, expectedTitles: string[]) =>
+      ipcRenderer.invoke('anime:artwork:clear-logo', {
+        animeId,
+        expectedTitles,
+      }),
+  } satisfies AnimeArtworkBridge,
 });

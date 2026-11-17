@@ -21,8 +21,10 @@ import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeResult } from '@/types/anime';
+import './home-page.css';
 
 type HomeData = Awaited<ReturnType<typeof AniListCatalog.home>>;
+const CLEARLOGO_IMAGE_TIMEOUT_MS = 10_000;
 
 const HERO_FORMAT_LABELS: Record<string, string> = {
   TV: 'TV',
@@ -45,6 +47,11 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [heroLogo, setHeroLogo] = useState<{
+    key: string;
+    url: string;
+    status: 'preloading' | 'ready' | 'failed';
+  } | null>(null);
   const [activeTab, setActiveTab] = useState<'completed' | 'new' | 'recent'>(
     'completed',
   );
@@ -86,6 +93,29 @@ export function HomePage() {
   }, [home]);
 
   const featured = home?.banner[activeSlide] ?? home?.banner[0];
+  const featuredId = featured?.id;
+  const featuredEnglishTitle = featured?.title.english;
+  const featuredRomajiTitle = featured?.title.romaji;
+  const featuredNativeTitle = featured?.title.native;
+  const featuredArtworkKey = featuredId
+    ? JSON.stringify([
+        featuredId,
+        featuredEnglishTitle ?? '',
+        featuredRomajiTitle ?? '',
+        featuredNativeTitle ?? '',
+      ])
+    : undefined;
+  const featuredTitle = featured
+    ? resolveAnimeTitle(featured.title, titleLanguage)
+    : 'Descubra seu próximo anime';
+  const currentHeroLogo =
+    heroLogo?.key === featuredArtworkKey ? heroLogo : undefined;
+  const featuredLogoUrl =
+    currentHeroLogo && currentHeroLogo.status !== 'failed'
+      ? currentHeroLogo.url
+      : undefined;
+  const isFeaturedLogoPreloading = currentHeroLogo?.status === 'preloading';
+  const isFeaturedLogoLoaded = currentHeroLogo?.status === 'ready';
   const banner =
     featured?.banner ?? (featured ? getAnimeImage(featured) : undefined);
   const featuredRating =
@@ -111,6 +141,56 @@ export function HomePage() {
       : activeTab === 'new'
         ? home?.newReleases
         : home?.recentlyAdded;
+
+  useEffect(() => {
+    if (!featuredId || !featuredArtworkKey) return;
+
+    let isCurrent = true;
+    const expectedTitles = [
+      featuredEnglishTitle,
+      featuredRomajiTitle,
+      featuredNativeTitle,
+    ].filter((title): title is string => Boolean(title));
+
+    const artworkBridge = window.animonkey?.artwork;
+    if (!artworkBridge) return;
+
+    artworkBridge
+      .getClearLogo(featuredId, expectedTitles)
+      .then((url) => {
+        if (isCurrent && url)
+          setHeroLogo({
+            key: featuredArtworkKey,
+            url,
+            status: 'preloading',
+          });
+      })
+      .catch(() => {
+        // AniZip is optional; the visible AniList title remains the fallback.
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [
+    featuredEnglishTitle,
+    featuredArtworkKey,
+    featuredId,
+    featuredNativeTitle,
+    featuredRomajiTitle,
+  ]);
+
+  useEffect(() => {
+    if (!isFeaturedLogoPreloading || !featuredArtworkKey) return;
+    const timeout = window.setTimeout(() => {
+      setHeroLogo((current) =>
+        current?.key === featuredArtworkKey && current.status === 'preloading'
+          ? { ...current, status: 'failed' }
+          : current,
+      );
+    }, CLEARLOGO_IMAGE_TIMEOUT_MS);
+    return () => window.clearTimeout(timeout);
+  }, [featuredArtworkKey, isFeaturedLogoPreloading]);
 
   return (
     <div>
@@ -163,21 +243,56 @@ export function HomePage() {
                   ))}
                 </div>
               )}
-              <div className="flex flex-wrap items-center gap-2">
-                {(featured?.genres ?? []).slice(0, 3).map((genre) => (
+              <h1
+                aria-label={featuredTitle}
+                aria-busy={isFeaturedLogoPreloading}
+                className={`max-w-[720px] text-3xl leading-tight font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem] ${featuredLogoUrl ? 'relative min-h-[4rem] sm:min-h-[5rem]' : ''}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`line-clamp-2 block transition-opacity duration-200 motion-reduce:transition-none ${isFeaturedLogoPreloading || isFeaturedLogoLoaded ? 'opacity-0' : 'opacity-100'}`}
+                >
+                  {featuredTitle}
+                </span>
+                {isFeaturedLogoPreloading && (
                   <span
-                    key={genre}
-                    className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/90 backdrop-blur-sm"
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-0 left-0 h-16 w-[min(420px,85vw)] overflow-hidden rounded-lg bg-white/[0.08] motion-safe:animate-pulse sm:h-20"
                   >
-                    {genre}
+                    <span className="absolute inset-y-0 -left-1/2 w-1/2 skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
                   </span>
-                ))}
-              </div>
-              <h1 className="line-clamp-2 max-w-[720px] text-3xl leading-tight font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem]">
-                {featured
-                  ? resolveAnimeTitle(featured.title, titleLanguage)
-                  : 'Descubra seu próximo anime'}
+                )}
+                {featuredLogoUrl && (
+                  <img
+                    key={featuredArtworkKey}
+                    src={featuredLogoUrl}
+                    alt=""
+                    aria-hidden="true"
+                    onLoad={() => {
+                      if (featuredId)
+                        setHeroLogo((current) =>
+                          current && current.key === featuredArtworkKey
+                            ? { ...current, status: 'ready' }
+                            : current,
+                        );
+                    }}
+                    onError={() => {
+                      if (featuredId)
+                        setHeroLogo((current) =>
+                          current && current.key === featuredArtworkKey
+                            ? { ...current, status: 'failed' }
+                            : current,
+                        );
+                    }}
+                    className={`home-hero-clear-logo absolute top-0 left-0 max-h-16 max-w-[min(560px,85vw)] object-contain object-left transition-opacity duration-300 motion-reduce:transition-none sm:max-h-20 ${isFeaturedLogoLoaded ? 'opacity-100' : 'opacity-0'}`}
+                  />
+                )}
               </h1>
+              {isFeaturedLogoLoaded && (
+                <p className="home-hero-title-label text-sm font-semibold text-[#d7ffe2] drop-shadow-[0_2px_10px_rgba(0,0,0,0.9)] sm:text-base">
+                  {featuredTitle}
+                </p>
+              )}
               <p className="line-clamp-2 max-w-[620px] text-sm leading-relaxed text-white/70 sm:line-clamp-3 sm:text-base">
                 {featured
                   ? stripHtml(featured.description) ||

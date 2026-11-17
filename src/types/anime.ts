@@ -4,6 +4,13 @@ export interface AnimeTitle {
   native?: string | null;
 }
 
+export interface AnimeArtworkBridge {
+  getClearLogo(
+    animeId: string,
+    expectedTitles: string[],
+  ): Promise<string | null>;
+}
+
 export interface AnimeResult {
   id: string;
   mediaType: 'ANIME';
