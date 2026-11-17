@@ -488,3 +488,8 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - Normalizei os estilos pequenos encontrados em 18 arquivos de componentes para `text-xs`/12 px, incluindo CSS do tooltip, card lateral e seleção de episódios. Fixei o token de escala em `src/index.css`, adicionei `scripts/check-ui-typography.mjs` ao `pnpm lint` como proteção contra regressões literais e ajustei line-height/dimensões próximas para que chips, linhas do provider, páginas e metadados não sejam comprimidos pela nova escala.
 - Mantive Rubik, os tamanhos acima de 12 px e o controle nativo de tamanho das captions Vidstack. Não migrei componentes para shadcn nem alterei dependências; essa modernização fica reservada à branch futura solicitada.
 - Não foi feita captura/runtime visual nesta rodada. O resultado estático foi auditado por busca de classes arbitrárias e declarações CSS inferiores a 12 px; reflow, truncamento e leitura em larguras reais continuam dependendo de inspeção visual manual. `pnpm typecheck`, `pnpm lint` (inclui o piso tipográfico), `pnpm format:check` e `git diff --check` passaram; a busca global por classes/fontes literais de 8–11 px não encontrou ocorrências. Não rodei testes automatizados.
+
+## Remoção do verificador tipográfico — 16/11/2026
+
+- Removi `scripts/check-ui-typography.mjs` e restaurei `pnpm lint` para executar somente ESLint. O piso de 12 px continua como referência de design documentada, sem uma trava automatizada; não adicionar outra checagem desse tipo sem pedido explícito.
+- A mudança não altera os tamanhos de texto já ajustados no renderer. Não houve captura visual nesta correção; reflow e legibilidade em runtime seguem pendentes de inspeção manual.
