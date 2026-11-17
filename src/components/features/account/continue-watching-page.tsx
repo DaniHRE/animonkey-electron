@@ -89,7 +89,7 @@ export function ContinueWatchingPage() {
 
   return (
     <section>
-      <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+      <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
         Minha biblioteca
       </p>
       <h1 className="text-2xl font-bold tracking-tight">
@@ -122,7 +122,7 @@ export function ContinueWatchingPage() {
               <div className="mt-2 flex items-center justify-between gap-2">
                 <Link
                   to={`/watch/${anime.id}?ep=${encodeURIComponent(progress.episodeId)}`}
-                  className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-semibold text-[#70e793] hover:text-white"
+                  className="inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-[#70e793] hover:text-white"
                 >
                   <Play size={12} fill="currentColor" /> Ep.{' '}
                   {progress.episodeNumber} · {Math.floor(progress.percentage)}%

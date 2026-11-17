@@ -45,17 +45,17 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
           )}
           <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
           {rank !== undefined && (
-            <span className="absolute top-2.5 left-2.5 rounded-md border border-white/10 bg-black/55 px-2 py-1 text-[10px] font-bold text-white backdrop-blur">
+            <span className="absolute top-2.5 left-2.5 rounded-md border border-white/10 bg-black/55 px-2 py-1 text-xs font-bold text-white backdrop-blur">
               #{rank}
             </span>
           )}
           {anime.isAdult && (
-            <span className="absolute left-2.5 bottom-2.5 rounded-md border border-red-200/15 bg-red-950/75 px-2 py-1 text-[9px] font-bold tracking-wide text-red-100">
+            <span className="absolute left-2.5 bottom-2.5 rounded-md border border-red-200/15 bg-red-950/75 px-2 py-1 text-xs font-bold tracking-wide text-red-100">
               18+
             </span>
           )}
           {anime.rating !== undefined && (
-            <span className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-md bg-black/65 px-2 py-1 text-[10px] font-bold backdrop-blur">
+            <span className="absolute right-2.5 bottom-2.5 flex items-center gap-1 rounded-md bg-black/65 px-2 py-1 text-xs font-bold backdrop-blur">
               <Star size={11} className="fill-[#ffc658] text-[#ffc658]" />
               {anime.rating.toFixed(1)}
             </span>
@@ -76,10 +76,10 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
       </button>
 
       <Link to={`/anime/${anime.id}`} className="block px-0.5 pt-3">
-        <h3 className="line-clamp-2 text-[12px] leading-[1.45] font-semibold text-white/85 transition group-hover:text-[#70e793]">
+        <h3 className="line-clamp-2 text-xs leading-[1.45] font-semibold text-white/85 transition group-hover:text-[#70e793]">
           {resolveAnimeTitle(anime.title, titleLanguage)}
         </h3>
-        <p className="mt-1.5 text-[10px] font-medium tracking-wide text-white/35">
+        <p className="mt-1.5 text-xs font-medium tracking-wide text-white/35">
           {[
             anime.type,
             anime.releaseDate,
@@ -90,7 +90,7 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
         </p>
       </Link>
       {error && (
-        <span role="alert" className="mt-1 block text-[10px] text-red-300">
+        <span role="alert" className="mt-1 block text-xs text-red-300">
           Não foi possível salvar localmente.
         </span>
       )}

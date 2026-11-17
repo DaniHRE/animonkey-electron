@@ -117,7 +117,7 @@ const multiKeys = new Set([
 ]);
 const inputClass =
   'h-10 min-w-32 rounded-xl border border-white/[0.09] bg-[#171719] px-3 text-[13px] text-white/80 outline-none transition placeholder:text-white/25 hover:border-white/[0.16] focus:border-[#49d77a]/55 focus:ring-2 focus:ring-[#49d77a]/10';
-const labelClass = 'grid min-w-0 gap-2 text-[11px] font-semibold text-white/50';
+const labelClass = 'grid min-w-0 gap-2 text-xs font-semibold text-white/50';
 
 interface MultiPickerProps {
   label: string;
@@ -146,7 +146,7 @@ function MultiPicker({ label, selected, options, onChange }: MultiPickerProps) {
 
   return (
     <div className="relative min-w-0">
-      <span className="mb-2 block text-[11px] font-semibold text-white/50">
+      <span className="mb-2 block text-xs font-semibold text-white/50">
         {label}
       </span>
       <button
@@ -172,7 +172,7 @@ function MultiPicker({ label, selected, options, onChange }: MultiPickerProps) {
               key={value}
               type="button"
               onClick={() => toggle(value)}
-              className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#49d77a]/20 bg-[#49d77a]/[0.08] px-2 py-1 text-[10px] text-[#a5f0bc] transition hover:border-[#49d77a]/45"
+              className="inline-flex max-w-full items-center gap-1 rounded-full border border-[#49d77a]/20 bg-[#49d77a]/[0.08] px-2 py-1 text-xs text-[#a5f0bc] transition hover:border-[#49d77a]/45"
             >
               <span className="truncate">
                 {options.find(([option]) => option === value)?.[1] ?? value}
@@ -181,7 +181,7 @@ function MultiPicker({ label, selected, options, onChange }: MultiPickerProps) {
             </button>
           ))}
           {selected.length > 3 && (
-            <span className="self-center text-[10px] text-white/35">
+            <span className="self-center text-xs text-white/35">
               +{selected.length - 3}
             </span>
           )}
@@ -240,14 +240,14 @@ function MultiPicker({ label, selected, options, onChange }: MultiPickerProps) {
               <button
                 type="button"
                 onClick={() => onChange([])}
-                className="px-2 py-1.5 text-[10px] font-medium text-white/40 transition hover:text-white"
+                className="px-2 py-1.5 text-xs font-medium text-white/40 transition hover:text-white"
               >
                 Limpar seleção
               </button>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg bg-[#49d77a] px-3 py-1.5 text-[10px] font-bold text-[#101412] transition hover:bg-[#65e48e]"
+                className="rounded-lg bg-[#49d77a] px-3 py-1.5 text-xs font-bold text-[#101412] transition hover:bg-[#65e48e]"
               >
                 Concluir
               </button>
@@ -454,7 +454,7 @@ export function SearchPage() {
   return (
     <section>
       <div className="mb-6">
-        <p className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+        <p className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
           <Search size={13} /> Catálogo AniList
         </p>
         <h1 className="text-2xl font-bold tracking-tight">
@@ -527,7 +527,7 @@ export function SearchPage() {
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[11px] font-medium text-white/40">
+            <span className="mr-1 text-xs font-medium text-white/40">
               Conteúdo:
             </span>
             {[
@@ -541,14 +541,14 @@ export function SearchPage() {
                   key={value}
                   type="button"
                   onClick={() => update('adultMode', value)}
-                  className={`rounded-full border px-3 py-1.5 text-[11px] font-medium transition ${active ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.11] text-[#91ecad]' : 'border-white/[0.08] text-white/45 hover:border-white/20 hover:text-white/75'}`}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${active ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.11] text-[#91ecad]' : 'border-white/[0.08] text-white/45 hover:border-white/20 hover:text-white/75'}`}
                 >
                   {label}
                 </button>
               );
             })}
           </div>
-          <span className="text-[10px] text-white/30">
+          <span className="text-xs text-white/30">
             Os filtros selecionados ficam salvos na URL
           </span>
         </div>
@@ -559,7 +559,7 @@ export function SearchPage() {
               <SlidersHorizontal size={14} className="text-[#69df8d]" />
               Filtros avançados
               {activeFilterCount > 0 && (
-                <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[10px] text-white/55">
+                <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-xs text-white/55">
                   {activeFilterCount} ativos
                 </span>
               )}
@@ -571,7 +571,7 @@ export function SearchPage() {
           </summary>
           <div className="grid gap-3 pt-2 lg:grid-cols-2">
             <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+              <h2 className="mb-3 text-xs font-bold tracking-wide text-white/70 uppercase">
                 Temporada e lançamento
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -610,7 +610,7 @@ export function SearchPage() {
               </div>
             </div>
             <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+              <h2 className="mb-3 text-xs font-bold tracking-wide text-white/70 uppercase">
                 Formato da série
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -623,7 +623,7 @@ export function SearchPage() {
               </div>
             </div>
             <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+              <h2 className="mb-3 text-xs font-bold tracking-wide text-white/70 uppercase">
                 Nota e popularidade
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -644,7 +644,7 @@ export function SearchPage() {
               </div>
             </div>
             <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+              <h2 className="mb-3 text-xs font-bold tracking-wide text-white/70 uppercase">
                 Gêneros e tags
               </h2>
               <div className="grid grid-cols-2 gap-3">
@@ -662,7 +662,7 @@ export function SearchPage() {
               </div>
             </div>
             <div className="rounded-xl border border-white/[0.06] bg-black/[0.12] p-4 lg:col-span-2">
-              <h2 className="mb-3 text-[11px] font-bold tracking-wide text-white/70 uppercase">
+              <h2 className="mb-3 text-xs font-bold tracking-wide text-white/70 uppercase">
                 Origem e identificadores
               </h2>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

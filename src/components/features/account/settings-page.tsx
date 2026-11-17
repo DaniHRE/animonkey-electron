@@ -311,7 +311,7 @@ export function SettingsPage() {
 
   return (
     <section className="max-w-3xl">
-      <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+      <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
         Aplicativo
       </p>
       <h1 className="text-2xl font-bold tracking-tight">
@@ -343,7 +343,7 @@ export function SettingsPage() {
               <p className="mt-1 text-sm font-semibold text-white/85">
                 {session.user.email}
               </p>
-              <p className="mt-2 text-[11px] text-white/40">
+              <p className="mt-2 text-xs text-white/40">
                 {syncState === 'syncing'
                   ? 'Sincronizando alterações…'
                   : syncState === 'synced'
@@ -433,7 +433,7 @@ export function SettingsPage() {
                   <h3 className="text-xs font-semibold text-white/80">
                     Privacidade da atividade
                   </h3>
-                  <p className="mt-1 max-w-lg text-[11px] text-white/40">
+                  <p className="mt-1 max-w-lg text-xs text-white/40">
                     Quando ativada, atividades de episódios e avaliações podem
                     aparecer no feed.
                   </p>
@@ -459,7 +459,7 @@ export function SettingsPage() {
                   <h3 className="text-xs font-semibold text-white/80">
                     Alterar senha
                   </h3>
-                  <p className="mt-1 text-[11px] text-white/40">
+                  <p className="mt-1 text-xs text-white/40">
                     A senha atual é verificada no servidor; a nova é armazenada
                     com bcrypt.
                   </p>

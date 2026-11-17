@@ -51,6 +51,8 @@
 }
 
 @theme inline {
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

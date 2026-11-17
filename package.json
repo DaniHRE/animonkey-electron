@@ -11,7 +11,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint .",
+    "lint": "eslint . && node scripts/check-ui-typography.mjs",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit -p .",
     "format:check": "prettier --check ."

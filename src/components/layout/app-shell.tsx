@@ -272,7 +272,7 @@ export function AppShell() {
                 aria-label="Buscar animes"
                 className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.025] pr-12 pl-10 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:border-[#49d77a]/45 focus:bg-white/[0.04]"
               />
-              <kbd className="absolute top-1/2 right-3 -translate-y-1/2 text-[10px] text-white/35">
+              <kbd className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-white/35">
                 ENTER
               </kbd>
             </form>
@@ -292,7 +292,7 @@ export function AppShell() {
                     if (titleLanguage !== language) toggleTitleLanguage();
                   }}
                   aria-pressed={titleLanguage === language}
-                  className={`rounded px-2 py-1 text-[10px] font-bold transition ${titleLanguage === language ? 'bg-white/[0.12] text-white' : 'text-white/50 hover:text-white'}`}
+                  className={`rounded px-2 py-1 text-xs font-bold transition ${titleLanguage === language ? 'bg-white/[0.12] text-white' : 'text-white/50 hover:text-white'}`}
                 >
                   {language.toUpperCase()}
                 </button>

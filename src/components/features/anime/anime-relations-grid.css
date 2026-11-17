@@ -68,9 +68,10 @@
   top: 8px;
   left: 8px;
   display: flex;
-  max-width: calc(100% - 16px);
-  align-items: center;
-  gap: 5px;
+  max-width: calc(100% - 74px);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .anime-relation-kind {
@@ -78,18 +79,19 @@
   z-index: 1;
   top: 8px;
   right: 8px;
-  max-width: calc(100% - 104px);
+  max-width: calc(100% - 74px);
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 18%);
   border-radius: 999px;
   background: rgb(10 10 12 / 84%);
   padding: 3px 7px;
   color: #fff;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 14px;
+  line-height: 16px;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  text-align: right;
+  overflow-wrap: anywhere;
   backdrop-filter: blur(8px);
 }
 
@@ -104,9 +106,9 @@
   background: rgb(10 10 12 / 82%);
   padding: 2px 7px;
   color: #fff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 14px;
+  line-height: 16px;
   white-space: nowrap;
   backdrop-filter: blur(8px);
 }
@@ -117,7 +119,7 @@
 
 .anime-relation-adult {
   color: #f5f1f3;
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .anime-relation-facts {
@@ -127,7 +129,7 @@
   bottom: 8px;
   left: 8px;
   display: flex;
-  min-height: 21px;
+  min-height: 24px;
   overflow: hidden;
   align-items: stretch;
   border: 1px solid rgb(255 255 255 / 13%);
@@ -145,9 +147,9 @@
   justify-content: center;
   gap: 4px;
   padding: 3px 5px;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 650;
-  line-height: 13px;
+  line-height: 16px;
 }
 
 .anime-relation-fact + .anime-relation-fact {
@@ -258,7 +260,7 @@
   }
 
   .anime-relation-top-badges {
-    top: 32px;
+    top: 6px;
     left: 6px;
     gap: 4px;
   }
@@ -266,16 +268,14 @@
   .anime-relation-kind {
     top: 6px;
     right: 6px;
-    max-width: calc(100% - 12px);
+    max-width: calc(100% - 74px);
     padding-inline: 6px;
-    font-size: 8px;
   }
 
   .anime-relation-rating,
   .anime-relation-adult {
-    min-height: 19px;
+    min-height: 22px;
     padding-inline: 6px;
-    font-size: 9px;
   }
 
   .anime-relation-facts {
@@ -287,7 +287,7 @@
   .anime-relation-fact {
     gap: 3px;
     padding-inline: 3px;
-    font-size: 8px;
+    font-size: 12px;
   }
 
   .anime-relation-copy {
@@ -303,7 +303,7 @@
   .anime-relation-summary {
     margin-top: 2px;
     padding-left: 12px;
-    font-size: 11px;
+    font-size: 12px;
     line-height: 16px;
   }
 }

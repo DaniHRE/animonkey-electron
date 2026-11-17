@@ -103,7 +103,7 @@ export function AnimeCharacterCarousel({
               <p className="line-clamp-2 text-sm font-bold leading-snug text-white">
                 {character.name}
               </p>
-              <span className="mt-1.5 inline-flex rounded-md bg-white/[0.07] px-2 py-1 text-[9px] font-semibold text-white/55">
+              <span className="mt-1.5 inline-flex rounded-md bg-white/[0.07] px-2 py-1 text-xs font-semibold text-white/55">
                 {character.role === 'MAIN' ? 'Principal' : 'Coadjuvante'}
               </span>
               {character.voiceActor && (
@@ -121,10 +121,10 @@ export function AnimeCharacterCarousel({
                     </span>
                   )}
                   <span className="min-w-0">
-                    <span className="block text-[9px] leading-none text-white/40">
+                    <span className="block text-xs leading-tight text-white/40">
                       Voz japonesa
                     </span>
-                    <span className="mt-1 block truncate text-[10px] font-medium text-white/70">
+                    <span className="mt-1 block truncate text-xs font-medium text-white/70">
                       {character.voiceActor.name}
                     </span>
                   </span>

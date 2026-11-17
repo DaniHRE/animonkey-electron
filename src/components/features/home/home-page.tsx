@@ -220,7 +220,7 @@ export function HomePage() {
             <section>
               <div className="mb-5 flex items-end justify-between">
                 <div>
-                  <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+                  <p className="mb-1.5 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
                     <CalendarDays size={13} /> Hoje
                   </p>
                   <h2 className="text-xl font-bold tracking-tight">Agenda</h2>
@@ -241,7 +241,7 @@ export function HomePage() {
                       to={`/anime/${anime.id}`}
                       className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.04]"
                     >
-                      <span className="grid size-9 place-items-center rounded-md bg-[#49d77a]/10 text-[10px] font-bold text-[#73e994]">
+                      <span className="grid size-9 place-items-center rounded-md bg-[#49d77a]/10 text-xs font-bold text-[#73e994]">
                         {new Intl.DateTimeFormat('pt-BR', {
                           timeZone: 'America/Sao_Paulo',
                           hour: '2-digit',
@@ -250,10 +250,10 @@ export function HomePage() {
                         }).format(new Date((anime.airingAt ?? 0) * 1000))}
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-[10px] font-semibold text-white/75">
+                        <span className="block truncate text-xs font-semibold text-white/75">
                           {resolveAnimeTitle(anime.title, titleLanguage)}
                         </span>
-                        <span className="mt-1 block text-[9px] text-white/35">
+                        <span className="mt-1 block text-xs text-white/35">
                           Episódio {anime.airingEpisode}
                         </span>
                       </span>
@@ -287,7 +287,7 @@ function AnimeRail({ title, eyebrow, items, link, icon }: AnimeRailProps) {
     <section>
       <div className="mb-5 flex items-end justify-between">
         <div>
-          <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+          <p className="mb-1.5 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
             {icon === 'trending' ? (
               <Flame size={13} />
             ) : icon === 'new' ? (
@@ -336,7 +336,7 @@ function HomeTabs({
     <section>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+          <p className="mb-1.5 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
             <Flame size={13} /> Para descobrir
           </p>
           <h2 className="text-xl font-bold tracking-tight">
@@ -353,7 +353,7 @@ function HomeTabs({
               type="button"
               onClick={() => onChange(tab.id)}
               aria-pressed={activeTab === tab.id}
-              className={`rounded-lg px-3 py-2 text-[11px] font-semibold transition ${activeTab === tab.id ? 'bg-white/10 text-white' : 'text-white/45 hover:text-white'}`}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${activeTab === tab.id ? 'bg-white/10 text-white' : 'text-white/45 hover:text-white'}`}
             >
               {tab.label}
             </button>

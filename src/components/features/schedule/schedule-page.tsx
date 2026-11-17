@@ -109,7 +109,7 @@ export function SchedulePage() {
             <CalendarDays size={23} />
           </span>
           <div>
-            <p className="mb-1 text-[10px] font-bold tracking-[0.2em] text-[#70e793] uppercase">
+            <p className="mb-1 text-xs font-bold tracking-[0.2em] text-[#70e793] uppercase">
               Programação semanal
             </p>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
@@ -147,7 +147,7 @@ export function SchedulePage() {
                 setWeekOffset(0);
                 setSelectedDate(today);
               }}
-              className="ml-1 rounded-lg border border-white/[0.08] px-3 py-2 text-[10px] font-semibold text-white/65 transition hover:border-[#49d77a]/30 hover:text-white"
+              className="ml-1 rounded-lg border border-white/[0.08] px-3 py-2 text-xs font-semibold text-white/65 transition hover:border-[#49d77a]/30 hover:text-white"
             >
               Esta semana
             </button>
@@ -170,7 +170,7 @@ export function SchedulePage() {
               aria-pressed={active}
               className={`relative flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl border transition sm:min-h-[88px] ${active ? 'border-[#49d77a]/50 bg-[#49d77a]/12 text-white shadow-[0_8px_24px_rgba(73,215,122,0.08)]' : 'border-transparent text-white/55 hover:border-white/10 hover:bg-white/[0.04] hover:text-white'}`}
             >
-              <span className="text-[9px] font-bold tracking-[0.1em] text-white/45 sm:text-[10px]">
+              <span className="text-xs font-bold tracking-[0.1em] text-white/45">
                 {WEEKDAY_LABELS[index]}
               </span>
               <span
@@ -179,7 +179,7 @@ export function SchedulePage() {
                 {formatDate(day, { day: '2-digit' })}
               </span>
               {isToday && (
-                <span className="text-[8px] font-bold tracking-wider text-[#70e793] uppercase">
+                <span className="text-xs font-bold tracking-wider text-[#70e793] uppercase">
                   Hoje
                 </span>
               )}
@@ -193,7 +193,7 @@ export function SchedulePage() {
 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[10px] font-bold tracking-[0.16em] text-[#70e793] uppercase">
+          <p className="text-xs font-bold tracking-[0.16em] text-[#70e793] uppercase">
             {formatDate(selectedDate, { weekday: 'long' })}
           </p>
           <h2 className="mt-1 text-xl font-bold tracking-tight">
@@ -268,19 +268,19 @@ export function SchedulePage() {
                     {(anime.genres ?? []).slice(0, 2).map((genre) => (
                       <span
                         key={genre}
-                        className="rounded-md bg-white/[0.06] px-1.5 py-1 text-[9px] font-medium text-white/45"
+                        className="rounded-md bg-white/[0.06] px-1.5 py-1 text-xs font-medium text-white/45"
                       >
                         {genre}
                       </span>
                     ))}
                   </span>
                   <span className="mt-auto flex items-center justify-between gap-2 pt-2">
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-[#49d77a]/10 px-2 py-1 text-[10px] font-bold text-[#70e793]">
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-[#49d77a]/10 px-2 py-1 text-xs font-bold text-[#70e793]">
                       <Play size={10} fill="currentColor" /> Episódio{' '}
                       {anime.airingEpisode ?? '—'}
                     </span>
                     {anime.type && (
-                      <span className="truncate text-[9px] font-medium text-white/30">
+                      <span className="truncate text-xs font-medium text-white/30">
                         {anime.type}
                       </span>
                     )}

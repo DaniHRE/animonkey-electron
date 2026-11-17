@@ -108,7 +108,7 @@ export function AnimeEpisodeList({
                   {episode.title ?? `Episódio ${episode.number}`}
                 </span>
                 {episode.description && (
-                  <span className="mt-1 line-clamp-2 block text-[11px] leading-relaxed text-white/40">
+                  <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-white/40">
                     {stripHtml(episode.description)}
                   </span>
                 )}
@@ -116,7 +116,7 @@ export function AnimeEpisodeList({
               <span className="flex shrink-0 items-center gap-2 text-white/40">
                 {episode.isSubbed && (
                   <span
-                    className="inline-flex items-center gap-1 rounded bg-white/[0.07] px-1.5 py-1 text-[9px] font-bold tracking-wide"
+                    className="inline-flex items-center gap-1 rounded bg-white/[0.07] px-1.5 py-1 text-xs font-bold tracking-wide"
                     aria-label="Episódio legendado"
                     title="Legendado"
                   >

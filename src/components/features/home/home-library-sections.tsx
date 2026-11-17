@@ -103,14 +103,14 @@ export function ContinueWatchingSection() {
                       }}
                     />
                   </div>
-                  <span className="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute bottom-2 left-2 rounded bg-black/70 px-1.5 py-0.5 text-xs font-semibold text-white">
                     Ep. {progress.episodeNumber}
                   </span>
                 </div>
                 <h3 className="mt-2 line-clamp-2 text-xs font-semibold text-white/85">
                   {title}
                 </h3>
-                <p className="mt-1 text-[10px] text-white/40">
+                <p className="mt-1 text-xs text-white/40">
                   {Math.round(progress.percentage)}% assistido
                 </p>
               </Link>
@@ -182,7 +182,7 @@ function WatchLaterCard({
         <h3 className="mt-2 line-clamp-2 text-xs font-semibold text-white/85">
           {title}
         </h3>
-        <p className="mt-1 text-[10px] text-white/40">
+        <p className="mt-1 text-xs text-white/40">
           {[item.type, item.releaseDate].filter(Boolean).join(' · ')}
         </p>
       </Link>

@@ -74,7 +74,7 @@ export function CatalogPage() {
     <section>
       <div className="mb-7 flex items-end justify-between">
         <div>
-          <p className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+          <p className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
             {collection === 'trending' ? (
               <Flame size={13} />
             ) : (

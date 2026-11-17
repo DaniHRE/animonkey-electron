@@ -390,7 +390,7 @@ export function AnimePage() {
             {anime.genres.map((genre) => (
               <span
                 key={genre}
-                className="rounded-full border border-white/10 px-3 py-1.5 text-[10px] font-semibold text-white/50"
+                className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-semibold text-white/50"
               >
                 {genre}
               </span>
@@ -408,7 +408,7 @@ export function AnimePage() {
                   <p className="text-xs font-semibold text-white/85">
                     Próximo episódio {anime.nextAiringEpisode.episode}
                   </p>
-                  <p className="mt-0.5 text-[11px] text-white/45">
+                  <p className="mt-0.5 text-xs text-white/45">
                     {new Date(
                       anime.nextAiringEpisode.airingAt * 1000,
                     ).toLocaleString('pt-BR', {

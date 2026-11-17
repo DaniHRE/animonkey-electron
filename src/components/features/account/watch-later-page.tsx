@@ -37,7 +37,7 @@ export function WatchLaterPage() {
   return (
     <section>
       <div className="mb-7">
-        <p className="mb-2 flex items-center gap-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+        <p className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
           <Bookmark size={13} /> Biblioteca
         </p>
         <h1 className="text-2xl font-bold tracking-tight">Assistir Depois</h1>
@@ -75,10 +75,10 @@ export function WatchLaterPage() {
                       </div>
                     )}
                   </div>
-                  <h2 className="mt-3 line-clamp-2 text-[12px] leading-[1.45] font-semibold text-white/85">
+                  <h2 className="mt-3 line-clamp-2 text-xs leading-[1.45] font-semibold text-white/85">
                     {resolveAnimeTitle(item.title, titleLanguage)}
                   </h2>
-                  <p className="mt-1.5 text-[10px] text-white/35">
+                  <p className="mt-1.5 text-xs text-white/35">
                     {[
                       item.type,
                       item.releaseDate,

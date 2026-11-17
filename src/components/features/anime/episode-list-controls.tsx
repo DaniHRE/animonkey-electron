@@ -34,7 +34,7 @@ export function EpisodeListControls({
           <h3 className="text-sm font-semibold tracking-tight text-white">
             {heading}{' '}
             {count !== undefined && (
-              <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-medium text-white/50 tabular-nums">
+              <span className="ml-1 rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/50 tabular-nums">
                 {count}
               </span>
             )}

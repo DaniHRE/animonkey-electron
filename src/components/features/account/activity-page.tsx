@@ -186,7 +186,7 @@ export function ActivityPage() {
   const currentError = error?.userId === userId ? error.message : null;
   return (
     <section className="mx-auto max-w-3xl">
-      <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+      <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
         Comunidade
       </p>
       <div className="mb-7 flex flex-wrap items-end justify-between gap-3">
