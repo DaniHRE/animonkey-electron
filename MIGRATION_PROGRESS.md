@@ -1,5 +1,10 @@
 # Progresso da migração
 
+## Ajuste de tamanho da sidebar e EN/JP — 17/11/2026
+
+- Etapa anterior: `7de295f`. Sidebar de 64 para 72 px, recuo e backdrop sincronizados, ícones centralizados e fundo preto adicional de 12%. EN/JP de 64×24 para 72×28 px.
+- Validação: formatação e diff; lint e typecheck pelo hook do commit. Sem inspeção visual nesta etapa.
+
 ## Transparência e alinhamento do shell pela referência ReAnime — 17/11/2026
 
 - Baseline: `072fdb3` (`fix(home): smooth hero clearlogo transition`), branch `main` limpa e três commits à frente de `origin/main`. Pedido inclui comparação manual do CSS e limite de 20 minutos para a tarefa. Implementação concluída nesta etapa.
