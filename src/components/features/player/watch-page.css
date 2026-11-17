@@ -257,17 +257,17 @@
 .watch-related__heading {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .watch-related__heading h2 {
   min-width: 0;
   margin: 0;
   color: #f5f5f5;
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .watch-related__marker {
@@ -501,38 +501,63 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 10px;
+  gap: 7px;
+  border: 1px solid rgb(255 255 255 / 7%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 2%);
+  padding: 8px 10px;
   font-family: Rubik, sans-serif;
+}
+
+.watch-server-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.watch-server-row-label {
+  width: 58px;
+  flex: 0 0 58px;
+  color: rgb(255 255 255 / 48%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .watch-server-providers,
 .watch-server-options {
   display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .watch-server-provider,
 .watch-server-option {
   display: inline-flex;
-  min-height: 32px;
+  min-height: 30px;
   align-items: center;
   gap: 6px;
   border: 1px solid transparent;
   border-radius: 5px;
   background: rgb(255 255 255 / 5%);
-  padding: 5px 9px;
+  padding: 5px 8px;
   color: rgb(255 255 255 / 76%);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
+  cursor: pointer;
   transition:
     color 140ms ease,
     background-color 140ms ease,
-    border-color 140ms ease;
+    border-color 140ms ease,
+    transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .watch-server-provider:hover,
@@ -543,9 +568,20 @@
 
 .watch-server-provider.is-active,
 .watch-server-option.is-active {
-  border-color: rgb(73 215 122 / 40%);
+  border-color: rgb(73 215 122 / 32%);
   background: rgb(73 215 122 / 13%);
   color: #aff3c1;
+}
+
+.watch-server-option.is-active {
+  border-color: var(--watch-accent);
+  background: var(--watch-accent);
+  color: #0b1b10;
+}
+
+.watch-server-provider:active,
+.watch-server-option:active:not(:disabled) {
+  transform: scale(0.96);
 }
 
 .watch-server-provider:disabled,
@@ -566,14 +602,18 @@
   font-variant-numeric: tabular-nums;
 }
 
+.watch-server-provider.is-active .watch-server-count {
+  color: rgb(220 255 230 / 78%);
+}
+
 .watch-server-options {
   gap: 5px;
 }
 
 .watch-server-option {
-  min-height: 34px;
-  gap: 8px;
-  padding-inline: 10px;
+  min-height: 30px;
+  gap: 7px;
+  padding-inline: 9px;
   text-align: left;
 }
 
@@ -595,7 +635,7 @@
   align-items: center;
   border-radius: 3px;
   background: rgb(255 255 255 / 9%);
-  padding: 3px 4px;
+  padding: 2px 4px;
   color: rgb(255 255 255 / 82%);
   font-size: 9px;
   font-weight: 700;
@@ -608,6 +648,11 @@
   color: #f4d58a;
 }
 
+.watch-server-option.is-active .watch-server-language {
+  background: rgb(0 0 0 / 12%);
+  color: rgb(10 30 16 / 84%);
+}
+
 .watch-server-language.is-unknown {
   background: transparent;
   color: rgb(255 255 255 / 67%);
@@ -617,7 +662,7 @@
 
 .watch-server-check {
   flex: 0 0 auto;
-  color: #8fe7a7;
+  color: #0b1b10;
 }
 
 .watch-page__episodes {
@@ -802,6 +847,7 @@
 }
 
 .watch-page__episode-list {
+  position: relative;
   display: flex;
   min-height: 0;
   flex: 1;
@@ -820,27 +866,10 @@
 
 .watch-page__episode-list.is-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  grid-auto-rows: 40px;
   align-content: start;
-  gap: 8px;
-}
-
-.watch-page__episode-list:not([role='status']) {
-  animation: watch-episode-view-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes watch-episode-view-enter {
-  from {
-    filter: blur(2px);
-    opacity: 0.55;
-    transform: translateY(5px);
-  }
-
-  to {
-    filter: blur(0);
-    opacity: 1;
-    transform: translateY(0);
-  }
+  gap: 6px;
 }
 
 .watch-page__episode-card {
@@ -885,6 +914,16 @@
   color: #b3f3c3;
 }
 
+.watch-page__episode-card.is-grid.is-current {
+  border-color: var(--watch-accent);
+  background: var(--watch-accent);
+  color: #0b1b10;
+}
+
+.watch-page__episode-card.is-grid::before {
+  display: none;
+}
+
 .watch-page__episode-card.is-current::before {
   background: var(--watch-accent);
 }
@@ -907,6 +946,20 @@
   border-radius: 6px;
   background: #191a1b;
   aspect-ratio: 16 / 9;
+}
+
+.watch-page__episode-grid-number {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(255 255 255 / 78%);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  opacity: 0;
+  visibility: hidden;
 }
 
 .watch-page__episode-card.spoilers-hidden .watch-page__episode-image img {
@@ -995,28 +1048,34 @@
 }
 
 .watch-page__episode-card.is-grid {
-  min-height: 0;
-  align-items: stretch;
-  flex-direction: column;
-  gap: 7px;
-  padding: 7px;
-}
-
-.watch-page__episode-card.is-grid .watch-page__episode-image {
+  display: grid;
   width: 100%;
-  flex: 0 0 auto;
+  height: 40px;
+  min-height: 40px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgb(255 255 255 / 1.5%);
+  padding: 0;
+  text-align: center;
 }
 
-.watch-page__episode-card.is-grid .watch-page__episode-title {
-  -webkit-line-clamp: 2;
+.watch-page__episode-card.is-grid:hover:not(.is-current) {
+  border-color: rgb(73 215 122 / 35%);
+  background: rgb(73 215 122 / 8%);
 }
 
-.watch-page__episode-card.is-grid .watch-page__episode-description {
-  -webkit-line-clamp: 3;
+.watch-page__episode-card.is-grid .watch-page__episode-grid-number {
+  position: static;
+  visibility: visible;
 }
 
-.watch-page__episode-card.is-grid .watch-page__episode-audio {
-  margin-top: 6px;
+.watch-page__episode-card.is-grid.is-current .watch-page__episode-grid-number {
+  color: #0b1b10;
+}
+
+.watch-page__episode-card.is-grid .watch-page__episode-image,
+.watch-page__episode-card.is-grid .watch-page__episode-copy {
+  display: none;
 }
 
 @container watch (max-width: 1500px) {
@@ -1112,7 +1171,23 @@
   }
 
   .watch-page__episode-list.is-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  }
+
+  .watch-server-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .watch-server-row-label {
+    width: auto;
+    flex-basis: auto;
+  }
+
+  .watch-server-providers,
+  .watch-server-options {
+    width: 100%;
   }
 
   .watch-related__item {
@@ -1142,9 +1217,5 @@
 
   .watch-related__item:hover {
     transform: none;
-  }
-
-  .watch-page__episode-list:not([role='status']) {
-    animation: none;
   }
 }

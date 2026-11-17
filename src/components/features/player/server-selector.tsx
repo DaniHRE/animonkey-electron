@@ -86,81 +86,91 @@ export function ServerSelector({
 
   return (
     <div className="watch-server-selector">
-      <div
-        role="group"
-        aria-label="Selecionar provedor de reprodução"
-        className="watch-server-providers"
-      >
-        {providerGroups.map((group) => (
-          <button
-            key={group.provider}
-            type="button"
-            aria-pressed={group.provider === selectedGroup.provider}
-            disabled={disabled}
-            onClick={() =>
-              setProviderSelection({ activeId, provider: group.provider })
-            }
-            className={`watch-server-provider ${group.provider === selectedGroup.provider ? 'is-active' : ''}`}
-          >
-            {group.label}
-            <span className="watch-server-count">{group.servers.length}</span>
-          </button>
-        ))}
+      <div className="watch-server-row">
+        <span className="watch-server-row-label" aria-hidden="true">
+          Provedor
+        </span>
+        <div
+          role="group"
+          aria-label="Selecionar provedor de reprodução"
+          className="watch-server-providers"
+        >
+          {providerGroups.map((group) => (
+            <button
+              key={group.provider}
+              type="button"
+              aria-pressed={group.provider === selectedGroup.provider}
+              disabled={disabled}
+              onClick={() =>
+                setProviderSelection({ activeId, provider: group.provider })
+              }
+              className={`watch-server-provider ${group.provider === selectedGroup.provider ? 'is-active' : ''}`}
+            >
+              {group.label}
+              <span className="watch-server-count">{group.servers.length}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {selectedGroup && (
-        <div
-          role="group"
-          aria-label={`Servidores do provedor ${selectedGroup.label}`}
-          className="watch-server-options"
-        >
-          {selectedGroup.servers.map((server) => {
-            const selected = server.id === activeId;
-            return (
-              <button
-                key={server.id}
-                type="button"
-                aria-pressed={selected}
-                disabled={disabled}
-                onClick={() => onSelect(server.id)}
-                className={`watch-server-option ${selected ? 'is-active' : ''}`}
-              >
-                <span className="watch-server-name">{server.serverName}</span>
-                <span className="watch-server-languages">
-                  {server.subtitleLanguages.map((language) => (
-                    <span key={language} className="watch-server-language">
-                      <Captions
-                        className="mr-1 inline"
-                        size={10}
-                        aria-hidden="true"
-                      />
-                      {language === 'pt-BR' ? 'PT-BR' : 'EN'}
-                    </span>
-                  ))}
-                  {server.subtitlePresentation === 'embedded' && (
-                    <span className="watch-server-language is-embedded">
-                      H-SUB · EMBUTIDA
-                    </span>
-                  )}
-                  {server.subtitleLanguages.length === 0 &&
-                    server.subtitlePresentation !== 'embedded' && (
-                      <span className="watch-server-language is-unknown">
-                        {server.subtitleType === 'softsub'
-                          ? 'Sem idioma compatível'
-                          : 'Idioma não identificado'}
+        <div className="watch-server-row">
+          <span className="watch-server-row-label" aria-hidden="true">
+            Fontes
+          </span>
+          <div
+            role="group"
+            aria-label={`Servidores do provedor ${selectedGroup.label}`}
+            className="watch-server-options"
+          >
+            {selectedGroup.servers.map((server) => {
+              const selected = server.id === activeId;
+              return (
+                <button
+                  key={server.id}
+                  type="button"
+                  aria-pressed={selected}
+                  disabled={disabled}
+                  onClick={() => onSelect(server.id)}
+                  className={`watch-server-option ${selected ? 'is-active' : ''}`}
+                >
+                  <span className="watch-server-name">{server.serverName}</span>
+                  <span className="watch-server-languages">
+                    {server.subtitleLanguages.map((language) => (
+                      <span key={language} className="watch-server-language">
+                        <Captions
+                          className="mr-1 inline"
+                          size={10}
+                          aria-hidden="true"
+                        />
+                        {language === 'pt-BR' ? 'PT-BR' : 'EN'}
+                      </span>
+                    ))}
+                    {server.subtitlePresentation === 'embedded' && (
+                      <span className="watch-server-language is-embedded">
+                        H-SUB · EMBUTIDA
                       </span>
                     )}
-                </span>
-                {selected && (
-                  <Check
-                    size={15}
-                    className="watch-server-check"
-                    aria-hidden="true"
-                  />
-                )}
-              </button>
-            );
-          })}
+                    {server.subtitleLanguages.length === 0 &&
+                      server.subtitlePresentation !== 'embedded' && (
+                        <span className="watch-server-language is-unknown">
+                          {server.subtitleType === 'softsub'
+                            ? 'Sem idioma compatível'
+                            : 'Idioma não identificado'}
+                        </span>
+                      )}
+                  </span>
+                  {selected && (
+                    <Check
+                      size={14}
+                      className="watch-server-check"
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

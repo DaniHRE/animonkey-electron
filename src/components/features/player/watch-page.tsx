@@ -15,8 +15,15 @@ import {
   Captions,
   Mic,
 } from 'lucide-react';
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  useReducedMotion,
+} from 'motion/react';
 import { VideoPlayer } from '@/components/features/player/video-player';
 import { ServerSelector } from '@/components/features/player/server-selector';
+import { WatchRelatedList } from '@/components/features/player/watch-related-list';
 import type { EpisodeViewMode } from '@/components/features/anime/episode-list-controls';
 import { PlayerErrorBoundary } from '@/components/features/player/player-error-boundary';
 import { AniListCatalog } from '@/services/anilist.service';
@@ -25,7 +32,7 @@ import { useEpisodeProgress } from '@/hooks/use-episode-progress';
 import { useSaveEpisodeProgress } from '@/hooks/use-save-episode-progress';
 import { usePlaybackSessionStore } from '@/stores/playback-session-store';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
-import type { AnimeInfo, AnimeResult } from '@/types/anime';
+import type { AnimeInfo } from '@/types/anime';
 import type {
   AnimeEpisode,
   EpisodeServer,
@@ -76,6 +83,7 @@ export function WatchPage() {
 
 function WatchPageContent() {
   const { titleLanguage } = useTitleLanguage();
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const { id = '' } = useParams();
   const [params, setParams] = useSearchParams();
   const requestedEpisodeId = params.get('ep') ?? '';
@@ -222,9 +230,15 @@ function WatchPageContent() {
   useEffect(() => {
     activeEpisodeRef.current?.scrollIntoView({
       block: 'nearest',
-      behavior: 'smooth',
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
     });
-  }, [currentEpisodeId, episodePage, episodeSearch]);
+  }, [
+    currentEpisodeId,
+    episodePage,
+    episodeSearch,
+    episodeViewMode,
+    prefersReducedMotion,
+  ]);
 
   useEffect(() => {
     if (!currentEpisodeId || currentEpisodeId === requestedEpisodeId) return;
@@ -739,55 +753,116 @@ function WatchPageContent() {
               ))}
             </div>
           ) : visibleEpisodes.length ? (
-            <div
-              key={`${episodeViewMode}-${episodeAudioFilter}-${episodePage}`}
-              className={`watch-page__episode-list ${episodeViewMode === 'grid' ? 'is-grid' : ''}`}
-            >
-              {visibleEpisodes.map((episode) => {
-                const isCurrent = episodeHasId(episode, currentEpisodeId);
-                const isGrid = episodeViewMode === 'grid';
-                return (
-                  <button
-                    key={episode.id}
-                    type="button"
-                    ref={isCurrent ? activeEpisodeRef : undefined}
-                    aria-current={isCurrent ? 'true' : undefined}
-                    onClick={() => selectEpisode(episode, preferredAudio)}
-                    className={`watch-page__episode-card ${isGrid ? 'is-grid' : ''} ${isCurrent ? 'is-current' : ''} ${spoilersHidden ? 'spoilers-hidden' : ''}`}
-                  >
-                    <span className="watch-page__episode-image">
-                      <EpisodeThumbnail
-                        image={episode.image}
-                        className="w-full"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="watch-page__play-overlay"
+            <MotionConfig reducedMotion="user">
+              <motion.div
+                layoutScroll
+                className={`watch-page__episode-list ${episodeViewMode === 'grid' ? 'is-grid' : ''}`}
+              >
+                <AnimatePresence initial={false} mode="popLayout">
+                  {visibleEpisodes.map((episode, index) => {
+                    const isCurrent = episodeHasId(episode, currentEpisodeId);
+                    const isGrid = episodeViewMode === 'grid';
+                    const title = episode.title ?? `Episódio ${episode.number}`;
+                    const audioLabels = [
+                      episode.isSubbed ? 'SUB' : null,
+                      episode.isDubbed ? 'DUB' : null,
+                    ].filter((label): label is string => label !== null);
+                    const accessibleTitle = spoilersHidden
+                      ? 'Título e descrição ocultos para evitar spoilers.'
+                      : title;
+                    return (
+                      <motion.button
+                        layout
+                        key={episode.id}
+                        type="button"
+                        ref={isCurrent ? activeEpisodeRef : undefined}
+                        aria-current={isCurrent ? 'true' : undefined}
+                        aria-label={`Episódio ${String(episode.number).padStart(2, '0')}: ${accessibleTitle}${audioLabels.length ? `. Áudio ${audioLabels.join(' e ')}` : ''}`}
+                        onClick={() => selectEpisode(episode, preferredAudio)}
+                        className={`watch-page__episode-card ${isGrid ? 'is-grid' : ''} ${isCurrent ? 'is-current' : ''} ${spoilersHidden ? 'spoilers-hidden' : ''}`}
+                        initial={{
+                          opacity: 0,
+                          x: isGrid ? 0 : 8,
+                          scale: isGrid ? 0.88 : 1,
+                        }}
+                        animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: isGrid ? 0.94 : 1 }}
+                        transition={{
+                          layout: {
+                            type: 'spring',
+                            stiffness: 440,
+                            damping: 38,
+                            mass: 0.65,
+                            delay: Math.min(index * 0.01, 0.12),
+                          },
+                          opacity: {
+                            duration: 0.16,
+                            ease: [0.16, 1, 0.3, 1],
+                            delay: Math.min(index * 0.01, 0.12),
+                          },
+                          default: {
+                            duration: 0.2,
+                            ease: [0.16, 1, 0.3, 1],
+                            delay: Math.min(index * 0.01, 0.12),
+                          },
+                        }}
                       >
-                        <Play size={18} fill="currentColor" />
-                      </span>
-                    </span>
-                    <span className="watch-page__episode-copy">
-                      <span className="watch-page__episode-title">
-                        <span className="watch-page__episode-number">
-                          {String(episode.number).padStart(2, '0')}.
-                        </span>{' '}
-                        {episode.title ?? `Episódio ${episode.number}`}
-                      </span>
-                      {episode.description && (
-                        <span className="watch-page__episode-description">
-                          {stripHtml(episode.description)}
-                        </span>
-                      )}
-                      <span className="watch-page__episode-audio">
-                        {episode.isSubbed && <span>SUB</span>}
-                        {episode.isDubbed && <span>DUB</span>}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                        <motion.span
+                          layout="position"
+                          className="watch-page__episode-grid-number"
+                          aria-hidden="true"
+                          animate={{
+                            opacity: isGrid ? 1 : 0,
+                            scale: isGrid ? 1 : 0.82,
+                          }}
+                          transition={{
+                            duration: 0.16,
+                            ease: [0.16, 1, 0.3, 1],
+                          }}
+                        >
+                          {episode.number}
+                        </motion.span>
+                        <motion.span
+                          layout="position"
+                          className="watch-page__episode-image"
+                        >
+                          <EpisodeThumbnail
+                            image={episode.image}
+                            className="w-full"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="watch-page__play-overlay"
+                          >
+                            <Play size={18} fill="currentColor" />
+                          </span>
+                        </motion.span>
+                        <motion.span
+                          layout
+                          className="watch-page__episode-copy"
+                        >
+                          <span className="watch-page__episode-title">
+                            <span className="watch-page__episode-number">
+                              {String(episode.number).padStart(2, '0')}.
+                            </span>{' '}
+                            {title}
+                          </span>
+                          {episode.description && (
+                            <span className="watch-page__episode-description">
+                              {stripHtml(episode.description)}
+                            </span>
+                          )}
+                          <span className="watch-page__episode-audio">
+                            {episode.isSubbed && <span>SUB</span>}
+                            {episode.isDubbed && <span>DUB</span>}
+                          </span>
+                        </motion.span>
+                      </motion.button>
+                    );
+                  })}
+                </AnimatePresence>
+              </motion.div>
+            </MotionConfig>
           ) : episodes.length > 0 ? (
             <p className="flex min-h-36 flex-1 items-center justify-center px-4 text-center text-xs leading-relaxed text-white/40">
               Nenhum episódio encontrado para “{episodeSearch}”.
@@ -815,124 +890,5 @@ function WatchPageContent() {
         </aside>
       </div>
     </div>
-  );
-}
-
-function WatchRelatedList({
-  variant,
-  title,
-  items,
-  titleLanguage,
-}: {
-  variant: 'related' | 'recommendations';
-  title: string;
-  items: Array<AnimeResult & { relationType?: string }>;
-  titleLanguage: 'en' | 'jp';
-}) {
-  const [showAllRelated, setShowAllRelated] = useState(false);
-
-  if (items.length === 0) return null;
-
-  const isScrollable = variant === 'recommendations' && items.length > 4;
-  const hasMoreRelated = variant === 'related' && items.length > 5;
-  const visibleItems =
-    hasMoreRelated && !showAllRelated ? items.slice(0, 5) : items;
-  const headingId = `watch-related-${variant}-heading`;
-  const listId = `watch-related-${variant}-list`;
-
-  return (
-    <section
-      className={`watch-related watch-related--${variant}`}
-      aria-labelledby={headingId}
-    >
-      <div className="watch-related__heading">
-        <span className="watch-related__marker" aria-hidden="true" />
-        <h2 id={headingId}>{title}</h2>
-      </div>
-      <div
-        id={listId}
-        className={`watch-related__list ${isScrollable ? 'watch-related__list--scrollable' : ''}`}
-        aria-label={isScrollable ? title : undefined}
-        role={isScrollable ? 'region' : undefined}
-        tabIndex={isScrollable ? 0 : undefined}
-      >
-        {visibleItems.map((item) => {
-          const itemTitle = resolveAnimeTitle(item.title, titleLanguage);
-          const relationLabel = item.relationType?.replace(/_/g, ' ');
-          const year =
-            typeof item.releaseDate === 'number' &&
-            Number.isFinite(item.releaseDate)
-              ? item.releaseDate
-              : undefined;
-          const rating =
-            typeof item.rating === 'number' &&
-            Number.isFinite(item.rating) &&
-            item.rating > 0
-              ? item.rating
-              : undefined;
-
-          return (
-            <Link
-              key={item.id}
-              to={`/anime/${item.id}`}
-              className="watch-related__item"
-            >
-              <span className="watch-related__image">
-                {item.image ? (
-                  <img src={item.image} alt="" loading="lazy" />
-                ) : (
-                  <span aria-hidden="true">?</span>
-                )}
-              </span>
-              <span className="watch-related__copy">
-                <span className="watch-related__title" title={itemTitle}>
-                  {itemTitle}
-                </span>
-                <span className="watch-related__metadata">
-                  {variant === 'related' ? (
-                    <>
-                      <span className="watch-related__relation-type">
-                        {relationLabel ?? 'Relacionado'}
-                      </span>
-                      {item.type && <span>{item.type}</span>}
-                      {year !== undefined && <span>{year}</span>}
-                    </>
-                  ) : (
-                    <>
-                      {item.type && <span>{item.type}</span>}
-                      {rating !== undefined && (
-                        <span
-                          className="watch-related__rating"
-                          aria-label={`Nota AniList ${rating.toFixed(1)} de 10`}
-                        >
-                          <Star size={12} aria-hidden="true" />
-                          {rating.toFixed(1)}
-                        </span>
-                      )}
-                      {!item.type && rating === undefined && (
-                        <span>Recomendado</span>
-                      )}
-                    </>
-                  )}
-                </span>
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-      {hasMoreRelated && (
-        <button
-          className="watch-related__more"
-          type="button"
-          aria-controls={listId}
-          aria-expanded={showAllRelated}
-          onClick={() => setShowAllRelated((expanded) => !expanded)}
-        >
-          {showAllRelated
-            ? 'Mostrar menos'
-            : `Mostrar mais ${items.length - visibleItems.length}`}
-        </button>
-      )}
-    </section>
   );
 }
