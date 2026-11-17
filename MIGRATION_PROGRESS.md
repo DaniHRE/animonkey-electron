@@ -1,5 +1,11 @@
 # Progresso da migração
 
+## Diretórios locais do Codex fora do Git — 17/11/2026
+
+- O usuário pediu que `.ia/`, `.codex/`, `.skills/`, `.agents/` e `.impeccable/` fossem ignorados. `.agents/skills/motion/` e `.codex/config.toml` estavam rastreados; foram removidos somente do índice com `git rm --cached`, mantendo os arquivos no disco.
+- `.gitignore` agora ignora esses cinco diretórios em qualquer nível do repositório. Nenhuma configuração global do Git foi alterada.
+- Preferência registrada: só usar Impeccable quando o usuário o mencionar explicitamente.
+
 ## Home hero do Electron e origem da arte — 17/11/2026
 
 - Baseline antes da implementação: branch `main`, `HEAD` `80de506` (`chore(ui): remove typography size checker`), sem alterações locais. O checkout `../Anivexa-API` foi apenas inspecionado e permaneceu intacto na branch `fix/reanime-episode-catalog-selection`, commit `08185ce`.

@@ -94,3 +94,10 @@ out/
 # Supabase CLI and Deno local metadata
 supabase/.temp/
 supabase/functions/desktop-api/.npmrc
+
+# Local Codex, agent, and skill tooling
+.ia/
+.codex/
+.skills/
+.agents/
+.impeccable/

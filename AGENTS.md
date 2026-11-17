@@ -39,7 +39,8 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm start` e `pnpm make` são os comandos do destino.
 - Não enfraquecer TypeScript strict. Evitar `any`, segredos em logs, `console.log` persistente e supressões de lint sem motivo.
-- O cache local `.impeccable/hook.cache.json` é estado gerado pelo hook de design: manter fora de commits e ignorado pela formatação global.
+- Diretórios locais de ferramentas e skills (`.ia/`, `.codex/`, `.skills/`, `.agents/` e `.impeccable/`) devem permanecer fora do Git; preservar seu conteúdo local quando forem removidos do índice. Não aplicar workflows ou ferramentas Impeccable automaticamente: usar somente quando o usuário mencionar explicitamente.
+- O cache local `.impeccable/hook.cache.json` é estado gerado local e deve ficar fora de commits e da formatação global.
 - Para segurança Electron ou player, a validação exige executar o app empacotado e conferir o comportamento real, não apenas compilar.
 
 ## Etapas e commits da migração
