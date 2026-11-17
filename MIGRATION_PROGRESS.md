@@ -474,3 +474,10 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - A composição foi isolada em `src/components/features/anime/anime-relations-grid.tsx` e `anime-relations-grid.css`; os IDs e rotas permanecem intactos. O fallback de imagem, EN/JP, foco visível e `prefers-reduced-motion` foram preservados. Não alterei `../animonkey` nem `../Anivexa-API`.
 - O pedido desta rodada não solicitou controle visual do computador; a política deste workspace exige aprovação específica por tarefa, então não abri o app nem naveguei no browser. Não há captura Electron antes/depois nem viewport CSS renderizado verificado nesta etapa. A verificação visual no runtime permanece pendente; a captura anexada não comprova reflow, carregamento de imagens ou foco.
 - Validações: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Não executei testes automatizados.
+
+## Badge de tipo de relação em PT-BR — 16/11/2026
+
+- Ajustei `src/components/features/anime/anime-relations-grid.tsx` para exibir o tipo da relação como badge no canto superior direito do poster. Rótulos conhecidos agora usam PT-BR (`Sequência`, `Prequela`, `Adaptação`, `História paralela`, entre outros); quando o título indica uma temporada, a badge inclui `Temporada N` traduzida.
+- A faixa inferior passou a reservar espaço para ano e episódios. Nota e indicador adulto continuam no topo esquerdo; em telas estreitas eles descem para uma segunda linha para evitar colisão com a badge superior direita.
+- Atualizei o plano e as regras do agente para registrar a posição e o idioma dos rótulos. Mantive os dados, IDs, links, cache e player sem alterações nesta etapa.
+- Validação visual em runtime não realizada nesta revisão; o comportamento em posters estreitos segue pendente de conferência manual. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Não rodei testes automatizados.

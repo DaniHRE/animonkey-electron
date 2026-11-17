@@ -73,6 +73,26 @@
   gap: 5px;
 }
 
+.anime-relation-kind {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  max-width: calc(100% - 104px);
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 999px;
+  background: rgb(10 10 12 / 84%);
+  padding: 3px 7px;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+}
+
 .anime-relation-rating,
 .anime-relation-adult {
   display: inline-flex;
@@ -238,9 +258,17 @@
   }
 
   .anime-relation-top-badges {
-    top: 6px;
+    top: 32px;
     left: 6px;
     gap: 4px;
+  }
+
+  .anime-relation-kind {
+    top: 6px;
+    right: 6px;
+    max-width: calc(100% - 12px);
+    padding-inline: 6px;
+    font-size: 8px;
   }
 
   .anime-relation-rating,

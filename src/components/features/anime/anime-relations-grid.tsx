@@ -107,11 +107,10 @@ function RelationCard({
             </span>
           )}
         </span>
+        <span className="anime-relation-kind" title={relationLabel}>
+          {relationLabel}
+        </span>
         <span className="anime-relation-facts" aria-label="Metadados">
-          <span className="anime-relation-fact" title={relationLabel}>
-            <Network size={11} aria-hidden="true" />
-            <span>{relationLabel}</span>
-          </span>
           {year != null && (
             <span className="anime-relation-fact" title={`Ano ${year}`}>
               <CalendarDays size={11} aria-hidden="true" />
@@ -153,16 +152,22 @@ function getRelationLabel(relationType: string, title: string): string {
     /(?:season\s+(\d+)(?:\s*part\s+(\d+))?|(?:(\d+)(?:st|nd|rd|th)\s+season)(?:\s*part\s+(\d+))?)/i,
   );
   const season = seasonMatch
-    ? `Season ${seasonMatch[1] ?? seasonMatch[3]}${(seasonMatch[2] ?? seasonMatch[4]) ? ` Part ${seasonMatch[2] ?? seasonMatch[4]}` : ''}`
+    ? `Temporada ${seasonMatch[1] ?? seasonMatch[3]}${(seasonMatch[2] ?? seasonMatch[4]) ? ` Parte ${seasonMatch[2] ?? seasonMatch[4]}` : ''}`
     : null;
-  const readableType =
-    relationType === 'SEQUEL'
-      ? 'Direct Sequel'
-      : relationType
-          .toLowerCase()
-          .split('_')
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
+  const labels: Record<string, string> = {
+    ADAPTATION: 'Adaptação',
+    PREQUEL: 'Prequela',
+    SEQUEL: 'Sequência',
+    PARENT: 'Obra principal',
+    SIDE_STORY: 'História paralela',
+    CHARACTER: 'Personagem',
+    SUMMARY: 'Resumo',
+    ALTERNATIVE: 'Versão alternativa',
+    SPIN_OFF: 'Derivado',
+    SOURCE: 'Obra de origem',
+    OTHER: 'Outro',
+  };
+  const readableType = labels[relationType] ?? 'Relacionado';
 
   return season ? `${season} · ${readableType}` : readableType;
 }
