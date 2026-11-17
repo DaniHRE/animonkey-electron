@@ -26,18 +26,23 @@ export function SidebarTooltip({ label, children }: SidebarTooltipProps) {
       Math.max(rect.top + rect.height / 2, 20),
       window.innerHeight - 20,
     );
-    setPosition({ left: rect.right + 14, top });
+    const left = rect.right + 14;
+    setPosition((current) =>
+      current?.left === left && current.top === top ? current : { left, top },
+    );
   }, []);
 
   useEffect(() => {
     if (!isOpen) return;
 
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
-    return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
+    // Follow the anchor while the rail or its expanded sections move.
+    let frame: number;
+    const followAnchor = () => {
+      updatePosition();
+      frame = window.requestAnimationFrame(followAnchor);
     };
+    frame = window.requestAnimationFrame(followAnchor);
+    return () => window.cancelAnimationFrame(frame);
   }, [isOpen, updatePosition]);
 
   function showTooltip() {

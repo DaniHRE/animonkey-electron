@@ -42,6 +42,7 @@ export function AppShell() {
   const [search, setSearch] = useState('');
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const showSidebarRef = useRef<HTMLButtonElement | null>(null);
   const previousSidebarVisibility = useRef(sidebarVisible);
@@ -57,6 +58,27 @@ export function AppShell() {
     pathname !== '/' &&
     !pathname.startsWith('/anime/') &&
     !pathname.startsWith('/watch/');
+
+  useEffect(() => {
+    let frame: number | undefined;
+    const updateSurface = () => {
+      frame = undefined;
+      shellRef.current?.style.setProperty(
+        '--app-scroll-progress',
+        String(Math.min(1, Math.max(0, window.scrollY / 150))),
+      );
+    };
+    const onScroll = () => {
+      if (frame === undefined)
+        frame = window.requestAnimationFrame(updateSurface);
+    };
+    updateSurface();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const wasVisible = previousSidebarVisibility.current;
@@ -86,7 +108,11 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0b0b0c] text-[#f5f5f5]">
+    <div
+      ref={shellRef}
+      data-sidebar-visible={sidebarVisible}
+      className="app-shell min-h-screen bg-[#0b0b0c] text-[#f5f5f5]"
+    >
       <aside
         ref={sidebarRef}
         id="app-sidebar"
@@ -94,7 +120,7 @@ export function AppShell() {
         aria-hidden={!sidebarVisible}
         inert={!sidebarVisible}
         data-visible={sidebarVisible}
-        className="app-sidebar fixed top-[81px] bottom-0 left-0 z-30 border-r border-white/[0.045] bg-[#0b0b0c]"
+        className="app-sidebar fixed top-[81px] bottom-0 left-0 z-30"
       >
         <div className="app-sidebar__nav-stack">
           <nav
@@ -170,21 +196,6 @@ export function AppShell() {
               ))}
             </div>
           </nav>
-        </div>
-
-        <div className="app-sidebar__foot" aria-label="Controles da navegação">
-          <SidebarTooltip label="Configurações">
-            <NavLink
-              to="/settings"
-              data-sidebar-link="true"
-              aria-label="Configurações"
-              className={({ isActive }) =>
-                `app-sidebar__nav-link ${isActive ? 'is-active' : ''}`
-              }
-            >
-              <Settings size={19} strokeWidth={1.8} aria-hidden="true" />
-            </NavLink>
-          </SidebarTooltip>
           <span className="app-sidebar__divider" aria-hidden="true" />
           <SidebarTooltip label="Ocultar navegação">
             <button
@@ -196,8 +207,24 @@ export function AppShell() {
               onClick={() => setSidebarVisible(false)}
               className="app-sidebar__nav-link app-sidebar__hide-toggle"
             >
-              <ChevronLeft size={19} strokeWidth={1.8} aria-hidden="true" />
+              <ChevronLeft size={20} strokeWidth={1.8} aria-hidden="true" />
             </button>
+          </SidebarTooltip>
+        </div>
+
+        <div className="app-sidebar__foot" aria-label="Controles da navegação">
+          <span className="app-sidebar__divider" aria-hidden="true" />
+          <SidebarTooltip label="Configurações">
+            <NavLink
+              to="/settings"
+              data-sidebar-link="true"
+              aria-label="Configurações"
+              className={({ isActive }) =>
+                `app-sidebar__nav-link ${isActive ? 'is-active' : ''}`
+              }
+            >
+              <Settings size={18} strokeWidth={1.8} aria-hidden="true" />
+            </NavLink>
           </SidebarTooltip>
         </div>
       </aside>
@@ -228,7 +255,15 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header className="app-header fixed inset-x-0 top-0 z-40 flex h-[81px] items-center gap-8 border-b border-white/[0.06] bg-[#0b0b0c] px-6">
+        <header className="app-header fixed inset-x-0 top-0 z-40 flex h-[81px] items-center gap-3 pr-4 pl-6">
+          <div
+            className="app-header__edge app-header__edge--left"
+            aria-hidden="true"
+          />
+          <div
+            className="app-header__edge app-header__edge--right"
+            aria-hidden="true"
+          />
           {!sidebarVisible && (
             <SidebarTooltip label="Mostrar navegação">
               <button
@@ -259,48 +294,45 @@ export function AppShell() {
           {pathname !== '/search' && (
             <form
               onSubmit={submitSearch}
-              className="app-header__search relative w-[min(320px,calc(100vw-520px))] shrink-0"
+              className="app-header__search relative"
             >
               <Search
-                size={17}
-                className="absolute top-1/2 left-3 -translate-y-1/2 text-white/40"
+                size={20}
+                className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-gray-400"
               />
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Busque por anime, gênero ou temporada..."
-                aria-label="Buscar animes"
-                className="h-11 w-full rounded-lg border border-white/[0.08] bg-white/[0.025] pr-12 pl-10 text-[13px] text-white outline-none transition placeholder:text-white/45 focus:border-[#49d77a]/45 focus:bg-white/[0.04]"
+                placeholder="Buscar anime..."
+                aria-label="Buscar anime"
+                className="app-header__search-input"
               />
-              <kbd className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-white/35">
-                ENTER
-              </kbd>
             </form>
           )}
 
           <div className="ml-auto flex items-center gap-4">
-            <div
-              role="group"
-              className="app-header__language flex items-center gap-1 rounded-md bg-white/[0.045] p-1"
-              aria-label="Idioma dos títulos"
+            <button
+              type="button"
+              className="app-header__language"
+              onClick={toggleTitleLanguage}
+              aria-pressed={titleLanguage === 'jp'}
+              aria-label={`EN/JP: títulos em ${titleLanguage === 'jp' ? 'japonês (romaji). Mudar para inglês' : 'inglês. Mudar para japonês (romaji)'}`}
+              title={`Títulos em ${titleLanguage === 'jp' ? 'japonês (romaji)' : 'inglês'}`}
             >
+              <span className="app-header__language-thumb" aria-hidden="true" />
               {(['en', 'jp'] as const).map((language) => (
-                <button
+                <span
                   key={language}
-                  type="button"
-                  onClick={() => {
-                    if (titleLanguage !== language) toggleTitleLanguage();
-                  }}
-                  aria-pressed={titleLanguage === language}
-                  className={`rounded px-2 py-1 text-xs font-bold transition ${titleLanguage === language ? 'bg-white/[0.12] text-white' : 'text-white/50 hover:text-white'}`}
+                  aria-hidden="true"
+                  className={`app-header__language-option ${titleLanguage === language ? 'is-active' : ''}`}
                 >
                   {language.toUpperCase()}
-                </button>
+                </span>
               ))}
-            </div>
+            </button>
             <NavLink
               to="/settings"
-              className="flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left"
+              className="app-header__account flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left"
               title="Configurações locais"
             >
               <ProfileAvatar

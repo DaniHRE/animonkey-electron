@@ -175,7 +175,7 @@ export function AnimePage() {
           } as React.CSSProperties
         }
       >
-        <div className="relative -mt-[76px] min-h-[436px] overflow-hidden pt-[76px] lg:min-h-0">
+        <div className="app-hero-bleed relative min-h-[436px] overflow-hidden pt-[81px] lg:min-h-0">
           {anime.banner && (
             <img
               src={anime.banner}

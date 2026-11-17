@@ -209,7 +209,7 @@ export function HomePage() {
       {loading && !home ? (
         <HomeHeroSkeleton />
       ) : (
-        <section className="relative isolate -mt-[76px] h-[70vh] min-h-[500px] max-h-[820px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]">
+        <section className="app-hero-bleed relative isolate h-[70vh] min-h-[500px] max-h-[820px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]">
           {banner && (
             <img
               key={featured?.id}
@@ -453,7 +453,7 @@ function HomeHeroSkeleton() {
     <section
       aria-label="Carregando destaques da página inicial"
       aria-busy="true"
-      className="relative isolate -mt-[76px] h-[70vh] min-h-[500px] max-h-[820px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]"
+      className="app-hero-bleed relative isolate h-[70vh] min-h-[500px] max-h-[820px] overflow-hidden border-b border-white/[0.05] bg-[#09090a]"
     >
       <div
         className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#080809]/95 via-[#080809]/75 to-[#080809]/35"
