@@ -1,12 +1,10 @@
 import {
-  ArrowUpRight,
   Bookmark,
   BookmarkCheck,
   Check,
   Clapperboard,
   Clock,
   Maximize2,
-  Network,
   Play,
   Share2,
   Star,
@@ -17,6 +15,7 @@ import { Link, useParams } from 'react-router-dom';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { AnimeCharacterCarousel } from '@/components/features/anime/anime-character-carousel';
 import { AnimeEpisodeList } from '@/components/features/anime/anime-episode-list';
+import { AnimeRelationsGrid } from '@/components/features/anime/anime-relations-grid';
 import { AniListCatalog } from '@/services/anilist.service';
 import type { AnimeInfo } from '@/types/anime';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
@@ -482,100 +481,10 @@ export function AnimePage() {
               <AnimeCharacterCarousel characters={anime.characters} />
             )}
             {detailTab === 'relations' && (
-              <div
-                role="tabpanel"
-                className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
-              >
-                {anime.relations.map((relation) => {
-                  const relationTitle = resolveAnimeTitle(
-                    relation.title,
-                    titleLanguage,
-                  );
-                  const relationLabel = getRelationLabel(
-                    relation.relationType,
-                    relationTitle,
-                  );
-
-                  return (
-                    <Link
-                      key={`${relation.id}-${relation.relationType}`}
-                      to={`/anime/${relation.id}`}
-                      className="group min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-[#171719] transition-colors hover:border-white/[0.16] hover:bg-[#1b1b1e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a]"
-                    >
-                      <span className="relative block aspect-video overflow-hidden bg-white/[0.04]">
-                        {relation.image ? (
-                          <img
-                            src={relation.image}
-                            alt=""
-                            loading="lazy"
-                            className="size-full object-cover transition duration-300 group-hover:scale-[1.025] motion-reduce:transform-none motion-reduce:transition-none"
-                          />
-                        ) : (
-                          <span className="grid size-full place-items-center text-white/25">
-                            <Clapperboard size={28} aria-hidden="true" />
-                          </span>
-                        )}
-                        <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-                        <span className="absolute top-2 left-2 inline-flex max-w-[calc(100%-2.75rem)] items-center gap-1 rounded-md border border-white/15 bg-black/75 px-2 py-1 text-[8px] font-bold tracking-wide text-white shadow-sm sm:top-2.5 sm:left-2.5 sm:text-[9px]">
-                          <Network size={11} aria-hidden="true" />
-                          <span className="truncate">{relationLabel}</span>
-                        </span>
-                        <span className="absolute top-2 right-2 grid size-7 place-items-center rounded-full border border-white/20 bg-black/55 text-white/75 transition group-hover:bg-black/80 group-hover:text-white sm:top-2.5 sm:right-2.5">
-                          <ArrowUpRight size={14} aria-hidden="true" />
-                        </span>
-                      </span>
-                      <span className="flex min-w-0 flex-col gap-1.5 p-2.5 sm:p-3">
-                        <span className="line-clamp-2 min-h-[2.3em] text-xs font-bold leading-snug text-white/90 group-hover:text-white sm:text-sm">
-                          {relationTitle}
-                        </span>
-                        <span className="flex min-h-[2.2em] flex-wrap content-start gap-x-1.5 gap-y-1 text-[8px] font-medium leading-tight text-white/45 sm:text-[9px]">
-                          {relation.type && <span>{relation.type}</span>}
-                          {relation.status && (
-                            <span>{formatRelationStatus(relation.status)}</span>
-                          )}
-                          {(relation.season || relation.releaseDate) && (
-                            <span>
-                              {relation.season
-                                ? `${capitalize(relation.season.toLowerCase())} ${relation.releaseDate ?? ''}`.trim()
-                                : relation.releaseDate}
-                            </span>
-                          )}
-                          {relation.totalEpisodes != null && (
-                            <span>{relation.totalEpisodes} ep</span>
-                          )}
-                          {relation.rating != null && (
-                            <span>★ {relation.rating.toFixed(1)}</span>
-                          )}
-                        </span>
-                        {relation.genres[0] && (
-                          <span className="w-fit max-w-full truncate rounded bg-white/[0.06] px-1.5 py-1 text-[8px] font-medium text-white/55">
-                            {relation.genres[0]}
-                          </span>
-                        )}
-                        {relation.description && (
-                          <span className="line-clamp-1 text-[9px] leading-relaxed text-white/40 sm:line-clamp-2 sm:text-[10px]">
-                            {stripHtml(relation.description)}
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  );
-                })}
-                {!anime.relations.length && (
-                  <div className="col-span-full flex min-h-48 flex-col items-center justify-center px-6 text-center">
-                    <span className="mb-4 grid size-12 place-items-center rounded-full bg-white/[0.05] text-white/45">
-                      <Network size={21} />
-                    </span>
-                    <p className="text-sm font-semibold text-white/75">
-                      Não existem animes relacionados para esta obra.
-                    </p>
-                    <p className="mt-1 text-xs text-white/40">
-                      Quando houver continuações, especiais ou adaptações, elas
-                      aparecerão aqui.
-                    </p>
-                  </div>
-                )}
-              </div>
+              <AnimeRelationsGrid
+                relations={anime.relations}
+                titleLanguage={titleLanguage}
+              />
             )}
           </div>
         </section>
@@ -797,33 +706,6 @@ export function AnimePage() {
       )}
     </article>
   );
-}
-
-function getRelationLabel(relationType: string, title: string): string {
-  const seasonMatch = title.match(
-    /(?:season\s+(\d+)(?:\s*part\s+(\d+))?|(?:(\d+)(?:st|nd|rd|th)\s+season)(?:\s*part\s+(\d+))?)/i,
-  );
-  const season = seasonMatch
-    ? `Season ${seasonMatch[1] ?? seasonMatch[3]}${(seasonMatch[2] ?? seasonMatch[4]) ? ` Part ${seasonMatch[2] ?? seasonMatch[4]}` : ''}`
-    : null;
-  const readableType =
-    relationType === 'SEQUEL'
-      ? 'Direct Sequel'
-      : relationType
-          .toLowerCase()
-          .split('_')
-          .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-          .join(' ');
-
-  return season ? `${season} · ${readableType}` : readableType;
-}
-
-function formatRelationStatus(status: string): string {
-  return status.toLowerCase().split('_').map(capitalize).join(' ');
-}
-
-function capitalize(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function formatAiringCountdown(seconds: number): string {

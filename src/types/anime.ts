@@ -21,6 +21,7 @@ export interface AnimeResult {
   type?: string;
   status?: string;
   totalEpisodes?: number;
+  duration?: number;
   airingAt?: number;
   airingEpisode?: number;
 }
@@ -160,7 +161,6 @@ export interface AnimeVoiceActor {
 }
 
 export interface AnimeInfo extends AnimeResult {
-  duration?: number;
   trailer?: { id: string; site: string; thumbnail?: string };
   nextAiringEpisode?: { airingAt: number; episode: number };
   characters: AnimeCharacter[];

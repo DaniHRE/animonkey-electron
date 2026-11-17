@@ -163,6 +163,7 @@ function mapMedia(media: AniListMedia): AnimeResult {
     type: media.format ?? undefined,
     status: media.status ?? undefined,
     totalEpisodes: media.episodes ?? undefined,
+    duration: media.duration ?? undefined,
   };
 }
 
@@ -502,12 +503,12 @@ export const AniListCatalog = {
     const numericId = Number(id);
     if (!Number.isSafeInteger(numericId) || numericId < 1) return null;
     return withCatalogCache(
-      `anime:v5:${numericId}`,
+      `anime:v6:${numericId}`,
       ONE_DAY,
       signal,
       async () => {
         const response = await request(
-          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} stats { scoreDistribution { amount } } duration trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: [ROLE, RELEVANCE, ID], perPage: 50) { edges { role node { id name { userPreferred full } image { large } } voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) { id languageV2 name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
+          `query ($id: Int) { Media(id: $id, type: ANIME) { ${CARD_FIELDS} stats { scoreDistribution { amount } } trailer { id site thumbnail } nextAiringEpisode { airingAt episode } characters(sort: [ROLE, RELEVANCE, ID], perPage: 50) { edges { role node { id name { userPreferred full } image { large } } voiceActors(language: JAPANESE, sort: [RELEVANCE, ID]) { id languageV2 name { userPreferred full } image { large } } } } relations { edges { relationType node { ${CARD_FIELDS} } } } recommendations(perPage: 8, sort: RATING_DESC) { nodes { mediaRecommendation { ${CARD_FIELDS} } } } } }`,
           { id: numericId },
           signal,
         );
@@ -515,7 +516,6 @@ export const AniListCatalog = {
         if (!media) return null;
         return {
           ...mapMedia(media),
-          duration: media.duration ?? undefined,
           trailer:
             media.trailer?.id && media.trailer.site
               ? {
