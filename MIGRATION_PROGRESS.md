@@ -433,3 +433,34 @@ Este tracker acompanha [MIGRATION_PLAN.md](./MIGRATION_PLAN.md). Estado atualiza
 - Consultas legadas desta revisão: `../animonkey/components/features/anime/watch-episode-list.tsx`, `../animonkey/components/features/anime/server-selector.tsx`, `../animonkey/components/features/anime/watch-related-list.tsx`, `../animonkey/components/features/anime/recommendation-carousel.tsx` e o consumidor `../animonkey/app/(site)/anime/[id]/anime-page-client.tsx`. Foram comparados dados, IDs, estado de seleção, filtros e convenções de UI; nenhuma alteração foi feita no legado ou checkout Anivexa.
 - Capturas Electron de lista e grade, seção Related/Recommendations e referência foram observadas no controle do computador com o mesmo viewport CSS 1424×856. As capturas apareceram na sessão visual, sem export para arquivo no repositório. A aba ReAnime foi restaurada para 1920×855 CSS px. A inspeção valida layout estático e a presença dos controles; o ciclo de teclado/foco, reduced motion em sistema real, reflow estreito e reprodução no pacote ainda precisam de QA adicional.
 - `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. O hook do commit também executou `pnpm lint` e `pnpm typecheck`; testes automatizados não foram executados. Commit local: `6d729bf` (`feat(watch): animate episode layout and refine server selector`).
+
+## Reanálise da sidebar do ReAnime — 16/11/2026
+
+- Inspecionei a sidebar renderizada em Chrome com DOM, nomes acessíveis, atributos ARIA, classes e estilos computados. No viewport amplo de 1920×855 CSS px, `header.hdr` mede 81 px; `aside.sb` começa em y=81, mede 64×774 px e fica fixo. A navegação principal (`.sb-nav`) ocupa uma coluna centralizada de alvos 40×40 px, com gaps de 4 px. O header não inclui a rail no seu fluxo horizontal.
+- A seta `.sb-more-toggle` tem alvo de 40 px e ícone ChevronDown de 18 px. Ela mantém a largura do rail e abre os atalhos adicionais verticalmente. No estado fechado a lista usa uma grade com linha 0fr; aberta passa a 1fr, os itens entram com opacidade/translate/escala e atraso escalonado, e a seta gira. A navegação permanece acessível pelo estado `aria-expanded` e seus destinos aparecem ao expandir.
+- CSS mínimo extraído e mostrado como evidência (trecho da captura; não incorporado ao produto):
+
+  ```css
+  .sb-more {
+    grid-template-rows: 0fr;
+  }
+  .sb-more.is-open {
+    grid-template-rows: 1fr;
+  }
+  .sb-item[data-tip]::after {
+    content: attr(data-tip);
+  }
+  .sbt {
+    width: 40px;
+    height: 80px;
+  }
+  ```
+
+  O tooltip observado ancora à direita do ícone, centraliza no eixo vertical e usa texto 11 px/600, padding de cerca de 6×10 px, borda discreta, fundo escuro, sombra e entrada por opacidade/deslocamento de 6 px. Há regra para hover e foco, com atraso curto. O puxador `.sbt` fica parcialmente fora da borda esquerda (x≈−8), centralizado na tela, e desliza para dentro no hover/foco. Ao ocultar a rail, a referência também oferece um botão de menu no header.
+
+- O CSS carregado nesta captura era `0.CDgDkD__.css` mais `nodes_44.C0ZTpxRu.css`: o primeiro contém classes utilitárias compiladas semelhantes a Tailwind para geometria/gaps/tipografia; o segundo contém classes escopadas de navegação, tooltip e interação. Isso é uma classificação pelo CSSOM e pelos estilos computados, não prova qual framework/configuração gerou os bundles. O CSS autoral do Electron não copia esses arquivos.
+- Consultei `../animonkey/components/layout/navbar.tsx` e `../animonkey/components/ui/tooltip.tsx`; o legado fornece navegação horizontal e sheet móvel, sem uma rail desktop equivalente. Preservei as rotas e atalhos Electron existentes. A ordem inferior desta implementação segue a solicitação desta revisão: Configurações → divisor → ocultar. O botão de ocultar permanece separado do controle que expande as seções adicionais.
+- Em `src/components/layout/app-shell.tsx` e `app-shell.css`, a rail agora permanece em 64 px e não alarga o conteúdo. A seta abre os três destinos adicionais em coluna; Configurações fica no rodapé, seguida por divisor e botão de ocultar. Ocultar desloca a rail para fora da tela e devolve seus 64 px ao conteúdo; puxador na borda e botão de menu no header reabrem a navegação. O foco é restaurado para o controle de navegação apropriado. `SidebarTooltip` mostra os nomes no hover e no foco, calcula posição relativa ao botão e usa portal para não ser cortado pelo overflow vertical da rail. Cores e destaque ativo mantêm o verde e o fundo do Animonkey.
+- Capturas antes/depois no Electron usam o mesmo viewport interno de 1424×856 CSS px; a janela nativa aparece como 1426×913 px incluindo moldura e menu. O ReAnime também foi observado em 1424×856 CSS px na comparação responsiva anterior e em 1920×855 para as medidas do layout amplo. Na interação do app, abri/fechei as seções, ocultei e reabri a rail pelo puxador, confirmei o botão do header no estado oculto e avancei o foco com Tab; a árvore acessível mostrou os atalhos somente quando apropriado e o tooltip de “Explorar” apareceu com foco. A navegação foi restaurada visível e fechada ao final. As capturas ficaram na sessão visual e não foram exportadas como arquivos do repositório.
+- O hook Impeccable não encontrou problemas determinísticos nos arquivos alterados. `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram; os hooks do commit repetiram lint e typecheck. Não executei testes automatizados. Não testei reduced-motion no sistema, reflow em janela estreita, leitor de tela nem o pacote empacotado; paridade final nesses estados depende de QA adicional. Não alterei `../animonkey` nem o checkout `../Anivexa-API`.
+- Commit local da implementação: `9a08c3e` (`feat(layout): match ReAnime sidebar behavior`).
