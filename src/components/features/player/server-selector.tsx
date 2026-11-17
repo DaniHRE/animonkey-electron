@@ -94,7 +94,7 @@ export function ServerSelector({
     <div className="watch-server-selector">
       <div className="watch-server-row">
         <span className="watch-server-row-label" aria-hidden="true">
-          Providers
+          Provedores
         </span>
         <div
           role="group"
@@ -122,7 +122,7 @@ export function ServerSelector({
       {selectedGroup && (
         <div className="watch-server-row">
           <span className="watch-server-row-label" aria-hidden="true">
-            Servidores
+            Fontes
           </span>
           <div
             role="group"

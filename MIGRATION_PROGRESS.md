@@ -1,5 +1,14 @@
 # Progresso da migração
 
+## Revisão ampla do watch — 17/11/2026
+
+- Branch solicitada pelo usuário: feat/watch-experience-refresh, criada da main limpa no commit 25d4406; main preservada.
+- Implementação: resumo horizontal em largura intermediária, link interno Ver detalhes, relacionados/recomendações em duas colunas, modo teatro por CSS sem remount, anterior/próximo com IDs e áudio existentes, Assistir depois com hook e erros existentes, ajuda de atalhos reais do Vidstack, provider separado da fonte selecionada, idiomas identificados como legendas, seletores discretos e com largura limitada, gêneros/relações traduzidos e filtro Todos.
+- Reflow dos episódios usa layout de posição e remove stagger na troca de modos, mantendo keys dos IDs, MotionConfig e reduced-motion. Intervenção preserva o engine/proxy e não cria capacidades remotas, comentários ou watch party.
+- Referências: auditoria manual anterior ReAnime/Electron (1424×855 e referência 1920×855), watch-page, watch-related-list, video-player/Vidstack, useWatchLater, anime-card e legado video-player/use-player-source. Orientações Impeccable e Motion aplicadas, detector sem achados.
+- Typecheck e lint passaram; format:check e diff:check executados. Inspeção visual autorizada foi interrompida por interação simultânea na janela; esta versão ainda precisa de QA visual e smoke empacotado. Não declarar paridade audiovisual. Autoplay/auto-next/auto-skip, localização completa do engine e pôster antes do primeiro frame permanecem para etapa própria do player.
+- Próximo passo: validar no app resumo, teatro, navegação, biblioteca, layout estreito e reflow. Hash do commit registrado na próxima etapa.
+
 ## Seletor de servidores com idioma identificado — 17/11/2026
 
 - Baseline `c5f1ec9`, árvore limpa. Impeccable aplicado como refinamento da identidade existente, modo Operate; context, craft-floor e detector consultados, detector sem achados.

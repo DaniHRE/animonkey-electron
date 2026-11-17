@@ -1256,3 +1256,237 @@
     transform: none;
   }
 }
+/* Watch experience: compact controls and responsive information. */
+.watch-page__summary-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 10px;
+}
+.watch-page__details-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.watch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+.watch-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: transparent;
+  color: #ccc;
+  font-size: 14px;
+  cursor: pointer;
+}
+.watch-actions button:hover:not(:disabled),
+.watch-page__details-link:hover {
+  background: rgb(255 255 255 / 7%);
+  color: white;
+}
+.watch-actions button[aria-pressed='true'] {
+  color: var(--watch-accent);
+  background: rgb(73 215 122 / 8%);
+}
+.watch-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.watch-actions button:focus-visible,
+.watch-page__details-link:focus-visible {
+  outline: 2px solid var(--watch-accent);
+  outline-offset: 3px;
+}
+.watch-shortcuts,
+.watch-library-error {
+  padding: 12px 16px;
+  background: rgb(255 255 255 / 4%);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.watch-shortcuts kbd {
+  border: 1px solid rgb(255 255 255 / 20%);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.watch-library-error {
+  color: #fecaca;
+}
+.watch-playing-source {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 4px 0 12px;
+  color: #bcbcbc;
+  font-size: 12px;
+}
+.watch-playing-source strong {
+  color: #e8e8e8;
+  font-weight: 500;
+}
+.watch-playing-source span {
+  margin-left: auto;
+}
+.watch-server-selector {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.watch-server-options {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 230px));
+}
+.watch-server-option.is-active {
+  background: rgb(73 215 122 / 8%);
+  border-color: rgb(73 215 122 / 55%);
+  color: #aff3c1;
+}
+.watch-server-option.is-active .watch-server-language {
+  background: rgb(73 215 122 / 12%);
+  color: #aff3c1;
+}
+.watch-server-check {
+  color: var(--watch-accent);
+}
+.watch-server-row-label {
+  font-weight: 500;
+}
+.watch-page__episode-card:not(.is-current) {
+  border-color: rgb(255 255 255 / 4%);
+  background: transparent;
+}
+.watch-page__episode-card:hover:not(.is-current) {
+  background: rgb(255 255 255 / 4%);
+}
+.watch-related__item {
+  background: transparent;
+  border-color: transparent;
+}
+.watch-page.is-theater .watch-page__layout {
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 380px);
+  grid-template-areas: 'center center' 'info episodes';
+}
+.watch-page.is-theater .watch-page__center {
+  grid-area: center;
+  width: 100%;
+  max-width: 1440px;
+  justify-self: center;
+}
+.watch-page.is-theater .watch-page__info {
+  grid-area: info;
+}
+.watch-page.is-theater .watch-page__episodes {
+  grid-area: episodes;
+}
+@container watch (max-width:1500px) {
+  .watch-page__info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+  }
+  .watch-page__info-card {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 150px minmax(0, 1fr);
+    align-items: start;
+    gap: 24px;
+    padding: 20px;
+    border: 1px solid rgb(255 255 255 / 7%);
+    border-radius: 12px;
+  }
+  .watch-page__poster-stage {
+    height: auto;
+    margin: 0;
+  }
+  .watch-page__poster-glow,
+  .watch-page__poster-stage::after {
+    display: none;
+  }
+  .watch-page__poster,
+  .watch-page__poster-placeholder {
+    width: 150px;
+    height: 225px;
+    box-shadow: none;
+  }
+  .watch-page__anime-title {
+    align-self: start;
+    text-align: left;
+    max-width: none;
+  }
+  .watch-page__native-title {
+    text-align: left;
+  }
+  .watch-page__availability,
+  .watch-page__metadata,
+  .watch-page__genres,
+  .watch-page__rating {
+    justify-content: flex-start;
+  }
+  .watch-page__description-box {
+    max-height: 100px;
+    margin: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .watch-page__anilist-link {
+    align-self: start;
+  }
+  .watch-page__details-link {
+    align-self: start;
+  }
+  .watch-related__item {
+    width: 100%;
+  }
+}
+@container watch (max-width:600px) {
+  .watch-page__info {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .watch-page__info-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+  .watch-page__poster,
+  .watch-page__poster-placeholder {
+    width: 88px;
+    height: 132px;
+  }
+  .watch-page__anime-title {
+    font-size: 18px;
+  }
+  .watch-page.is-theater .watch-page__layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'center' 'episodes' 'info';
+  }
+  .watch-actions button {
+    flex: 1 1 auto;
+  }
+  .watch-playing-source span {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+@container watch (max-width:1050px) {
+  .watch-page.is-theater .watch-page__layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'center' 'episodes' 'info';
+  }
+}

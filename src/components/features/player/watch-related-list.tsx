@@ -25,7 +25,24 @@ function WatchRelatedCard({
   titleLanguage,
 }: WatchRelatedCardProps) {
   const title = resolveAnimeTitle(item.title, titleLanguage);
-  const relation = item.relationType?.replace(/_/g, ' ');
+  const relationLabels: Record<string, string> = {
+    SEQUEL: 'Sequência',
+    PREQUEL: 'Prequela',
+    SIDE_STORY: 'História paralela',
+    SPIN_OFF: 'Derivado',
+    CHARACTER: 'Personagens',
+    ALTERNATIVE: 'Alternativo',
+    SUMMARY: 'Resumo',
+    PARENT: 'Obra principal',
+    ADAPTATION: 'Adaptação',
+    SOURCE: 'Obra original',
+    OTHER: 'Relacionado',
+    COMPILATION: 'Compilação',
+    CONTAINS: 'Inclui',
+  };
+  const relation = item.relationType
+    ? (relationLabels[item.relationType] ?? 'Relacionado')
+    : undefined;
   const year =
     typeof item.releaseDate === 'number' && Number.isFinite(item.releaseDate)
       ? item.releaseDate

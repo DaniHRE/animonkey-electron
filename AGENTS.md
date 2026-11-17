@@ -157,3 +157,5 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - Refinamento solicitado em 17/11/2026: EN/JP agora mede 88×36 px com rótulos de 12 px, substituindo as dimensões anteriores e encerrando a exceção tipográfica de 10 px.
 
 - Seletor em 17/11/2026: por pedido explícito, excluir fontes sem subtitleLanguages reconhecido (PT-BR/EN), inclusive H-SUB sem idioma. Esta regra substitui a exposição manual de idioma desconhecido. Filtrar antes da seleção/fallback e antes de agrupar providers; nunca inferir idioma de H-SUB. Providers vazios não aparecem.
+
+- Watch atualizado em 17/11/2026: modo teatro deve preservar o mount do player e os IDs de episódio/fonte; navegação anterior/próximo reutiliza selectEpisode e áudio atual. Assistir depois reutiliza useWatchLater com estado pending e erro localizado. Fonte selecionada é distinta do provider aberto para consulta; não afirmar reprodução ativa apenas pela seleção. Resumo vira horizontal no breakpoint de duas colunas; datas e idiomas nunca são inventados.
