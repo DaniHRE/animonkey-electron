@@ -375,6 +375,7 @@ export const AnivexaCatalog = {
               presentation !== 'hardsub',
             );
             const serverName = stream.server ?? `Fonte ${streamIndex + 1}`;
+            if (languages.length === 0) return [];
             return [
               {
                 id: `${provider}|${streamIndex}`,

@@ -155,3 +155,5 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 - Ajuste solicitado em 17/11/2026: a largura atual da sidebar é 72 px (substitui os 64 px anteriores), com fundo preto a 12% mantendo transparência; sincronizar recuo do conteúdo e backdrop. O EN/JP passa a 72×28 px, mantendo indicador e foco acessível.
 
 - Refinamento solicitado em 17/11/2026: EN/JP agora mede 88×36 px com rótulos de 12 px, substituindo as dimensões anteriores e encerrando a exceção tipográfica de 10 px.
+
+- Seletor em 17/11/2026: por pedido explícito, excluir fontes sem subtitleLanguages reconhecido (PT-BR/EN), inclusive H-SUB sem idioma. Esta regra substitui a exposição manual de idioma desconhecido. Filtrar antes da seleção/fallback e antes de agrupar providers; nunca inferir idioma de H-SUB. Providers vazios não aparecem.

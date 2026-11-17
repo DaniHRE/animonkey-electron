@@ -52,6 +52,7 @@ export function ServerSelector({
   const providerGroups = useMemo(() => {
     const groups = new Map<string, EpisodeServer[]>();
     for (const server of servers) {
+      if (server.subtitleLanguages.length === 0) continue;
       const group = groups.get(server.provider) ?? [];
       group.push(server);
       groups.set(server.provider, group);
@@ -77,8 +78,13 @@ export function ServerSelector({
       ? providerSelection.provider
       : (activeServer?.provider ?? firstProvider);
 
-  if (servers.length === 0)
-    return <p className="text-xs text-white/45">Nenhum servidor disponível</p>;
+  if (providerGroups.length === 0)
+    return (
+      <p className="watch-server-empty" role="status">
+        Nenhuma fonte com idioma identificado. Tente outro episódio ou carregue
+        novamente.
+      </p>
+    );
 
   const selectedGroup =
     providerGroups.find((group) => group.provider === selectedProvider) ??
@@ -88,7 +94,7 @@ export function ServerSelector({
     <div className="watch-server-selector">
       <div className="watch-server-row">
         <span className="watch-server-row-label" aria-hidden="true">
-          Provedor
+          Providers
         </span>
         <div
           role="group"
@@ -116,7 +122,7 @@ export function ServerSelector({
       {selectedGroup && (
         <div className="watch-server-row">
           <span className="watch-server-row-label" aria-hidden="true">
-            Fontes
+            Servidores
           </span>
           <div
             role="group"
@@ -140,7 +146,7 @@ export function ServerSelector({
                       <span key={language} className="watch-server-language">
                         <Captions
                           className="mr-1 inline"
-                          size={10}
+                          size={12}
                           aria-hidden="true"
                         />
                         {language === 'pt-BR' ? 'PT-BR' : 'EN'}
@@ -151,14 +157,6 @@ export function ServerSelector({
                         H-SUB · EMBUTIDA
                       </span>
                     )}
-                    {server.subtitleLanguages.length === 0 &&
-                      server.subtitlePresentation !== 'embedded' && (
-                        <span className="watch-server-language is-unknown">
-                          {server.subtitleType === 'softsub'
-                            ? 'Sem idioma compatível'
-                            : 'Idioma não identificado'}
-                        </span>
-                      )}
                   </span>
                   {selected && (
                     <Check

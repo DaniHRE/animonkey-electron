@@ -1,5 +1,13 @@
 # Progresso da migração
 
+## Seletor de servidores com idioma identificado — 17/11/2026
+
+- Baseline `c5f1ec9`, árvore limpa. Impeccable aplicado como refinamento da identidade existente, modo Operate; context, craft-floor e detector consultados, detector sem achados.
+- Fontes sem PT-BR/EN reconhecido excluídas no serviço antes de seleção/fallback e defensivamente na UI. H-SUB sem idioma também é excluído, sem inferir português. Provider sem fontes elegíveis desaparece; IDs originais preservados.
+- Seletor com providers compactos, divisória e grade responsiva de fontes, nome/idiomas separados, tipografia 14/12 px, foco, disabled e seleção explícita. Mantido agrupamento provider → servidor e estado local sem persistência.
+- QA autorizado no Electron dev, janela 1426×914 (viewport de referência 1424×855): anime 101280, episódio 1, quatro providers elegíveis; seleção de Reanime exibiu HD-2 e HD-1 com EN. Captura conferida; não houve smoke do pacote ou validação audiovisual. Consulta de episódios levou tempo antes de apresentar as fontes.
+- Typecheck, lint, format:check e diff --check passaram. Referências: MIGRATION_PLAN.md, guias do legado, video-player.tsx e contratos locais. Revisão independente de código: ship, sem achados materiais; não incluiu avaliação visual. Hash desta etapa na próxima atualização.
+
 ## Ampliação do seletor de idioma — 17/11/2026
 
 - Etapa anterior: `a171e11`. EN/JP ampliado para 88×36 px e fonte de 12 px por solicitação do usuário; mantém indicador, foco e estado acessível.
