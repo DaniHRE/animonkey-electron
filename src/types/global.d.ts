@@ -2,6 +2,7 @@ export {};
 
 import type { AccountBridge } from './account';
 import type { AnimeArtworkBridge } from './anime';
+import type { AnivexaBridge } from './anivexa';
 
 declare global {
   interface Window {
@@ -10,6 +11,7 @@ declare global {
       onOpenAnime: (callback: (animeId: string) => void) => () => void;
       account: AccountBridge;
       artwork: AnimeArtworkBridge;
+      anivexa: AnivexaBridge;
     };
   }
 }

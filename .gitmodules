@@ -1,0 +1,3 @@
+[submodule "vendor/anivexa-api"]
+	path = vendor/anivexa-api
+	url = https://github.com/DaniHRE/Anivexa-API.git

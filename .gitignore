@@ -90,6 +90,7 @@ typings/
 
 # Electron-Forge
 out/
+/anivexa-runtime/
 
 # Supabase CLI and Deno local metadata
 supabase/.temp/

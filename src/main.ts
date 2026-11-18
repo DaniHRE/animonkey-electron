@@ -9,6 +9,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
+import { anivexaRuntime, registerAnivexaIpc } from './electron/anivexa-runtime';
 import { getTaizenMetadata } from './electron/taizen-artwork';
 import type {
   AccountCredentials,
@@ -382,13 +383,39 @@ const createWindow = () => {
 
 registerAccountIpc();
 registerAnimeArtworkIpc();
+registerAnivexaIpc(assertTrustedIpcSender);
+
+app.on('before-quit', () => {
+  anivexaRuntime.stop();
+});
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   if (!hasSingleInstanceLock) return;
+  if (process.argv.includes('--anivexa-smoke')) {
+    void anivexaRuntime
+      .smokeDependencies()
+      .then((result) => {
+        const passed = result.status === 200;
+        const detail = passed ? '' : ' ' + result.body;
+        process.stdout.write(
+          passed
+            ? 'ANIVEXA_SMOKE_OK\n'
+            : 'ANIVEXA_SMOKE_FAILED' + detail + '\n',
+        );
+        app.exit(passed ? 0 : 1);
+      })
+      .catch((error: unknown) => {
+        const detail = error instanceof Error ? ' ' + error.message : '';
+        process.stderr.write('ANIVEXA_SMOKE_FAILED' + detail + '\n');
+        app.exit(1);
+      });
+    return;
+  }
   installMediaProxy();
+  void anivexaRuntime.start().catch(() => {});
   createWindow();
 });
 

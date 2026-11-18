@@ -6,10 +6,26 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    extraResource: ['anivexa-runtime'],
+  },
+  hooks: {
+    generateAssets: async (_forgeConfig, platform, arch) => {
+      const script = path.resolve('scripts/prepare-anivexa-runtime.mjs');
+      const result = spawnSync(process.execPath, [script, platform, arch], {
+        cwd: process.cwd(),
+        stdio: 'inherit',
+      });
+      if (result.error) throw result.error;
+      if (result.status !== 0) {
+        throw new Error('Failed to prepare the Anivexa runtime.');
+      }
+    },
   },
   rebuildConfig: {},
   makers: [

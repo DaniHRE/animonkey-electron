@@ -27,7 +27,14 @@ export default defineConfig([
 
   // Directories ignored by ESLint
   {
-    ignores: ['node_modules', 'dist', '.vite'],
+    ignores: [
+      'node_modules',
+      'dist',
+      '.vite',
+      'out',
+      'anivexa-runtime',
+      'vendor/anivexa-api',
+    ],
   },
 
   // Language and global environment settings
@@ -39,6 +46,19 @@ export default defineConfig([
         ...globals.browser,
         ...globals.node,
       },
+    },
+  },
+
+  {
+    files: ['scripts/**/*.mjs', 'src/electron/**/*.cjs'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 

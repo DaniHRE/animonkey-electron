@@ -8,6 +8,7 @@ import type {
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
+import type { AnivexaBridge } from './types/anivexa';
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -79,4 +80,9 @@ contextBridge.exposeInMainWorld('animonkey', {
     getMetadata: (identities) =>
       ipcRenderer.invoke('anime:artwork:metadata', identities),
   } satisfies AnimeArtworkBridge,
+  anivexa: {
+    request: (request, requestId) =>
+      ipcRenderer.invoke('anivexa:request', { request, requestId }),
+    cancel: (requestId) => ipcRenderer.send('anivexa:cancel', requestId),
+  } satisfies AnivexaBridge,
 });

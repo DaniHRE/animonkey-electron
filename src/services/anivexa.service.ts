@@ -6,11 +6,14 @@ import type {
   EpisodeSubtitle,
   EpisodeTimestamp,
 } from '@/types/player';
+import type {
+  AnivexaDesktopRequest,
+  AnivexaDesktopResponse,
+} from '@/types/anivexa';
 
-const API_BASE = (
-  import.meta.env.VITE_ANIVEXA_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:4000' : '')
-).replace(/\/$/, '');
+const API_BASE = import.meta.env.DEV
+  ? (import.meta.env.VITE_ANIVEXA_API_URL ?? '').replace(/\/$/, '')
+  : '';
 const DEFAULT_REQUEST_TIMEOUT_MS = 25_000;
 const EPISODE_INDEX_TIMEOUT_MS = 120_000;
 const PROVIDER_PRIORITY = [
@@ -67,10 +70,57 @@ interface StreamPayload {
   outro?: unknown;
 }
 
-function requireBase(): string {
-  if (!API_BASE)
-    throw new Error('Configure VITE_ANIVEXA_API_URL para habilitar episódios.');
-  return API_BASE;
+function desktopRequest(path: string): AnivexaDesktopRequest {
+  const url = new URL(path, 'http://anivexa.internal');
+  const episodeMatch = /^\/episodes\/(\d+)$/.exec(url.pathname);
+  if (episodeMatch) return { kind: 'episodes', animeId: episodeMatch[1] };
+
+  const watchMatch = /^\/watch\/([^/]+)\/(\d+)\/(sub|dub)\/([^/]+)$/.exec(
+    url.pathname,
+  );
+  if (!watchMatch) throw new Error('Rota Anivexa inválida.');
+  let provider: string;
+  let episodeId: string;
+  try {
+    provider = decodeURIComponent(watchMatch[1]);
+    episodeId = decodeURIComponent(watchMatch[4]);
+  } catch {
+    throw new Error('Rota Anivexa inválida.');
+  }
+  return {
+    kind: 'watch',
+    provider,
+    animeId: watchMatch[2],
+    audio: watchMatch[3] as 'sub' | 'dub',
+    episodeId,
+  };
+}
+
+async function requestDesktop(
+  path: string,
+  signal: AbortSignal,
+): Promise<AnivexaDesktopResponse> {
+  const bridge = window.animonkey?.anivexa;
+  if (!bridge) throw new Error('A Anivexa local não está disponível.');
+  if (signal.aborted) throw signal.reason;
+
+  const requestId = crypto.randomUUID();
+  let abortHandler: (() => void) | undefined;
+  const abortPromise = new Promise<never>((_resolve, reject) => {
+    abortHandler = () => {
+      bridge.cancel(requestId);
+      reject(signal.reason);
+    };
+    signal.addEventListener('abort', abortHandler, { once: true });
+  });
+  try {
+    return await Promise.race([
+      bridge.request(desktopRequest(path), requestId),
+      abortPromise,
+    ]);
+  } finally {
+    if (abortHandler) signal.removeEventListener('abort', abortHandler);
+  }
 }
 
 function inferRefererFromEmbed(
@@ -98,12 +148,21 @@ async function getJson<T>(
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${requireBase()}${path}`, {
-      headers: { Accept: 'application/json' },
-      signal: signal
-        ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
-        : AbortSignal.timeout(timeoutMs),
-    });
+    const requestSignal = signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)])
+      : AbortSignal.timeout(timeoutMs);
+    if (API_BASE) {
+      response = await fetch(`${API_BASE}${path}`, {
+        headers: { Accept: 'application/json' },
+        signal: requestSignal,
+      });
+    } else {
+      const local = await requestDesktop(path, requestSignal);
+      response = new Response(local.body, {
+        status: local.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
   } catch (cause) {
     if (signal?.aborted) throw cause;
     if (cause instanceof DOMException && cause.name === 'TimeoutError')
