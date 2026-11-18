@@ -1,0 +1,39 @@
+name: Weekly source health
+
+on:
+  schedule:
+    # Change the weekly frequency here; currently Monday at 12:00 UTC.
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-health-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  check-sources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      VITE_ANIVEXA_API_URL: ${{ vars.VITE_ANIVEXA_API_URL }}
+      SOURCE_HEALTH_OUTPUT: ${{ runner.temp }}/source-health
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check public source contracts
+        id: probe
+        run: node scripts/source-health.mjs
+
+      - name: Upload sanitised reports
+        if: always() && steps.probe.outputs.report-ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-health-${{ github.run_id }}
+          path: ${{ runner.temp }}/source-health/
+          if-no-files-found: error
+          retention-days: 30

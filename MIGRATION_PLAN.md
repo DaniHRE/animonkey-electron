@@ -110,6 +110,15 @@ O escopo de recursos adicionais derivados do AniZip permanece aberto até a revi
 
 **Saída:** catálogo e navegação de descoberta equivalentes, com estados de erro/offline e cache preservados.
 
+#### Débito técnico — monitoramento semanal das fontes
+
+- `.github/workflows/source-health.yml` verifica AniList, AniZip, Taizen.MOE e artwork TheTVDB em probes mínimos; Anivexa e uma amostra de índice ReAnime usam somente a variável pública `vars.VITE_ANIVEXA_API_URL`.
+- O pipeline valida contratos além de HTTP, limita timeout, bytes e concorrência, e registra horário UTC, latência e evidência sanitizada em resumo do workflow e artefatos JSON/Markdown. Sem corpo bruto, URL, headers ou credenciais.
+- A amostra Anivexa consulta apenas `/episodes/reanime/:id?map=false`; não resolve URL em `/watch` e não comprova disponibilidade audiovisual. Falta de variável pública ou de conteúdo para o ID de amostra significa `not_verifiable`.
+- Frequência inicial: segunda-feira às 12:00 UTC; o ponto único de ajuste é o cron deste workflow. A agenda só roda após integração à branch padrão. Execução manual usa `workflow_dispatch`; o workflow tem `contents: read` e não altera o repositório.
+
+**Saída:** resumo agregado e artefatos sanitizados por execução; badge agregado no README.
+
 ### Fase 3 — Biblioteca do player e streaming
 
 - **Cronograma revisto em 10/11/2026:** por decisão explícita do usuário, Vidstack é o único player; Plyr e código exclusivo já foram removidos antes da validação audiovisual final. Fallback entre fontes/provedores continua dentro do Vidstack, mas nunca troca de engine. Zustand foi introduzido para a seleção compartilhada do servidor ativo, sem armazenar lista de fontes, URLs ou credenciais. Próximos marcos: validar Vidstack e a troca de servidores no pacote/fontes reais; fechar a matriz de captions e registrar limites conhecidos; rodar a validação final do app empacotado e seguir com persistência/distribuição.
