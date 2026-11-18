@@ -20,6 +20,9 @@
   "keywords": [],
   "license": "MIT",
   "pnpm": {
+    "overrides": {
+      "yauzl": "3.3.1"
+    },
     "onlyBuiltDependencies": [
       "electron",
       "electron-winstaller"
