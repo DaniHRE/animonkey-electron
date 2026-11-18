@@ -1,14 +1,14 @@
 # Animonkey Desktop
 
-Aplicativo desktop Electron do Animonkey. A passagem funcional para desktop foi encerrada por decisão de produto; o app web em `../animonkey` continua funcional e independente. A preparação da distribuição 1.0 ainda tem decisões e validações próprias. Veja o [plano histórico de migração](./MIGRATION_PLAN.md), o [checklist ativo do release 1.0](./docs/releases/1.0-checklist.md) e o [histórico arquivado](./docs/archive/MIGRATION_PROGRESS.md).
+Aplicativo desktop Electron do Animonkey. A passagem funcional para desktop foi encerrada por decisão de produto; o app web em `../animonkey` continua funcional e independente. A preparação da distribuição 1.0 ainda tem decisões e validações próprias. Veja o [plano histórico de migração](./docs/archive/MIGRATION_PLAN.md), o [checklist ativo do release 1.0](./docs/releases/1.0-checklist.md) e o [histórico arquivado](./docs/archive/MIGRATION_PROGRESS.md).
 
 ## Estado atual
 
-O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, biblioteca local, backup importável/exportável, conta/sync, feed e o player Vidstack com fontes Anivexa e proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Watch Together, painel admin e páginas institucionais permanecem no site web; não fazem parte do escopo desktop atual. A distribuição conjunta da Anivexa e os demais critérios de release 1.0 estão em preparação; veja [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) e [docs/releases/1.0-checklist.md](./docs/releases/1.0-checklist.md).
+O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, biblioteca local, backup importável/exportável, conta/sync, feed e o player Vidstack com fontes Anivexa e proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Watch Together, painel admin e páginas institucionais permanecem no site web; não fazem parte do escopo desktop atual. A distribuição conjunta da Anivexa e os demais critérios de release 1.0 estão em preparação; veja [docs/archive/MIGRATION_PLAN.md](./docs/archive/MIGRATION_PLAN.md) e [docs/releases/1.0-checklist.md](./docs/releases/1.0-checklist.md).
 
 ## Requisitos e comandos
 
-- Node.js 24 (ou versão LTS compatível com o starter) e pnpm 10.
+- Node.js 26.x e pnpm 10.
 - `pnpm install` instala dependências a partir do `pnpm-lock.yaml`.
 - `pnpm start` executa o app em desenvolvimento.
 - `pnpm typecheck`, `pnpm lint` e `pnpm format:check` validam o código.
@@ -31,3 +31,7 @@ O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, 
 - `src/lib/`, `src/hooks/`, `src/context/`, `src/types/`: domínio compartilhado do renderer.
 
 O renderer não recebe acesso a Node. Segredos de servidor nunca são distribuídos dentro do pacote. Consulte [AGENTS.md](./AGENTS.md) antes de implementar features.
+
+## Contribuição
+
+Veja [CONTRIBUTING.md](./CONTRIBUTING.md) para a regra de objetivo, merge e encerramento de branches.

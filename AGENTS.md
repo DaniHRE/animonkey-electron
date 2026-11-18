@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Aplicativo desktop do Animonkey. A migração funcional da experiência para Electron está encerrada; o site `../animonkey` continua independente e não deve depender do Electron nem ser alterado como consequência dessa decisão. `MIGRATION_PLAN.md` preserva decisões/evidências históricas; `docs/releases/1.0-checklist.md` é a fonte ativa da preparação do release 1.0. `docs/archive/MIGRATION_PROGRESS.md` preserva o tracker histórico e não é mais ativo.
+Aplicativo desktop do Animonkey. A migração funcional da experiência para Electron está encerrada; o site `../animonkey` continua independente e não deve depender do Electron nem ser alterado como consequência dessa decisão. `docs/archive/MIGRATION_PLAN.md` preserva decisões/evidências históricas; `docs/releases/1.0-checklist.md` é a fonte ativa da preparação do release 1.0. `docs/archive/MIGRATION_PROGRESS.md` preserva o tracker histórico e não é mais ativo.
 
 ## Stack e estrutura
 
@@ -30,7 +30,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 
 ## Migração e contratos
 
-- Consultar o `MIGRATION_PLAN.md` e os guias `../animonkey/AGENTS.md`, `CLAUDE.md` e `docs/` pertinentes antes de alterar uma feature.
+- Consultar `docs/archive/MIGRATION_PLAN.md` e os guias `../animonkey/AGENTS.md`, `CLAUDE.md` e `docs/` pertinentes antes de alterar uma feature.
 - Preservar os contratos AniList (`mediaType: ANIME`, `isAdult`), Anivexa, player (HLS/DASH/headers/Range), legendas (VTT/SRT/ASS/SSA), cache, sync offline-first e PartyKit. JASSUB/libass é uma extensão opcional de renderização de captions, não outro player, e só volta como dependência se a paridade Vidstack exigir.
 - Serviços de domínio são independentes de React e de Electron; capacidades específicas entram por adapters.
 - Nenhuma feature é considerada migrada só por sua tela. Registrar estados, persistência, erros, permissões, acessibilidade e evidência na matriz do plano.
@@ -43,6 +43,12 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 - Diretórios locais de ferramentas e skills (`.ia/`, `.codex/`, `.skills/`, `.agents/` e `.impeccable/`) devem permanecer fora do Git; preservar seu conteúdo local quando forem removidos do índice. Não aplicar workflows ou ferramentas Impeccable automaticamente: usar somente quando o usuário mencionar explicitamente.
 - O cache local `.impeccable/hook.cache.json` é estado gerado local e deve ficar fora de commits e da formatação global.
 - Para segurança Electron ou player, a validação exige executar o app empacotado e conferir o comportamento real, não apenas compilar.
+
+## Fluxo de branches
+
+- Cada branch de trabalho tem um objetivo explícito. Não reutilizar uma branch concluída para iniciar outro objetivo.
+- Quando o objetivo for concluído e revisado, mesclar em `main` para trabalho estável aprovado ou em `develop` para integração; confirmar o merge e então fechar/apagar a branch local e remota.
+- A regra de ciclo de branch em `CONTRIBUTING.md` é autorização explícita para esse merge e fechamento; não autoriza force-push nem reescrita de histórico.
 
 ## Etapas e commits da migração
 

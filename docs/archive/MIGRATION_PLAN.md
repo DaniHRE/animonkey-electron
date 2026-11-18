@@ -2,7 +2,7 @@
 
 > **Estado auditado em 18/11/2026:** a passagem funcional do site para o aplicativo Electron está **concluída por decisão de produto**. Este plano fica encerrado como plano de migração. As verificações e decisões ainda necessárias estão classificadas abaixo como preparação do release 1.0, decisão futura ou escopo web/desktop adiado; elas não reabrem a migração.
 
-As classificações usadas nesta auditoria são: **migração concluída e comprovada**, **validação ainda necessária** (sempre com critério), **trabalho de preparação do release 1.0**, **decisão de produto ainda necessária** e **fora do escopo desktop, adiado ou cancelado**. O inventário histórico detalhado, com evidência no código/documentação e próxima ação, está em [docs/archive/MIGRATION_PROGRESS.md](./docs/archive/MIGRATION_PROGRESS.md); a fila ativa de release está em [docs/releases/1.0-checklist.md](./docs/releases/1.0-checklist.md).
+As classificações usadas nesta auditoria são: **migração concluída e comprovada**, **validação ainda necessária** (sempre com critério), **trabalho de preparação do release 1.0**, **decisão de produto ainda necessária** e **fora do escopo desktop, adiado ou cancelado**. O inventário histórico detalhado, com evidência no código/documentação e próxima ação, está em [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md); a fila ativa de release está em [1.0-checklist.md](../releases/1.0-checklist.md).
 
 ## Objetivo e princípio de segurança
 
@@ -151,7 +151,7 @@ Os títulos de fase abaixo mostram a situação auditada. Os critérios e passos
 - O tamanho das captions Vidstack deve ser controlado pelo seletor nativo em **Acessibilidade → Estilos de legenda → Fonte → Tamanho**, que aplica `--media-user-font-size` sobre `--media-cue-font-size`. Não adicionar escala própria em paralelo. O estilo padrão compartilhado do player mantém texto branco com contorno/sombra escura e sem fundos no display ou nos cues; a CSS do renderer Vidstack padroniza isso para todos os formatos de track, inclusive anulando tamanhos/cores/fundos por formato para que o seletor nativo seja a autoridade visual comum.
 - O preset visual segue a preferência confirmada pelo usuário: texto branco, sombra suave, transparência no fundo e tamanho pelo controle nativo. A legenda selecionada automaticamente é apenas PT-BR; quando ela não existe, captions ficam desativadas até seleção manual.
 - O seletor de playback tem dois níveis: provedor e subservidores daquele provedor. Os campos de provider e server precisam permanecer separados no contrato; provedores/streams com PT-BR são priorizados, e English aparece depois dentro de cada provedor.
-- Débitos observados de captions devem ser registrados em [docs/technical-debt/README.md](./docs/technical-debt/README.md), com evidência, formato/provider ainda que sanitizados, hipótese separada de causa e critério de aceite. `TD-PLAYER-001` registra texto/comandos fora de contexto e quebras de linha; foi deliberadamente adiado para investigação futura.
+- Débitos observados de captions devem ser registrados em [technical-debt/README.md](../technical-debt/README.md), com evidência, formato/provider ainda que sanitizados, hipótese separada de causa e critério de aceite. `TD-PLAYER-001` registra texto/comandos fora de contexto e quebras de linha; foi deliberadamente adiado para investigação futura.
 - O Source Resolver em `src/lib/player-source-resolver.ts` decide proxy/direto/embed permitido e MIME HLS/DASH/MP4 para Vidstack.
 - O hook `usePlaybackController` deduplica erros e aplica a sequência proxy → HLS direto sem playlistKey → próximo servidor → embed HTTPS permitido → erro amigável. Não possui o elemento `<video>` nem toma autoridade sobre tempo, estado de captions ou teardown, que continuam no adapter Vidstack.
 - Referência de estilo e controles: [Captions — Vidstack](https://vidstack.io/docs/player/components/display/captions/). A seleção de tamanho pertence ao menu de acessibilidade/estilos da layout default, não a um seletor customizado no menu de tracks.
@@ -192,7 +192,7 @@ Os títulos de fase abaixo mostram a situação auditada. Os critérios e passos
 - Nunca incluir chaves secret/service-role, JWT secret ou segredo de NextAuth no desktop. O cliente recebe somente URL da Edge Function e publishable key; a função usa credencial server-side do ambiente Supabase. Operações privilegiadas e ownership ficam no servidor; manter RLS.
 - Perfil, senha, avatar, export e privacidade/feed estão implementados no Electron; validar contratos no smoke autenticado e manter fora do pacote tokens/segredos e identidade fornecida pelo renderer.
 
-**Saída registrada:** os fluxos desktop de conta/sync foram entregues por `desktop-api`; smoke remoto descartável confirmou operações e limpeza dos registros temporários. Esta fase não exige atualizar o site web, que continua independente. Evidência por operação e validações históricas estão em [docs/archive/MIGRATION_PROGRESS.md](./docs/archive/MIGRATION_PROGRESS.md).
+**Saída registrada:** os fluxos desktop de conta/sync foram entregues por `desktop-api`; smoke remoto descartável confirmou operações e limpeza dos registros temporários. Esta fase não exige atualizar o site web, que continua independente. Evidência por operação e validações históricas estão em [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md).
 
 ### Fase 6 — Watch together e recursos complementares — fora do escopo desktop atual
 
@@ -265,16 +265,16 @@ Os títulos de fase abaixo mostram a situação auditada. Os critérios e passos
 
 **Registro histórico:** a avaliação página por página e o step de captions/timestamps foram pedidos em 11/11/2026. A Fase 8 foi depois aceita pelo usuário em 16/11; as verificações de release que ainda fazem sentido estão no checklist ativo 1.0.
 
-**Saída da Fase 8:** aceite de produto registrado em 16/11/2026. A saída de QA do release 1.0 é definida no [checklist ativo](./docs/releases/1.0-checklist.md) e não altera esse status.
+**Saída da Fase 8:** aceite de produto registrado em 16/11/2026. A saída de QA do release 1.0 é definida no [checklist ativo](../releases/1.0-checklist.md) e não altera esse status.
 
 ## Encerramento da migração e preparação do release 1.0
 
-A migração permanece encerrada e não é reaberta por validações de release. A fila ativa, seus estados e a evidência por candidato agora são mantidos em [docs/releases/1.0-checklist.md](./docs/releases/1.0-checklist.md). A auditoria detalhada e os registros datados foram preservados em [docs/archive/MIGRATION_PROGRESS.md](./docs/archive/MIGRATION_PROGRESS.md).
+A migração permanece encerrada e não é reaberta por validações de release. A fila ativa, seus estados e a evidência por candidato agora são mantidos em [1.0-checklist.md](../releases/1.0-checklist.md). A auditoria detalhada e os registros datados foram preservados em [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md).
 
 ## Critérios de estabilidade e acompanhamento
 
 - O estado do plano é encerrado como decisão de produto; não usar `NOT_STARTED`/`IN_PROGRESS` de registros históricos para reabrir a migração. A fila do release registra cada validação ou decisão restante com critério explícito.
-- Preservar as entradas históricas em `docs/archive/MIGRATION_PROGRESS.md`; as frases “próximo passo” dentro de entradas datadas descrevem somente aquele momento, salvo se repetidas no checklist ativo 1.0.
+- Preservar as entradas históricas em `MIGRATION_PROGRESS.md`; as frases “próximo passo” dentro de entradas datadas descrevem somente aquele momento, salvo se repetidas no checklist ativo 1.0.
 - A matriz deste plano registra destino, evidência e classificação. Um build, compilação ou presença de UI não comprova reprodução audiovisual, instalação nem paridade por si só.
 - Em cada release candidata, verificar que o `animonkey` web continua independente e utilizável; não fazer cutover nem alterações web como consequência da migração Electron.
 - Preservar dados: nenhuma migração de IndexedDB/cache ou formato de progresso é feita sem versão, backup/estratégia de recuperação e teste de upgrade.

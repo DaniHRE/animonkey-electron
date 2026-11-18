@@ -1,11 +1,14 @@
 {
   "name": "animonkey-electron",
   "productName": "Animonkey",
-  "description": "Desktop anime catalog and streaming application",
+  "description": "Offline-first anime discovery and streaming app for desktop",
   "author": "DaniHRE",
   "version": "1.0.0",
   "main": ".vite/build/main.js",
   "private": true,
+  "engines": {
+    "node": ">=26 <27"
+  },
   "scripts": {
     "prepare": "husky",
     "start": "electron-forge start",
@@ -17,7 +20,14 @@
     "typecheck": "tsc --noEmit -p .",
     "format:check": "prettier --check ."
   },
-  "keywords": [],
+  "keywords": [
+    "anime",
+    "anilist",
+    "anivexa",
+    "desktop",
+    "electron",
+    "streaming"
+  ],
   "license": "MIT",
   "pnpm": {
     "overrides": {
