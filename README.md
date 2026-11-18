@@ -1,10 +1,10 @@
 # Animonkey Desktop
 
-Migração gradual do app web Animonkey para Electron. O app web em `../animonkey` permanece funcional e independente durante toda a transição. Veja o [plano de migração](./MIGRATION_PLAN.md) e o [tracker de progresso](./MIGRATION_PROGRESS.md).
+Aplicativo desktop Electron do Animonkey. A passagem funcional para desktop foi encerrada por decisão de produto; o app web em `../animonkey` continua funcional e independente. A preparação da distribuição 1.0 ainda tem decisões e validações próprias. Veja o [plano de migração](./MIGRATION_PLAN.md) e o [tracker de progresso](./MIGRATION_PROGRESS.md).
 
 ## Estado atual
 
-O corte atual inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, lista “Assistir Depois”, progresso local, continuação, preferências e backup importável/exportável. O player integra episódios e fontes da Anivexa e tem proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Conta/sync, feed/admin, Watch Together e distribuição de release seguem pendentes; veja [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) e [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md).
+O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, biblioteca local, backup importável/exportável, conta/sync, feed e o player Vidstack com fontes Anivexa e proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Watch Together, painel admin e páginas institucionais permanecem no site web; não fazem parte do escopo desktop atual. A distribuição conjunta da Anivexa e os demais critérios de release 1.0 estão em preparação; veja [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) e [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md).
 
 ## Requisitos e comandos
 
@@ -20,7 +20,7 @@ O corte atual inclui shell desktop, descoberta do AniList, busca com filtros, de
 - Para apontar para outra instância, configure `VITE_ANIVEXA_API_URL` antes de iniciar ou empacotar. Builds de produção aceitam apenas HTTPS.
 - HTTP para `localhost` em pacote de QA exige o opt-in `VITE_ALLOW_LOCAL_HTTP_API_FOR_TESTS=true`; não use esse modo em distribuição.
 - A API Anivexa fornece episódios e fontes, não um proxy de mídia. O processo principal do Electron faz o proxy local e reescreve playlists HLS e manifests DASH, encaminhando Range e headers exigidos. Nenhuma chave privada da Anivexa deve entrar no app.
-- A reprodução exige que a instância Anivexa esteja disponível. Confirme um endpoint HTTPS antes de criar pacote de release.
+- A reprodução depende da Anivexa. A decisão é distribuí-la junto com o Electron; o modelo de empacotamento e execução será fechado na preparação do release 1.0.
 
 ## Arquitetura
 
