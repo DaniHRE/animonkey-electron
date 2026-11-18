@@ -313,6 +313,16 @@ function WatchPageContent() {
         className="rounded-xl border border-red-300/10 bg-red-400/[0.04] p-5 text-sm text-red-200/80"
       >
         {animeQuery.error?.message ?? 'Anime não encontrado.'}
+        {animeQuery.error && (
+          <button
+            type="button"
+            onClick={() => void animeQuery.refetch()}
+            disabled={animeQuery.isFetching}
+            className="mt-3 block rounded-md border border-white/10 px-3 py-2 text-xs font-semibold text-white/75 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#49d77a] disabled:opacity-50"
+          >
+            {animeQuery.isFetching ? 'Tentando novamente…' : 'Tentar novamente'}
+          </button>
+        )}
       </div>
     );
   const title = resolveAnimeTitle(anime.title, titleLanguage);

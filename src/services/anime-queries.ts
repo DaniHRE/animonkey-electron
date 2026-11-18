@@ -190,6 +190,7 @@ export const animeQueries = {
       queryKey: animeQueryKeys.anilistDetail(id),
       staleTime: DAY,
       gcTime: 7 * DAY,
+      retry: false,
       queryFn: ({ signal }) => AniListCatalog.getAnime(id, signal),
     });
   },
@@ -198,6 +199,7 @@ export const animeQueries = {
       queryKey: animeQueryKeys.detail(id),
       staleTime: DAY,
       gcTime: 7 * DAY,
+      retry: false,
       queryFn: async ({ signal }): Promise<AnimeInfo | null> => {
         const anime = await client.fetchQuery({
           ...animeQueries.anilistDetail(id),

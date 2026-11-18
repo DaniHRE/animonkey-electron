@@ -66,14 +66,6 @@ const searchRoute = createRoute({
 const animeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/anime/$id',
-  loader: async ({ context, params }) => {
-    const anime = await context.queryClient.ensureQueryData(
-      animeQueries.detail(context.queryClient, params.id),
-    );
-    if (anime)
-      void context.queryClient.prefetchQuery(animeQueries.episodes(params.id));
-    return anime;
-  },
   component: AnimePage,
 });
 
@@ -81,14 +73,6 @@ const watchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/watch/$id',
   validateSearch: validateStringSearch,
-  loader: async ({ context, params }) => {
-    const anime = await context.queryClient.ensureQueryData(
-      animeQueries.detail(context.queryClient, params.id),
-    );
-    if (anime)
-      void context.queryClient.prefetchQuery(animeQueries.episodes(params.id));
-    return anime;
-  },
   component: WatchPage,
 });
 

@@ -214,14 +214,16 @@ async function request(
     if (cause instanceof DOMException && cause.name === 'TimeoutError')
       throw new Error('A busca demorou demais. Tente novamente.', { cause });
     throw new Error(
-      'Não foi possível conectar ao catálogo. Verifique sua conexão e tente novamente.',
+      'O catálogo está temporariamente indisponível. Aguarde alguns instantes e tente novamente.',
       { cause },
     );
   }
 
   if (!response.ok) {
     throw new Error(
-      `Não foi possível consultar o AniList (${response.status}).`,
+      response.status === 429
+        ? 'O catálogo está recebendo muitas solicitações. Aguarde alguns instantes e tente novamente.'
+        : 'O catálogo está temporariamente indisponível. Tente novamente em instantes.',
     );
   }
 
