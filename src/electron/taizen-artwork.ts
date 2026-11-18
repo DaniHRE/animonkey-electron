@@ -1,3 +1,5 @@
+import type { AnimeTaizenMetadata } from '../types/anime';
+
 const TAIZEN_GRAPHQL_URL = 'https://taizen.moe/api/graphql';
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 3 * 1024 * 1024;
@@ -15,20 +17,17 @@ export interface ClearLogoIdentity {
   expectedTitles: string[];
 }
 
-export interface ClearLogoResult {
-  animeId: string;
-  url: string | null;
-}
-
 interface ArtworkCacheEntry {
-  url: string | null;
+  metadata: AnimeTaizenMetadata | null;
   expiresAt: number;
   staleUntil: number;
 }
 
+/** Untrusted subset of Taizen's raw GraphQL response; validate before mapping. */
 interface TaizenAnime {
   id?: unknown;
   title?: unknown;
+  bannerImage?: unknown;
   clearlogos?: unknown;
   hdtvlogos?: unknown;
 }
@@ -40,7 +39,10 @@ interface CacheRead {
 }
 
 const artworkCache = new Map<string, ArtworkCacheEntry>();
-const artworkRequests = new Map<string, Promise<Map<string, string | null>>>();
+const artworkRequests = new Map<
+  string,
+  Promise<Map<string, AnimeTaizenMetadata | null>>
+>();
 let activeRequests = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -206,9 +208,39 @@ function getEnglishLogo(anime: TaizenAnime): string | null {
   return null;
 }
 
-async function requestClearLogos(
+function safeTaizenImage(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === 'https:' &&
+      url.hostname === 'taizen.moe' &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      url.pathname.startsWith('/i/') &&
+      !url.search &&
+      !url.hash
+    )
+      return url.toString();
+  } catch {
+    // Ignore malformed URLs from the external catalogue.
+  }
+  return undefined;
+}
+
+function mapTaizenMetadata(anime: TaizenAnime): AnimeTaizenMetadata | null {
+  const metadata: AnimeTaizenMetadata = {
+    animeId: String(anime.id),
+    banner: safeTaizenImage(anime.bannerImage),
+    logo: getEnglishLogo(anime) ?? undefined,
+  };
+  return metadata.banner || metadata.logo ? metadata : null;
+}
+
+async function requestTaizenMetadata(
   identities: ClearLogoIdentity[],
-): Promise<Map<string, string | null>> {
+): Promise<Map<string, AnimeTaizenMetadata | null>> {
   const ids = [
     ...new Set(identities.map((identity) => Number(identity.animeId))),
   ];
@@ -218,6 +250,7 @@ async function requestClearLogos(
       items {
         id
         title { english romaji native }
+        bannerImage
         clearlogos: artwork(type: CLEARLOGO, limit: 100) { type url lang }
         hdtvlogos: artwork(type: HDTVLOGO, limit: 100) { type url lang }
       }
@@ -257,34 +290,34 @@ async function requestClearLogos(
   return new Map(
     identities.map((identity) => {
       const item = items.get(Number(identity.animeId));
-      const url =
+      const metadata =
         item && hasExactTitleMatch(item.title, identity.expectedTitles)
-          ? getEnglishLogo(item)
+          ? mapTaizenMetadata(item)
           : null;
-      return [makeCacheKey(identity), url];
+      return [makeCacheKey(identity), metadata];
     }),
   );
 }
 
-function getStaleUrl(
+function getStaleMetadata(
   entry: ArtworkCacheEntry | undefined,
   now: number,
-): string | null {
-  return entry && entry.url && entry.staleUntil > now ? entry.url : null;
+): AnimeTaizenMetadata | null {
+  return entry?.metadata && entry.staleUntil > now ? entry.metadata : null;
 }
 
-export async function getTaizenClearLogos(
+export async function getTaizenMetadata(
   identitiesValue: unknown,
-): Promise<ClearLogoResult[]> {
+): Promise<AnimeTaizenMetadata[]> {
   const identities = sanitizeIdentities(identitiesValue);
   if (!identities.length) return [];
 
   const now = Date.now();
-  const resolved = new Map<string, string | null>();
+  const resolved = new Map<string, AnimeTaizenMetadata | null>();
   const cacheReads: CacheRead[] = identities.map((identity) => {
     const key = makeCacheKey(identity);
     const entry = getCachedEntry(key);
-    if (entry && entry.expiresAt > now) resolved.set(key, entry.url);
+    if (entry && entry.expiresAt > now) resolved.set(key, entry.metadata);
     return { entry, identity, key };
   });
   const misses = cacheReads.filter(({ key }) => !resolved.has(key));
@@ -299,34 +332,37 @@ export async function getTaizenClearLogos(
 
     if (!request && activeRequests < MAX_CONCURRENT_REQUESTS) {
       activeRequests += 1;
-      request = requestClearLogos(requestedIdentities)
-        .then((urls) => {
+      request = requestTaizenMetadata(requestedIdentities)
+        .then((metadataByKey) => {
           const fetchedAt = Date.now();
           for (const { key } of misses) {
-            const url = urls.get(key) ?? null;
+            const metadata = metadataByKey.get(key) ?? null;
             setCachedEntry(key, {
-              url,
+              metadata,
               expiresAt:
-                fetchedAt + (url ? LOGO_CACHE_TTL_MS : MISS_CACHE_TTL_MS),
+                fetchedAt + (metadata ? LOGO_CACHE_TTL_MS : MISS_CACHE_TTL_MS),
               staleUntil: fetchedAt + STALE_CACHE_TTL_MS,
             });
           }
-          return urls;
+          return metadataByKey;
         })
         .catch(() => {
           const failedAt = Date.now();
           for (const { entry, key } of misses) {
             setCachedEntry(key, {
-              url: getStaleUrl(entry, failedAt),
+              metadata: getStaleMetadata(entry, failedAt),
               expiresAt: failedAt + FAILURE_RETRY_MS,
               staleUntil:
-                entry && entry.url && entry.staleUntil > failedAt
+                entry?.metadata && entry.staleUntil > failedAt
                   ? entry.staleUntil
                   : failedAt + FAILURE_RETRY_MS,
             });
           }
           return new Map(
-            misses.map(({ entry, key }) => [key, getStaleUrl(entry, failedAt)]),
+            misses.map(({ entry, key }) => [
+              key,
+              getStaleMetadata(entry, failedAt),
+            ]),
           );
         })
         .finally(() => {
@@ -337,15 +373,15 @@ export async function getTaizenClearLogos(
     }
 
     if (request) {
-      for (const [key, url] of await request) resolved.set(key, url);
+      for (const [key, metadata] of await request) resolved.set(key, metadata);
     } else {
       for (const { entry, key } of misses)
-        resolved.set(key, getStaleUrl(entry, now));
+        resolved.set(key, getStaleMetadata(entry, now));
     }
   }
 
-  return identities.map((identity) => ({
-    animeId: identity.animeId,
-    url: resolved.get(makeCacheKey(identity)) ?? null,
-  }));
+  return identities.flatMap((identity) => {
+    const metadata = resolved.get(makeCacheKey(identity));
+    return metadata ? [metadata] : [];
+  });
 }

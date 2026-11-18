@@ -6,12 +6,12 @@ import {
   Play,
   Tv,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
-import { AniListCatalog } from '@/services/anilist.service';
-import type { AnimeResult } from '@/types/anime';
+import { animeQueries } from '@/services/anime-queries';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_ZONE = 'America/Sao_Paulo';
@@ -55,36 +55,10 @@ export function SchedulePage() {
     [startOfWeek, weekOffset],
   );
   const [selectedDate, setSelectedDate] = useState(today);
-  const [state, setState] = useState<{
-    date: number;
-    items: AnimeResult[];
-    error: string | null;
-  }>({ date: Number.NaN, items: [], error: null });
-
-  useEffect(() => {
-    const controller = new AbortController();
-    AniListCatalog.schedule(selectedDate, controller.signal)
-      .then((items) =>
-        setState({ date: selectedDate.getTime(), items, error: null }),
-      )
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({
-            date: selectedDate.getTime(),
-            items: [],
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Falha ao carregar a agenda.',
-          });
-        }
-      });
-    return () => controller.abort();
-  }, [selectedDate]);
-
-  const loading = state.date !== selectedDate.getTime();
-  const items = loading ? [] : state.items;
-  const error = loading ? null : state.error;
+  const scheduleQuery = useQuery(animeQueries.schedule(selectedDate));
+  const loading = scheduleQuery.isPending;
+  const items = scheduleQuery.data ?? [];
+  const error = scheduleQuery.error?.message ?? null;
   const selectedIndex = days.findIndex(
     (day) => day.getTime() === selectedDate.getTime(),
   );

@@ -1,10 +1,10 @@
 import { ArrowLeft, ArrowRight, Flame, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
-import { AniListCatalog } from '@/services/anilist.service';
-import type { AnimeResult, AnimeSearchResponse } from '@/types/anime';
+import { animeQueries } from '@/services/anime-queries';
+import type { AnimeResult } from '@/types/anime';
 
 const collections = {
   trending: {
@@ -35,42 +35,17 @@ export function CatalogPage() {
   const requestedPage = Number(params.page ?? 1);
   const page =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const [state, setState] = useState<{
-    key: string;
-    result: AnimeSearchResponse | null;
-    error: string | null;
-  }>({ key: '', result: null, error: null });
   const config = collections[collection as CollectionKey];
-  const requestKey = `${collection}:${page}`;
-
-  useEffect(() => {
-    if (!config) return;
-    const controller = new AbortController();
-    AniListCatalog.list(
+  const query = useQuery(
+    animeQueries.list(
       [...config.sort],
       'status' in config ? config.status : undefined,
       page,
-      controller.signal,
-    )
-      .then((result) => setState({ key: requestKey, result, error: null }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({
-            key: requestKey,
-            result: null,
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Falha ao carregar animes.',
-          });
-        }
-      });
-    return () => controller.abort();
-  }, [config, page, requestKey]);
-
-  const loading = state.key !== requestKey;
-  const result = loading ? null : state.result;
-  const error = loading ? null : state.error;
+    ),
+  );
+  const loading = query.isPending;
+  const result = query.data;
+  const error = query.error?.message ?? null;
 
   return (
     <section>

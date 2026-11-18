@@ -11,6 +11,7 @@ import { getCatalogCache, putCatalogCache } from '@/services/cache/local-db';
 const ANILIST_URL = 'https://graphql.anilist.co';
 const SIX_HOURS = 6 * 60 * 60 * 1000;
 const ONE_DAY = 24 * 60 * 60 * 1000;
+const SEASONAL_HERO_TTL = 30 * 60 * 1000;
 const CARD_FIELDS = `id type isAdult title { english romaji native } coverImage { extraLarge large color } bannerImage description(asHtml: false) genres averageScore popularity trending favourites updatedAt season seasonYear format status episodes duration startDate { year month day } endDate { year month day }`;
 const PAGE_QUERY = `query ($page: Int, $perPage: Int, $search: String, $sort: [MediaSort], $type: MediaType, $isAdult: Boolean, $status_in: [MediaStatus], $status_not_in: [MediaStatus], $format_in: [MediaFormat], $format_not_in: [MediaFormat], $season: MediaSeason, $seasonYear: Int, $startDate: FuzzyDateInt, $startDate_like: String, $startDate_greater: FuzzyDateInt, $startDate_lesser: FuzzyDateInt, $endDate: FuzzyDateInt, $endDate_greater: FuzzyDateInt, $endDate_lesser: FuzzyDateInt, $episodes_greater: Int, $episodes_lesser: Int, $duration_greater: Int, $duration_lesser: Int, $averageScore_greater: Int, $averageScore_lesser: Int, $popularity_greater: Int, $popularity_lesser: Int, $countryOfOrigin: CountryCode, $countryOfOrigin_not_in: [CountryCode], $source: MediaSource, $isLicensed: Boolean, $licensedBy: String, $licensedById_in: [Int], $genre_in: [String], $genre_not_in: [String], $tag_in: [String], $tag_not_in: [String], $tagCategory_in: [String], $tagCategory_not_in: [String], $minimumTagRank: Int, $id_in: [Int], $id_not_in: [Int], $idMal_in: [Int], $idMal_not_in: [Int]) { Page(page: $page, perPage: $perPage) { pageInfo { currentPage hasNextPage lastPage total } media(type: $type, search: $search, sort: $sort, isAdult: $isAdult, status_in: $status_in, status_not_in: $status_not_in, format_in: $format_in, format_not_in: $format_not_in, season: $season, seasonYear: $seasonYear, startDate: $startDate, startDate_like: $startDate_like, startDate_greater: $startDate_greater, startDate_lesser: $startDate_lesser, endDate: $endDate, endDate_greater: $endDate_greater, endDate_lesser: $endDate_lesser, episodes_greater: $episodes_greater, episodes_lesser: $episodes_lesser, duration_greater: $duration_greater, duration_lesser: $duration_lesser, averageScore_greater: $averageScore_greater, averageScore_lesser: $averageScore_lesser, popularity_greater: $popularity_greater, popularity_lesser: $popularity_lesser, countryOfOrigin: $countryOfOrigin, countryOfOrigin_not_in: $countryOfOrigin_not_in, source: $source, isLicensed: $isLicensed, licensedBy: $licensedBy, licensedById_in: $licensedById_in, genre_in: $genre_in, genre_not_in: $genre_not_in, tag_in: $tag_in, tag_not_in: $tag_not_in, tagCategory_in: $tagCategory_in, tagCategory_not_in: $tagCategory_not_in, minimumTagRank: $minimumTagRank, id_in: $id_in, id_not_in: $id_not_in, idMal_in: $idMal_in, idMal_not_in: $idMal_not_in) { ${CARD_FIELDS} } } }`;
 
@@ -165,6 +166,29 @@ function mapMedia(media: AniListMedia): AnimeResult {
     totalEpisodes: media.episodes ?? undefined,
     duration: media.duration ?? undefined,
   };
+}
+
+function getCurrentSeason(): {
+  season: NonNullable<AnimeResult['season']>;
+  year: number;
+} {
+  const now = new Date();
+  const month = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      month: 'numeric',
+    }).format(now),
+  );
+  const year = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+    }).format(now),
+  );
+  if (month <= 3) return { season: 'WINTER', year };
+  if (month <= 6) return { season: 'SPRING', year };
+  if (month <= 9) return { season: 'SUMMER', year };
+  return { season: 'FALL', year };
 }
 
 async function request(
@@ -402,6 +426,32 @@ export const AniListCatalog = {
     });
   },
 
+  async seasonalTrending(signal?: AbortSignal): Promise<AnimeResult[]> {
+    const { season, year } = getCurrentSeason();
+    return withCatalogCache(
+      `seasonal-hero:v1:${year}:${season}`,
+      SEASONAL_HERO_TTL,
+      signal,
+      async () => {
+        const response = await request(
+          PAGE_QUERY,
+          {
+            page: 1,
+            perPage: 6,
+            sort: ['TRENDING_DESC'],
+            type: 'ANIME',
+            isAdult: false,
+            season,
+            seasonYear: year,
+            status_in: ['RELEASING', 'NOT_YET_RELEASED'],
+          },
+          signal,
+        );
+        return (response.data?.Page?.media ?? []).map(mapMedia);
+      },
+    );
+  },
+
   async list(
     sort: string[],
     status?: 'FINISHED' | 'RELEASING',
@@ -440,26 +490,33 @@ export const AniListCatalog = {
   },
 
   async home(signal?: AbortSignal) {
-    const [trending, completed, newReleases, recentlyAdded, popular] =
-      await Promise.all([
-        AniListCatalog.list(['TRENDING_DESC'], undefined, 1, signal),
-        AniListCatalog.list(
-          ['END_DATE_DESC', 'POPULARITY_DESC'],
-          'FINISHED',
-          1,
-          signal,
-        ),
-        AniListCatalog.list(
-          ['START_DATE_DESC', 'POPULARITY_DESC'],
-          'RELEASING',
-          1,
-          signal,
-        ),
-        AniListCatalog.list(['ID_DESC'], undefined, 1, signal),
-        AniListCatalog.list(['POPULARITY_DESC'], undefined, 1, signal),
-      ]);
+    const [
+      seasonalTrending,
+      trending,
+      completed,
+      newReleases,
+      recentlyAdded,
+      popular,
+    ] = await Promise.all([
+      AniListCatalog.seasonalTrending(signal),
+      AniListCatalog.list(['TRENDING_DESC'], undefined, 1, signal),
+      AniListCatalog.list(
+        ['END_DATE_DESC', 'POPULARITY_DESC'],
+        'FINISHED',
+        1,
+        signal,
+      ),
+      AniListCatalog.list(
+        ['START_DATE_DESC', 'POPULARITY_DESC'],
+        'RELEASING',
+        1,
+        signal,
+      ),
+      AniListCatalog.list(['ID_DESC'], undefined, 1, signal),
+      AniListCatalog.list(['POPULARITY_DESC'], undefined, 1, signal),
+    ]);
     return {
-      banner: trending.results.slice(0, 6),
+      banner: seasonalTrending,
       trending: trending.results,
       completed: completed.results,
       newReleases: newReleases.results,
@@ -481,7 +538,7 @@ export const AniListCatalog = {
     const to = from + 24 * 60 * 60;
     return withCatalogCache(
       `schedule:${dateKey}`,
-      10 * 60 * 1000,
+      5 * 60 * 1000,
       signal,
       async () => {
         const query = `query ($from: Int, $to: Int, $page: Int, $perPage: Int) { Page(page: $page, perPage: $perPage) { airingSchedules(airingAt_greater: $from, airingAt_lesser: $to, sort: TIME) { episode airingAt media { ${CARD_FIELDS} } } } }`;

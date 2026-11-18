@@ -9,6 +9,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { HorizontalCarousel } from '@/components/shared/horizontal-carousel';
@@ -19,10 +20,9 @@ import {
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
-import { AniListCatalog } from '@/services/anilist.service';
-import type { AnimeArtworkIdentity, AnimeResult } from '@/types/anime';
+import { animeQueries } from '@/services/anime-queries';
+import type { AnimeResult } from '@/types/anime';
 
-type HomeData = Awaited<ReturnType<typeof AniListCatalog.home>>;
 const CLEARLOGO_IMAGE_TIMEOUT_MS = 10_000;
 
 const HERO_FORMAT_LABELS: Record<string, string> = {
@@ -40,33 +40,15 @@ function getHeroFormatLabel(format: string | undefined): string | undefined {
   return HERO_FORMAT_LABELS[format] ?? format.replaceAll('_', ' ');
 }
 
-function getArtworkIdentity(anime: AnimeResult): AnimeArtworkIdentity {
-  return {
-    animeId: anime.id,
-    expectedTitles: [
-      anime.title.english,
-      anime.title.romaji,
-      anime.title.native,
-    ].filter((title): title is string => Boolean(title)),
-  };
-}
-
-function getArtworkKey(anime: AnimeResult): string {
-  return JSON.stringify([
-    anime.id,
-    anime.title.english ?? '',
-    anime.title.romaji ?? '',
-    anime.title.native ?? '',
-  ]);
-}
-
 export function HomePage() {
-  const [home, setHome] = useState<HomeData | null>(null);
-  const [schedule, setSchedule] = useState<AnimeResult[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const homeQuery = useQuery(animeQueries.home(queryClient));
+  const scheduleQuery = useQuery(animeQueries.schedule(new Date()));
+  const home = homeQuery.data;
+  const schedule = scheduleQuery.data ?? [];
+  const loading = homeQuery.isPending;
+  const error = homeQuery.error?.message ?? null;
   const [activeSlide, setActiveSlide] = useState(0);
-  const [heroLogoUrls, setHeroLogoUrls] = useState<Record<string, string>>({});
   const [heroLogoStatuses, setHeroLogoStatuses] = useState<
     Record<string, 'ready' | 'failed'>
   >({});
@@ -75,31 +57,6 @@ export function HomePage() {
   );
   const { titleLanguage } = useTitleLanguage();
   const { isInList, toggle } = useWatchLater();
-
-  useEffect(() => {
-    const controller = new AbortController();
-    Promise.all([
-      AniListCatalog.home(controller.signal),
-      AniListCatalog.schedule(new Date(), controller.signal),
-    ])
-      .then(([homeData, scheduleData]) => {
-        setHome(homeData);
-        setSchedule(scheduleData);
-      })
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : 'Falha ao carregar o catálogo.',
-          );
-        }
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
-      });
-    return () => controller.abort();
-  }, []);
 
   useEffect(() => {
     if (!home || home.banner.length < 2) return;
@@ -111,16 +68,13 @@ export function HomePage() {
   }, [home]);
 
   const featured = home?.banner[activeSlide] ?? home?.banner[0];
-  const featuredArtworkKey = featured ? getArtworkKey(featured) : undefined;
   const featuredTitle = featured
     ? resolveAnimeTitle(featured.title, titleLanguage)
     : 'Descubra seu próximo anime';
-  const featuredLogoUrl = featuredArtworkKey
-    ? heroLogoUrls[featuredArtworkKey]
-    : undefined;
+  const featuredLogoUrl = featured?.logo;
   const featuredLogoLoadKey =
-    featuredArtworkKey && featuredLogoUrl
-      ? JSON.stringify([featuredArtworkKey, featuredLogoUrl])
+    featured && featuredLogoUrl
+      ? JSON.stringify([featured.id, featuredLogoUrl])
       : undefined;
   const featuredLogoStatus = featuredLogoLoadKey
     ? heroLogoStatuses[featuredLogoLoadKey]
@@ -158,39 +112,6 @@ export function HomePage() {
       : activeTab === 'new'
         ? home?.newReleases
         : home?.recentlyAdded;
-
-  useEffect(() => {
-    if (!home) return;
-    const slides = home.banner.slice(0, 6);
-    const identitiesByKey = new Map<string, AnimeArtworkIdentity>();
-    for (const slide of slides) {
-      const identity = getArtworkIdentity(slide);
-      identitiesByKey.set(getArtworkKey(slide), identity);
-    }
-    const identityEntries = [...identitiesByKey.entries()];
-    let isCurrent = true;
-    const artworkBridge = window.animonkey?.artwork;
-    if (!artworkBridge) return;
-
-    artworkBridge
-      .getClearLogos(identityEntries.map(([, identity]) => identity))
-      .then((results) => {
-        if (!isCurrent) return;
-        const urls: Record<string, string> = {};
-        for (const [index, [key]] of identityEntries.entries()) {
-          const result = results[index];
-          if (result?.url) urls[key] = result.url;
-        }
-        setHeroLogoUrls(urls);
-      })
-      .catch(() => {
-        // Taizen is optional; the AniList title remains visible on failure.
-      });
-
-    return () => {
-      isCurrent = false;
-    };
-  }, [home]);
 
   useEffect(() => {
     if (!isFeaturedLogoPreloading || !featuredLogoLoadKey) return;

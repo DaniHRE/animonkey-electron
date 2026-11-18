@@ -9,16 +9,15 @@ import {
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { getRouteApi, useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
-import { AniListCatalog } from '@/services/anilist.service';
+import { animeQueries } from '@/services/anime-queries';
 import type {
   AnimeFormat,
   AnimeMediaSort,
   AnimeResult,
   AnimeSearchFilters,
-  AnimeSearchOptions,
-  AnimeSearchResponse,
   AnimeSource,
 } from '@/types/anime';
 
@@ -333,50 +332,23 @@ export function SearchPage() {
     () => filtersFromParams(new URLSearchParams(searchString)),
     [searchString],
   );
-  const requestKey = JSON.stringify([query, page, filters]);
-  const [state, setState] = useState<{
-    key: string;
-    result: AnimeSearchResponse | null;
-    error: string | null;
-  }>({ key: '', result: null, error: null });
-  const [options, setOptions] = useState<AnimeSearchOptions>({
-    genres: [],
-    tags: [],
-  });
-
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
   useEffect(() => {
-    const controller = new AbortController();
-    void AniListCatalog.searchOptions(controller.signal)
-      .then(setOptions)
-      .catch(() => undefined);
-    return () => controller.abort();
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
     const timeout = window.setTimeout(
-      () => {
-        AniListCatalog.search(query, page, controller.signal, filters)
-          .then((result) => setState({ key: requestKey, result, error: null }))
-          .catch((cause: unknown) => {
-            if (!controller.signal.aborted)
-              setState({
-                key: requestKey,
-                result: null,
-                error:
-                  cause instanceof Error
-                    ? cause.message
-                    : 'Falha ao buscar animes.',
-              });
-          });
-      },
+      () => setDebouncedQuery(query),
       query ? 300 : 0,
     );
-    return () => {
-      window.clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [query, page, filters, requestKey]);
+    return () => window.clearTimeout(timeout);
+  }, [query]);
+  const optionsQuery = useQuery(animeQueries.searchOptions());
+  const searchQuery = useQuery({
+    ...animeQueries.search(debouncedQuery, page, filters),
+    enabled: debouncedQuery === query,
+  });
+  const options = optionsQuery.data ?? {
+    genres: [],
+    tags: [],
+  };
 
   const update = (key: string, value: string) => {
     void navigate({
@@ -403,8 +375,9 @@ export function SearchPage() {
   };
   const clearFilters = () =>
     void navigate({ search: query ? { q: query } : {} });
-  const loading = state.key !== requestKey;
-  const result = loading ? null : state.result;
+  const loading = debouncedQuery !== query || searchQuery.isPending;
+  const result = loading ? null : searchQuery.data;
+  const error = searchQuery.error?.message;
   const selected = (key: string) => listParam(params[key] ?? null);
   const renderMulti = (
     title: string,
@@ -721,12 +694,12 @@ export function SearchPage() {
       </div>
       {loading ? (
         <LoadingGrid />
-      ) : state.error ? (
+      ) : error ? (
         <div
           role="alert"
           className="rounded-xl border border-red-300/10 bg-red-400/[0.04] p-5 text-sm text-red-200/80"
         >
-          {state.error}
+          {error}
         </div>
       ) : result?.results.length ? (
         <>
@@ -762,7 +735,7 @@ export function SearchPage() {
         </>
       ) : (
         <div className="rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm text-white/50">
-          {state.error ? null : 'Nenhum anime encontrado com esses critérios.'}
+          {error ? null : 'Nenhum anime encontrado com esses critérios.'}
         </div>
       )}
     </section>

@@ -18,6 +18,7 @@ import { SchedulePage } from '@/components/features/schedule/schedule-page';
 import { SearchPage } from '@/components/features/search/search-page';
 import { RouterRootLayout } from '@/components/layout/router-root';
 import { queryClient } from '@/lib/query-client';
+import { animeQueries } from '@/services/anime-queries';
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -33,6 +34,11 @@ export function validateStringSearch(
   );
 }
 
+function parsePage(value: unknown): number {
+  const page = Number(value ?? 1);
+  return Number.isSafeInteger(page) && page > 0 ? page : 1;
+}
+
 const rootRoute = createRootRouteWithContext<RouterContext>()({
   component: RouterRootLayout,
   notFoundComponent: () => <Navigate to="/" replace />,
@@ -41,6 +47,12 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(animeQueries.schedule(new Date()));
+    return context.queryClient.ensureQueryData(
+      animeQueries.home(context.queryClient),
+    );
+  },
   component: HomePage,
 });
 
@@ -48,12 +60,22 @@ const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/search',
   validateSearch: validateStringSearch,
+  loader: ({ context }) =>
+    context.queryClient.prefetchQuery(animeQueries.searchOptions()),
   component: SearchPage,
 });
 
 const animeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/anime/$id',
+  loader: async ({ context, params }) => {
+    const anime = await context.queryClient.ensureQueryData(
+      animeQueries.detail(context.queryClient, params.id),
+    );
+    if (anime)
+      void context.queryClient.prefetchQuery(animeQueries.episodes(params.id));
+    return anime;
+  },
   component: AnimePage,
 });
 
@@ -61,12 +83,22 @@ const watchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/watch/$id',
   validateSearch: validateStringSearch,
+  loader: async ({ context, params }) => {
+    const anime = await context.queryClient.ensureQueryData(
+      animeQueries.detail(context.queryClient, params.id),
+    );
+    if (anime)
+      void context.queryClient.prefetchQuery(animeQueries.episodes(params.id));
+    return anime;
+  },
   component: WatchPage,
 });
 
 const scheduleRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/schedule',
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(animeQueries.schedule(new Date())),
   component: SchedulePage,
 });
 
@@ -98,6 +130,11 @@ const trendingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/trending',
   validateSearch: validateStringSearch,
+  loaderDeps: ({ search }) => ({ page: parsePage(search.page) }),
+  loader: ({ context, deps }) =>
+    context.queryClient.ensureQueryData(
+      animeQueries.list(['TRENDING_DESC'], undefined, deps.page),
+    ),
   component: CatalogPage,
 });
 
@@ -105,6 +142,15 @@ const updatesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/updates',
   validateSearch: validateStringSearch,
+  loaderDeps: ({ search }) => ({ page: parsePage(search.page) }),
+  loader: ({ context, deps }) =>
+    context.queryClient.ensureQueryData(
+      animeQueries.list(
+        ['START_DATE_DESC', 'POPULARITY_DESC'],
+        'RELEASING',
+        deps.page,
+      ),
+    ),
   component: CatalogPage,
 });
 

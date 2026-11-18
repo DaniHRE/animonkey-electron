@@ -1,9 +1,10 @@
 import { Play, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { resolveAnimeTitle } from '@/lib/anime';
 import { HorizontalCarousel } from '@/components/shared/horizontal-carousel';
-import { AniListCatalog } from '@/services/anilist.service';
+import { animeQueries } from '@/services/anime-queries';
 import {
   getRecentlyWatched,
   removeAnimeFromWatching,
@@ -21,6 +22,7 @@ interface ContinueItem {
 export function ContinueWatchingSection() {
   const [items, setItems] = useState<ContinueItem[]>([]);
   const { titleLanguage } = useTitleLanguage();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     let active = true;
@@ -33,7 +35,9 @@ export function ContinueWatchingSection() {
           const resolved = await Promise.all(
             records.map(async (progress) => ({
               progress,
-              anime: await AniListCatalog.getAnime(progress.animeId),
+              anime: await queryClient.fetchQuery(
+                animeQueries.anilistDetail(progress.animeId),
+              ),
             })),
           );
           if (active && currentRequest === requestId) setItems(resolved);
@@ -53,7 +57,7 @@ export function ContinueWatchingSection() {
       window.removeEventListener('animonkey:account-sync-applied', refresh);
       window.removeEventListener('animonkey:local-data-changed', refresh);
     };
-  }, []);
+  }, [queryClient]);
 
   if (!items.length) return null;
 

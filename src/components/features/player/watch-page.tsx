@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getRouteApi, Link, useNavigate } from '@tanstack/react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDownUp,
   ArrowLeft,
@@ -29,18 +30,12 @@ import { ServerSelector } from '@/components/features/player/server-selector';
 import { WatchRelatedList } from '@/components/features/player/watch-related-list';
 import type { EpisodeViewMode } from '@/components/features/anime/episode-list-controls';
 import { PlayerErrorBoundary } from '@/components/features/player/player-error-boundary';
-import { AniListCatalog } from '@/services/anilist.service';
-import { AnivexaCatalog } from '@/services/anivexa.service';
+import { animeQueries, animeQueryKeys } from '@/services/anime-queries';
 import { useEpisodeProgress } from '@/hooks/use-episode-progress';
 import { useSaveEpisodeProgress } from '@/hooks/use-save-episode-progress';
 import { usePlaybackSessionStore } from '@/stores/playback-session-store';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
-import type { AnimeInfo } from '@/types/anime';
-import type {
-  AnimeEpisode,
-  EpisodeServer,
-  EpisodeSources,
-} from '@/types/player';
+import type { AnimeEpisode } from '@/types/player';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { getPaginationItems } from '@/lib/pagination';
 import { EpisodeThumbnail } from '@/components/shared/episode-thumbnail';
@@ -112,27 +107,17 @@ function WatchPageContent() {
   const { id } = watchRoute.useParams();
   const { ep: requestedEpisodeId = '' } = watchRoute.useSearch();
   const navigate = useNavigate({ from: '/watch/$id' });
-  const [animeState, setAnimeState] = useState<{
-    id: string;
-    anime: AnimeInfo | null;
-    error: string | null;
-  }>({ id: '', anime: null, error: null });
-  const [episodeState, setEpisodeState] = useState<{
-    id: string;
-    episodes: AnimeEpisode[];
-    error: string | null;
-  }>({ id: '', episodes: [], error: null });
-  const [serverState, setServerState] = useState<{
-    episodeId: string;
-    servers: EpisodeServer[];
-    error: string | null;
-  }>({ episodeId: '', servers: [], error: null });
-  const [sourceState, setSourceState] = useState<{
-    key: string;
-    sources: EpisodeSources | null;
-    error: string | null;
-  }>({ key: '', sources: null, error: null });
-  const [retryVersion, setRetryVersion] = useState(0);
+  const queryClient = useQueryClient();
+  const animeQuery = useQuery(animeQueries.detail(queryClient, id));
+  const anime = animeQuery.data ?? null;
+  const episodesQuery = useQuery({
+    ...animeQueries.episodes(id),
+    enabled: Boolean(anime),
+  });
+  const episodes = useMemo(
+    () => episodesQuery.data ?? [],
+    [episodesQuery.data],
+  );
   const [episodeSearch, setEpisodeSearch] = useState('');
   const [episodesAscending, setEpisodesAscending] = useState(true);
   const [episodeAudioFilter, setEpisodeAudioFilter] =
@@ -156,55 +141,6 @@ function WatchPageContent() {
     (state) => state.clearSelection,
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    AniListCatalog.getAnime(id, controller.signal)
-      .then((anime) =>
-        setAnimeState({
-          id,
-          anime,
-          error: anime ? null : 'Anime não encontrado.',
-        }),
-      )
-      .catch(() => {
-        if (!controller.signal.aborted)
-          setAnimeState({
-            id,
-            anime: null,
-            error:
-              'Não foi possível carregar os dados deste anime. Tente novamente.',
-          });
-      });
-    return () => controller.abort();
-  }, [id, retryVersion]);
-  const anime = animeState.id === id ? animeState.anime : null;
-
-  useEffect(() => {
-    if (!anime) return;
-    const animeId = anime.id;
-    const controller = new AbortController();
-    AnivexaCatalog.episodes(animeId, controller.signal)
-      .then((episodes) =>
-        setEpisodeState({ id: animeId, episodes, error: null }),
-      )
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted)
-          setEpisodeState({
-            id: animeId,
-            episodes: [],
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Não foi possível carregar os episódios. Tente novamente.',
-          });
-      });
-    return () => controller.abort();
-  }, [anime, retryVersion]);
-
-  const episodes = useMemo(
-    () => (episodeState.id === anime?.id ? episodeState.episodes : []),
-    [anime?.id, episodeState.episodes, episodeState.id],
-  );
   const filteredEpisodes = useMemo(() => {
     const query = episodeSearch.trim().toLocaleLowerCase();
     const filtered = episodes.filter((episode) => {
@@ -236,6 +172,11 @@ function WatchPageContent() {
   );
   const currentEpisodeAudio: 'sub' | 'dub' =
     currentEpisode?.dubEpisodeId === currentEpisodeId ? 'dub' : 'sub';
+  const serversQuery = useQuery({
+    ...animeQueries.servers(currentEpisodeId),
+    enabled: Boolean(currentEpisodeId),
+  });
+  const servers = useMemo(() => serversQuery.data ?? [], [serversQuery.data]);
   const currentEpisodeDisplayIndex = filteredEpisodes.findIndex((episode) =>
     episodeHasId(episode, currentEpisodeId),
   );
@@ -279,44 +220,32 @@ function WatchPageContent() {
   }, [currentEpisodeId, navigate, requestedEpisodeId]);
 
   useEffect(() => {
-    if (!currentEpisodeId) return;
-    const controller = new AbortController();
-    AnivexaCatalog.servers(currentEpisodeId, controller.signal)
-      .then((servers) => {
-        setServerState({
-          episodeId: currentEpisodeId,
-          servers,
-          error: servers.length
-            ? null
-            : 'Nenhum servidor compatível encontrado.',
-        });
-        const currentSelection = usePlaybackSessionStore.getState().selection;
-        const selectedServerId =
-          currentSelection?.episodeId === currentEpisodeId &&
-          servers.some((server) => server.id === currentSelection.serverId)
-            ? currentSelection.serverId
-            : (servers[0]?.id ?? '');
-        if (selectedServerId) selectServer(currentEpisodeId, selectedServerId);
-        else clearSelection();
-      })
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted)
-          setServerState({
-            episodeId: currentEpisodeId,
-            servers: [],
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Não foi possível consultar os servidores. Tente novamente.',
-          });
-      });
-    return () => controller.abort();
-  }, [clearSelection, currentEpisodeId, retryVersion, selectServer]);
+    if (!currentEpisodeId || !serversQuery.data) return;
+    const currentSelection = usePlaybackSessionStore.getState().selection;
+    const selectedServerId =
+      currentSelection?.episodeId === currentEpisodeId &&
+      servers.some((server) => server.id === currentSelection.serverId)
+        ? currentSelection.serverId
+        : (servers[0]?.id ?? '');
+    if (selectedServerId) selectServer(currentEpisodeId, selectedServerId);
+    else clearSelection();
+  }, [
+    clearSelection,
+    currentEpisodeId,
+    selectServer,
+    servers,
+    serversQuery.data,
+  ]);
 
-  const currentServerState =
-    serverState.episodeId === currentEpisodeId
-      ? serverState
-      : { episodeId: currentEpisodeId, servers: [], error: null };
+  const currentServerState = {
+    episodeId: currentEpisodeId,
+    servers,
+    error:
+      serversQuery.error?.message ??
+      (serversQuery.isSuccess && !servers.length
+        ? 'Nenhum servidor compatível encontrado.'
+        : null),
+  };
   const activeServerId =
     selection?.episodeId === currentEpisodeId &&
     currentServerState.servers.some(
@@ -330,32 +259,18 @@ function WatchPageContent() {
   const nextServerId = currentServerState.servers
     .slice(Math.max(activeServerIndex + 1, 0))
     .find((server) => server.id !== activeServerId)?.id;
-  const advanceServer = useCallback(() => {
+  const advanceServer = () => {
     if (!nextServerId) return false;
     selectServer(currentEpisodeId, nextServerId);
     return true;
-  }, [currentEpisodeId, nextServerId, selectServer]);
+  };
   const requestKey = `${currentEpisodeId}:${activeServerId}`;
-  useEffect(() => {
-    if (!currentEpisodeId || !activeServerId) return;
-    const controller = new AbortController();
-    AnivexaCatalog.sources(currentEpisodeId, activeServerId, controller.signal)
-      .then((sources) =>
-        setSourceState({ key: requestKey, sources, error: null }),
-      )
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted)
-          setSourceState({
-            key: requestKey,
-            sources: null,
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Não foi possível preparar a transmissão. Tente novamente.',
-          });
-      });
-    return () => controller.abort();
-  }, [activeServerId, currentEpisodeId, requestKey, retryVersion]);
+  const sourcesQuery = useQuery({
+    ...animeQueries.sources(currentEpisodeId, activeServerId),
+    enabled: Boolean(currentEpisodeId && activeServerId),
+  });
+  const sources = sourcesQuery.data ?? null;
+  const streamError = sourcesQuery.error?.message ?? null;
 
   const progress = useEpisodeProgress(id, currentEpisode?.number);
   const { save } = useSaveEpisodeProgress(
@@ -376,18 +291,20 @@ function WatchPageContent() {
   };
   const retryPlayer = () => {
     setManualEpisodePage(null);
-    setEpisodeState({ id: '', episodes: [], error: null });
-    setServerState({
-      episodeId: '',
-      servers: [],
-      error: null,
-    });
     clearSelection();
-    setSourceState({ key: '', sources: null, error: null });
-    setRetryVersion((version) => version + 1);
+    void queryClient.invalidateQueries({
+      queryKey: animeQueryKeys.episodes(id),
+    });
+    void queryClient.invalidateQueries({
+      predicate: ({ queryKey }) =>
+        queryKey[0] === 'anivexa' &&
+        (queryKey[1] === 'servers' || queryKey[1] === 'sources') &&
+        typeof queryKey[2] === 'string' &&
+        queryKey[2].startsWith(`${id}:`),
+    });
   };
 
-  if (animeState.id !== id)
+  if (animeQuery.isPending)
     return <div className="h-96 animate-pulse rounded-2xl bg-white/[0.035]" />;
   if (!anime)
     return (
@@ -395,25 +312,21 @@ function WatchPageContent() {
         role="alert"
         className="rounded-xl border border-red-300/10 bg-red-400/[0.04] p-5 text-sm text-red-200/80"
       >
-        {animeState.error ?? 'Anime não encontrado.'}
+        {animeQuery.error?.message ?? 'Anime não encontrado.'}
       </div>
     );
   const title = resolveAnimeTitle(anime.title, titleLanguage);
   const poster = getAnimeImage(anime);
-  const catalogReady = episodeState.id === anime.id;
+  const catalogReady = episodesQuery.isSuccess;
   const subbedEpisodeCount = episodes.filter(
     (episode) => episode.isSubbed,
   ).length;
   const dubbedEpisodeCount = episodes.filter(
     (episode) => episode.isDubbed,
   ).length;
-  const loadingEpisodes = episodeState.id !== anime.id;
-  const loadingServers =
-    Boolean(currentEpisodeId) && serverState.episodeId !== currentEpisodeId;
-  const loadingSources =
-    Boolean(activeServerId) && sourceState.key !== requestKey;
-  const sources = sourceState.key === requestKey ? sourceState.sources : null;
-  const streamError = sourceState.key === requestKey ? sourceState.error : null;
+  const loadingEpisodes = episodesQuery.isPending;
+  const loadingServers = Boolean(currentEpisodeId) && serversQuery.isPending;
+  const loadingSources = Boolean(activeServerId) && sourcesQuery.isPending;
   const pageStart = episodePage * PLAYER_EPISODE_PAGE_SIZE + 1;
   const pageEnd = Math.min(
     (episodePage + 1) * PLAYER_EPISODE_PAGE_SIZE,
@@ -619,15 +532,15 @@ function WatchPageContent() {
                   ? 'Carregando episódios…'
                   : loadingServers
                     ? 'Buscando servidores…'
-                    : sourceState.key.startsWith(`${currentEpisodeId}:`) &&
-                        sourceState.sources
+                    : sourcesQuery.isFetching && sources
                       ? 'Alternando servidor…'
                       : 'Preparando transmissão…'
               }
               error={
                 streamError ??
                 currentServerState.error ??
-                (episodeState.id === anime.id ? episodeState.error : null)
+                episodesQuery.error?.message ??
+                null
               }
               onRetry={retryPlayer}
               onSourceFailure={advanceServer}
@@ -1010,13 +923,13 @@ function WatchPageContent() {
           ) : (
             <div
               className="flex flex-1 flex-col items-center justify-center gap-3 p-3 text-center text-xs leading-relaxed text-white/40"
-              role={episodeState.error ? 'alert' : undefined}
+              role={episodesQuery.error ? 'alert' : undefined}
             >
               <p>
-                {episodeState.error ??
+                {episodesQuery.error?.message ??
                   'Nenhum episódio disponível pela Anivexa.'}
               </p>
-              {episodeState.error && (
+              {episodesQuery.error && (
                 <button
                   type="button"
                   onClick={retryPlayer}

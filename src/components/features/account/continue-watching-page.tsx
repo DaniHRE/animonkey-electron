@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Play, X } from 'lucide-react';
 import { AnimeCard } from '@/components/shared/anime-card';
-import { AniListCatalog } from '@/services/anilist.service';
+import { animeQueries } from '@/services/anime-queries';
 import {
   getRecentlyWatched,
   removeAnimeFromWatching,
@@ -19,6 +20,7 @@ interface ContinueItem {
 
 export function ContinueWatchingPage() {
   const { titleLanguage } = useTitleLanguage();
+  const queryClient = useQueryClient();
   const [items, setItems] = useState<ContinueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +35,9 @@ export function ContinueWatchingPage() {
         .then(async (records) => {
           const resolved = await Promise.allSettled(
             records.map(async (progress) => {
-              const anime = await AniListCatalog.getAnime(progress.animeId);
+              const anime = await queryClient.fetchQuery(
+                animeQueries.anilistDetail(progress.animeId),
+              );
               return anime ? { progress, anime } : null;
             }),
           );
@@ -78,7 +82,7 @@ export function ContinueWatchingPage() {
       window.removeEventListener('animonkey:account-sync-applied', refresh);
       window.removeEventListener('animonkey:local-data-changed', refresh);
     };
-  }, []);
+  }, [queryClient]);
 
   const dismiss = async (animeId: string) => {
     await removeAnimeFromWatching(animeId);

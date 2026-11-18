@@ -12,17 +12,15 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { getRouteApi, Link } from '@tanstack/react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { AnimeCharacterCarousel } from '@/components/features/anime/anime-character-carousel';
 import { AnimeEpisodeList } from '@/components/features/anime/anime-episode-list';
 import { AnimeRelationsGrid } from '@/components/features/anime/anime-relations-grid';
-import { AniListCatalog } from '@/services/anilist.service';
-import type { AnimeInfo } from '@/types/anime';
+import { animeQueries } from '@/services/anime-queries';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { useAnimeRating } from '@/hooks/use-anime-rating';
-import { AnivexaCatalog } from '@/services/anivexa.service';
-import type { AnimeEpisode } from '@/types/player';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 
 type DetailTab = 'episodes' | 'characters' | 'relations';
@@ -31,11 +29,14 @@ const animeRoute = getRouteApi('/anime/$id');
 export function AnimePage() {
   const { titleLanguage } = useTitleLanguage();
   const { id } = animeRoute.useParams();
-  const [state, setState] = useState<{
-    id: string;
-    anime: AnimeInfo | null;
-    error: string | null;
-  }>({ id: '', anime: null, error: null });
+  const queryClient = useQueryClient();
+  const animeQuery = useQuery(animeQueries.detail(queryClient, id));
+  const anime = animeQuery.data ?? null;
+  const episodesQuery = useQuery({
+    ...animeQueries.episodes(id),
+    enabled: Boolean(anime),
+  });
+  const loading = animeQuery.isPending;
   const { isInList, toggle } = useWatchLater();
   const userRating = useAnimeRating(id);
   const [currentTime, setCurrentTime] = useState(0);
@@ -46,12 +47,6 @@ export function AnimePage() {
   const [copied, setCopied] = useState(false);
   const [posterOpen, setPosterOpen] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
-  const [episodeState, setEpisodeState] = useState<{
-    id: string;
-    episodes: AnimeEpisode[];
-    error: string | null;
-  }>({ id: '', episodes: [], error: null });
-  const [episodeRetryVersion, setEpisodeRetryVersion] = useState(0);
   const [detailTab, setDetailTab] = useState<DetailTab>('episodes');
 
   const reviewValue = reviewDraft ?? userRating.rating?.review ?? '';
@@ -91,53 +86,13 @@ export function AnimePage() {
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [posterOpen, trailerOpen]);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    AniListCatalog.getAnime(id, controller.signal)
-      .then((anime) => setState({ id, anime, error: null }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted) {
-          setState({
-            id,
-            anime: null,
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Falha ao carregar anime.',
-          });
-        }
-      });
-    return () => controller.abort();
-  }, [id]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    AnivexaCatalog.episodes(id, controller.signal)
-      .then((episodes) => setEpisodeState({ id, episodes, error: null }))
-      .catch((cause: unknown) => {
-        if (!controller.signal.aborted)
-          setEpisodeState({
-            id,
-            episodes: [],
-            error:
-              cause instanceof Error
-                ? cause.message
-                : 'Não foi possível carregar os episódios.',
-          });
-      });
-    return () => controller.abort();
-  }, [episodeRetryVersion, id]);
-
-  const loading = state.id !== id;
-  const anime = loading ? null : state.anime;
-
-  if (!loading && state.error) {
+  if (!loading && animeQuery.error) {
     return (
       <div
         role="alert"
         className="rounded-xl border border-red-300/10 bg-red-400/[0.04] p-5 text-sm text-red-200/80"
       >
-        {state.error}
+        {animeQuery.error.message}
       </div>
     );
   }
@@ -159,13 +114,10 @@ export function AnimePage() {
 
   const image = getAnimeImage(anime);
   const title = resolveAnimeTitle(anime.title, titleLanguage);
-  const episodesLoading = episodeState.id !== id;
-  const episodes = episodeState.id === id ? episodeState.episodes : [];
-  const episodesError = episodeState.id === id ? episodeState.error : null;
-  const retryEpisodeCatalog = () => {
-    setEpisodeState({ id: '', episodes: [], error: null });
-    setEpisodeRetryVersion((version) => version + 1);
-  };
+  const episodesLoading = episodesQuery.isPending;
+  const episodes = episodesQuery.data ?? [];
+  const episodesError = episodesQuery.error?.message ?? null;
+  const retryEpisodeCatalog = () => void episodesQuery.refetch();
   return (
     <article className="w-full bg-[#111113]">
       <section

@@ -9,7 +9,7 @@ import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
-import { getTaizenClearLogos } from './electron/taizen-artwork';
+import { getTaizenMetadata } from './electron/taizen-artwork';
 import type {
   AccountCredentials,
   ActivityFeedCursor,
@@ -312,10 +312,10 @@ function registerAccountIpc(): void {
 }
 
 function registerAnimeArtworkIpc(): void {
-  ipcMain.handle('anime:artwork:clear-logos', (event, value: unknown) => {
+  ipcMain.handle('anime:artwork:metadata', (event, value: unknown) => {
     assertTrustedIpcSender(event);
     if (!Array.isArray(value) || value.length > 6) return [];
-    return getTaizenClearLogos(value);
+    return getTaizenMetadata(value);
   });
 }
 

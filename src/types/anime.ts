@@ -5,7 +5,9 @@ export interface AnimeTitle {
 }
 
 export interface AnimeArtworkBridge {
-  getClearLogos(identities: AnimeArtworkIdentity[]): Promise<AnimeClearLogo[]>;
+  getMetadata(
+    identities: AnimeArtworkIdentity[],
+  ): Promise<AnimeTaizenMetadata[]>;
 }
 
 export interface AnimeArtworkIdentity {
@@ -13,9 +15,10 @@ export interface AnimeArtworkIdentity {
   expectedTitles: string[];
 }
 
-export interface AnimeClearLogo {
+export interface AnimeTaizenMetadata {
   animeId: string;
-  url: string | null;
+  banner?: string;
+  logo?: string;
 }
 
 export interface AnimeResult {
@@ -25,6 +28,7 @@ export interface AnimeResult {
   title: AnimeTitle;
   image?: string;
   banner?: string;
+  logo?: string;
   color?: string;
   description?: string;
   genres: string[];
