@@ -6,7 +6,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import type { AnimeInfo } from '@/types/anime';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
 import './anime-relations-grid.css';
@@ -75,7 +75,8 @@ function RelationCard({
 
   return (
     <Link
-      to={`/anime/${relation.id}`}
+      to="/anime/$id"
+      params={{ id: relation.id }}
       className="anime-relation-card"
       title={title}
     >

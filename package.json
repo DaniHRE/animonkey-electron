@@ -60,6 +60,8 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.107.1",
+    "@tanstack/react-router": "^1.170.46",
     "@vidstack/react": "1.15.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -73,7 +75,6 @@
     "radix-ui": "^1.8.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.4",
     "tailwind-merge": "^3.7.0",
     "zustand": "^5.0.16"
   },

@@ -164,6 +164,7 @@ Aplicativo desktop do Animonkey. Este repositório migra gradualmente a experiê
 ## TanStack Router, Query e monitoramento de fontes — 17/11/2026
 
 - O renderer usa TanStack Router com `createHashHistory`; preserve URLs existentes `#/...`, voltar/avançar, `watch/:id?ep=<episodeId>` e navegação de deep links recebidos pela bridge tipada. Não reintroduza React Router.
+- Validadores de search devem manter parâmetros string desconhecidos para não apagar query state existente em navegação parcial; links para `/anime/$id` e `/watch/$id` informam `params` tipados, e o episódio é passado como `search.ep`.
 - Routers loaders devem ler/carregar dados pelo `QueryClient` com chaves de domínio estáveis e tipadas. Query functions encaminham o `AbortSignal`; use `staleTime` por volatilidade e mantenha erros localizados com conteúdo previamente cacheado visível.
 - TanStack Query é cache em memória para deduplicação, atualização em segundo plano e invalidação. IndexedDB continua a fonte de verdade de biblioteca, progresso, ratings, preferências e demais dados offline-first; invalidar queries locais após mutações e troca de escopo. Não persistir no cache Query credenciais, sessão nem estado/URLs de mídia ao vivo.
 - Cache público AniList existente em IndexedDB oferece respostas cross-session e stale fallback. Mantê-lo até que uma substituição persistente equivalente prove esses comportamentos; não adicionar uma segunda persistência de payloads públicos sem uma migração explícita.

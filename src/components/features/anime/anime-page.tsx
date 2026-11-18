@@ -11,7 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { getRouteApi, Link } from '@tanstack/react-router';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { AnimeCharacterCarousel } from '@/components/features/anime/anime-character-carousel';
 import { AnimeEpisodeList } from '@/components/features/anime/anime-episode-list';
@@ -26,10 +26,11 @@ import type { AnimeEpisode } from '@/types/player';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 
 type DetailTab = 'episodes' | 'characters' | 'relations';
+const animeRoute = getRouteApi('/anime/$id');
 
 export function AnimePage() {
   const { titleLanguage } = useTitleLanguage();
-  const { id = '' } = useParams();
+  const { id } = animeRoute.useParams();
   const [state, setState] = useState<{
     id: string;
     anime: AnimeInfo | null;
@@ -268,7 +269,8 @@ export function AnimePage() {
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   <div className="inline-flex h-10 items-center overflow-hidden rounded-md">
                     <Link
-                      to={`/watch/${anime.id}`}
+                      to="/watch/$id"
+                      params={{ id: anime.id }}
                       className="inline-flex h-10 items-center gap-2 bg-[#49d77a] px-5 text-xs font-bold text-[#07110a] transition hover:bg-[#6ce995]"
                     >
                       <Play size={14} fill="currentColor" /> Assistir

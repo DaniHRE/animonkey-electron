@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { Star } from 'lucide-react';
 import { resolveAnimeTitle } from '@/lib/anime';
 import type { AnimeResult } from '@/types/anime';
@@ -55,7 +55,11 @@ function WatchRelatedCard({
       : undefined;
 
   return (
-    <Link to={`/anime/${item.id}`} className="watch-related__item">
+    <Link
+      to="/anime/$id"
+      params={{ id: item.id }}
+      className="watch-related__item"
+    >
       <span className="watch-related__image">
         {item.image ? (
           <img src={item.image} alt="" loading="lazy" />

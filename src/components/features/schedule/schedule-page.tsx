@@ -7,7 +7,7 @@ import {
   Tv,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
 import { AniListCatalog } from '@/services/anilist.service';
@@ -240,7 +240,8 @@ export function SchedulePage() {
             return (
               <Link
                 key={`${anime.id}-${anime.airingEpisode}`}
-                to={`/anime/${anime.id}`}
+                to="/anime/$id"
+                params={{ id: anime.id }}
                 className="group flex min-h-36 gap-3 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.025] p-3 transition hover:border-[#49d77a]/25 hover:bg-white/[0.045]"
               >
                 <div className="relative h-32 w-[90px] shrink-0 overflow-hidden rounded-xl bg-white/[0.04]">

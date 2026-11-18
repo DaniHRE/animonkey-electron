@@ -8,7 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { getRouteApi, useNavigate } from '@tanstack/react-router';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
 import { AniListCatalog } from '@/services/anilist.service';
@@ -21,6 +21,8 @@ import type {
   AnimeSearchResponse,
   AnimeSource,
 } from '@/types/anime';
+
+const searchRoute = getRouteApi('/search');
 
 const formats: Array<[AnimeFormat, string]> = [
   ['TV', 'Série de TV'],
@@ -320,10 +322,11 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
 }
 
 export function SearchPage() {
-  const [params, setParams] = useSearchParams();
-  const searchString = params.toString();
-  const query = params.get('q') ?? '';
-  const requestedPage = Number(params.get('page') ?? 1);
+  const params = searchRoute.useSearch();
+  const navigate = useNavigate({ from: '/search' });
+  const searchString = new URLSearchParams(params).toString();
+  const query = params.q ?? '';
+  const requestedPage = Number(params.page ?? 1);
   const page =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const filters = useMemo(
@@ -376,27 +379,33 @@ export function SearchPage() {
   }, [query, page, filters, requestKey]);
 
   const update = (key: string, value: string) => {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value);
-    else next.delete(key);
-    next.delete('page');
-    setParams(next);
+    void navigate({
+      search: (previous) => {
+        const next = { ...previous };
+        if (value) next[key] = value;
+        else delete next[key];
+        delete next.page;
+        return next;
+      },
+    });
   };
   const updateMulti = (key: string, values: string[]) =>
     update(key, values.join(','));
   const goToPage = (nextPage: number) => {
-    const next = new URLSearchParams(params);
-    if (nextPage > 1) next.set('page', String(nextPage));
-    else next.delete('page');
-    setParams(next);
+    void navigate({
+      search: (previous) => {
+        const next = { ...previous };
+        if (nextPage > 1) next.page = String(nextPage);
+        else delete next.page;
+        return next;
+      },
+    });
   };
   const clearFilters = () =>
-    setParams(
-      query ? new URLSearchParams({ q: query }) : new URLSearchParams(),
-    );
+    void navigate({ search: query ? { q: query } : {} });
   const loading = state.key !== requestKey;
   const result = loading ? null : state.result;
-  const selected = (key: string) => listParam(params.get(key));
+  const selected = (key: string) => listParam(params[key] ?? null);
   const renderMulti = (
     title: string,
     key: string,
@@ -414,7 +423,7 @@ export function SearchPage() {
       {title}
       <input
         className={inputClass}
-        value={params.get(key) ?? ''}
+        value={params[key] ?? ''}
         placeholder={placeholder}
         onChange={(event) => update(key, event.target.value)}
       />
@@ -433,7 +442,7 @@ export function SearchPage() {
         type="number"
         min={min}
         max={max}
-        value={params.get(key) ?? ''}
+        value={params[key] ?? ''}
         onChange={(event) => update(key, event.target.value)}
       />
     </label>
@@ -447,7 +456,7 @@ export function SearchPage() {
   const categories = [...new Set(options.tags.map((tag) => tag.category))]
     .sort()
     .map((category) => [category, category] as [string, string]);
-  const activeFilterCount = [...params.keys()].filter(
+  const activeFilterCount = Object.keys(params).filter(
     (key) => !['q', 'page', 'sort'].includes(key),
   ).length;
 
@@ -511,9 +520,7 @@ export function SearchPage() {
             Ordenar por
             <select
               className={`${inputClass} w-full`}
-              value={
-                params.get('sort') ?? (query ? 'SEARCH_MATCH' : 'TRENDING_DESC')
-              }
+              value={params.sort ?? (query ? 'SEARCH_MATCH' : 'TRENDING_DESC')}
               onChange={(event) => update('sort', event.target.value)}
             >
               {sortOptions.map(([value, label]) => (
@@ -535,7 +542,7 @@ export function SearchPage() {
               ['exclude', 'Sem adulto'],
               ['only', 'Adulto'],
             ].map(([value, label]) => {
-              const active = (params.get('adultMode') ?? 'include') === value;
+              const active = (params.adultMode ?? 'include') === value;
               return (
                 <button
                   key={value}
@@ -579,7 +586,7 @@ export function SearchPage() {
                   Temporada
                   <select
                     className={`${inputClass} w-full`}
-                    value={params.get('season') ?? ''}
+                    value={params.season ?? ''}
                     onChange={(event) => update('season', event.target.value)}
                   >
                     <option value="">Qualquer</option>
@@ -676,7 +683,7 @@ export function SearchPage() {
                   Fonte original
                   <select
                     className={`${inputClass} w-full`}
-                    value={params.get('source') ?? ''}
+                    value={params.source ?? ''}
                     onChange={(event) => update('source', event.target.value)}
                   >
                     <option value="">Qualquer</option>
@@ -691,7 +698,7 @@ export function SearchPage() {
                   Licenciada
                   <select
                     className={`${inputClass} w-full`}
-                    value={params.get('isLicensed') ?? ''}
+                    value={params.isLicensed ?? ''}
                     onChange={(event) =>
                       update('isLicensed', event.target.value)
                     }

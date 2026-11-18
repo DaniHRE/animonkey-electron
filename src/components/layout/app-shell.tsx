@@ -17,7 +17,12 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Link,
+  Outlet,
+  useNavigate,
+  useRouterState,
+} from '@tanstack/react-router';
 import { useAccount } from '@/context/account-state';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
@@ -26,17 +31,17 @@ import './app-shell.css';
 
 const navItems = [
   { label: 'Início', path: '/', icon: House, end: true },
-  { label: 'Explorar', path: '/search', icon: Compass },
-  { label: 'Agenda', path: '/schedule', icon: CalendarDays },
-  { label: 'Feed', path: '/activity', icon: Activity },
-  { label: 'Lançamentos', path: '/updates', icon: Sparkles },
-];
+  { label: 'Explorar', path: '/search', icon: Compass, end: false },
+  { label: 'Agenda', path: '/schedule', icon: CalendarDays, end: false },
+  { label: 'Feed', path: '/activity', icon: Activity, end: false },
+  { label: 'Lançamentos', path: '/updates', icon: Sparkles, end: false },
+] as const;
 
 const moreItems = [
   { label: 'Em alta', icon: Flame, path: '/trending' },
   { label: 'Continuar assistindo', icon: History, path: '/continue-watching' },
   { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
-];
+] as const;
 
 export function AppShell() {
   const [search, setSearch] = useState('');
@@ -46,7 +51,9 @@ export function AppShell() {
   const sidebarRef = useRef<HTMLElement | null>(null);
   const showSidebarRef = useRef<HTMLButtonElement | null>(null);
   const previousSidebarVisibility = useRef(sidebarVisible);
-  const { pathname } = useLocation();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const moreRouteActive = moreItems.some(
     ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
   );
@@ -104,7 +111,10 @@ export function AppShell() {
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const query = search.trim();
-    navigate(query ? `/search?q=${encodeURIComponent(query)}` : '/search');
+    void navigate({
+      to: '/search',
+      search: query ? { q: query } : {},
+    });
   }
 
   return (
@@ -129,17 +139,15 @@ export function AppShell() {
           >
             {navItems.map(({ label, path, icon: Icon, end }) => (
               <SidebarTooltip key={label} label={label}>
-                <NavLink
+                <Link
                   to={path}
-                  end={end}
+                  activeOptions={{ exact: end }}
                   data-sidebar-link="true"
                   aria-label={label}
-                  className={({ isActive }) =>
-                    `app-sidebar__nav-link ${isActive ? 'is-active' : ''}`
-                  }
+                  className={`app-sidebar__nav-link ${pathname === path || (!end && pathname.startsWith(`${path}/`)) ? 'is-active' : ''}`}
                 >
                   <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-                </NavLink>
+                </Link>
               </SidebarTooltip>
             ))}
           </nav>
@@ -179,19 +187,15 @@ export function AppShell() {
             <div className="app-sidebar__more-list-inner">
               {moreItems.map(({ label, icon: Icon, path }, index) => (
                 <SidebarTooltip key={label} label={label}>
-                  <NavLink
+                  <Link
                     to={path}
                     data-sidebar-link="true"
                     aria-label={label}
                     style={{ '--sidebar-index': index } as CSSProperties}
-                    className={({ isActive }) =>
-                      `app-sidebar__nav-link app-sidebar__more-link ${
-                        isActive ? 'is-active' : ''
-                      }`
-                    }
+                    className={`app-sidebar__nav-link app-sidebar__more-link ${pathname === path || pathname.startsWith(`${path}/`) ? 'is-active' : ''}`}
                   >
                     <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-                  </NavLink>
+                  </Link>
                 </SidebarTooltip>
               ))}
             </div>
@@ -215,16 +219,14 @@ export function AppShell() {
         <div className="app-sidebar__foot" aria-label="Controles da navegação">
           <span className="app-sidebar__divider" aria-hidden="true" />
           <SidebarTooltip label="Configurações">
-            <NavLink
+            <Link
               to="/settings"
               data-sidebar-link="true"
               aria-label="Configurações"
-              className={({ isActive }) =>
-                `app-sidebar__nav-link ${isActive ? 'is-active' : ''}`
-              }
+              className={`app-sidebar__nav-link ${pathname === '/settings' ? 'is-active' : ''}`}
             >
               <Settings size={18} strokeWidth={1.8} aria-hidden="true" />
-            </NavLink>
+            </Link>
           </SidebarTooltip>
         </div>
       </aside>
@@ -278,7 +280,7 @@ export function AppShell() {
               </button>
             </SidebarTooltip>
           )}
-          <NavLink
+          <Link
             to="/"
             aria-label="Ir para o início do Animonkey"
             className="app-header__brand flex shrink-0 items-center gap-2"
@@ -289,7 +291,7 @@ export function AppShell() {
             <span className="text-lg font-extrabold tracking-tight text-white">
               ani<span className="text-[#49d77a]">monkey</span>
             </span>
-          </NavLink>
+          </Link>
 
           {pathname !== '/search' && (
             <form
@@ -330,7 +332,7 @@ export function AppShell() {
                 </span>
               ))}
             </button>
-            <NavLink
+            <Link
               to="/settings"
               className="app-header__account flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left"
               title="Configurações locais"
@@ -344,7 +346,7 @@ export function AppShell() {
                 {session?.user.name?.trim() || 'Perfil'}
               </span>
               <ChevronDown size={14} className="text-white/40" />
-            </NavLink>
+            </Link>
           </div>
         </header>
 

@@ -1,6 +1,6 @@
 import { Bookmark, BookmarkCheck, Star } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
 import { useTitleLanguage } from '@/hooks/use-title-language';
@@ -29,7 +29,7 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
 
   return (
     <article className="group relative min-w-0">
-      <Link to={`/anime/${anime.id}`} className="block">
+      <Link to="/anime/$id" params={{ id: anime.id }} className="block">
         <div className="relative aspect-[0.71] overflow-hidden rounded-xl border border-white/[0.06] bg-[#161618]">
           {image ? (
             <img
@@ -75,7 +75,11 @@ export function AnimeCard({ anime, rank }: AnimeCardProps) {
         {saved ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
       </button>
 
-      <Link to={`/anime/${anime.id}`} className="block px-0.5 pt-3">
+      <Link
+        to="/anime/$id"
+        params={{ id: anime.id }}
+        className="block px-0.5 pt-3"
+      >
         <h3 className="line-clamp-2 text-xs leading-[1.45] font-semibold text-white/85 transition group-hover:text-[#70e793]">
           {resolveAnimeTitle(anime.title, titleLanguage)}
         </h3>

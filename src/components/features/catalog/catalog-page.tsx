@@ -1,6 +1,6 @@
 import { ArrowLeft, ArrowRight, Flame, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
 import { AniListCatalog } from '@/services/anilist.service';
@@ -25,10 +25,14 @@ const collections = {
 type CollectionKey = keyof typeof collections;
 
 export function CatalogPage() {
-  const { pathname } = useLocation();
-  const collection = pathname.replace(/^\/+/, '') || 'trending';
-  const [params, setParams] = useSearchParams();
-  const requestedPage = Number(params.get('page') ?? 1);
+  const { pathname, search } = useRouterState({
+    select: (state) => state.location,
+  });
+  const collection: CollectionKey =
+    pathname === '/updates' ? 'updates' : 'trending';
+  const params = search as Record<string, string>;
+  const navigate = useNavigate();
+  const requestedPage = Number(params.page ?? 1);
   const page =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const [state, setState] = useState<{
@@ -63,8 +67,6 @@ export function CatalogPage() {
       });
     return () => controller.abort();
   }, [config, page, requestKey]);
-
-  if (!config) return <Navigate to="/trending" replace />;
 
   const loading = state.key !== requestKey;
   const result = loading ? null : state.result;
@@ -113,7 +115,15 @@ export function CatalogPage() {
               type="button"
               disabled={page <= 1}
               onClick={() =>
-                setParams(page > 2 ? { page: String(page - 1) } : {})
+                void navigate({
+                  to: collection === 'trending' ? '/trending' : '/updates',
+                  search: (previous) => {
+                    const next = { ...previous };
+                    if (page > 2) next.page = String(page - 1);
+                    else delete next.page;
+                    return next as Record<string, string>;
+                  },
+                })
               }
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/65 transition hover:bg-white/[0.05] disabled:opacity-30"
             >
@@ -125,7 +135,15 @@ export function CatalogPage() {
             <button
               type="button"
               disabled={!result.hasNextPage}
-              onClick={() => setParams({ page: String(page + 1) })}
+              onClick={() =>
+                void navigate({
+                  to: collection === 'trending' ? '/trending' : '/updates',
+                  search: (previous) => ({
+                    ...previous,
+                    page: String(page + 1),
+                  }),
+                })
+              }
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/65 transition hover:bg-white/[0.05] disabled:opacity-30"
             >
               Próxima <ArrowRight size={14} />

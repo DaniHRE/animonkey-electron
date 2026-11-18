@@ -9,7 +9,7 @@ import {
   Star,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { HorizontalCarousel } from '@/components/shared/horizontal-carousel';
 import {
@@ -295,7 +295,8 @@ export function HomePage() {
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 {featured && (
                   <Link
-                    to={`/anime/${featured.id}`}
+                    to="/anime/$id"
+                    params={{ id: featured.id }}
                     className="inline-flex h-11 items-center gap-2 rounded-lg bg-[#2caf57] px-7 text-sm font-semibold text-[#0d0d0d] shadow-lg shadow-black/25 transition hover:scale-[1.02] hover:bg-[#39bd65]"
                   >
                     <Play size={18} fill="currentColor" /> Assistir Agora
@@ -413,7 +414,8 @@ export function HomePage() {
                   {schedule.slice(0, 5).map((anime) => (
                     <Link
                       key={`${anime.id}-${anime.airingEpisode}`}
-                      to={`/anime/${anime.id}`}
+                      to="/anime/$id"
+                      params={{ id: anime.id }}
                       className="flex items-center gap-3 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 hover:bg-white/[0.04]"
                     >
                       <span className="grid size-9 place-items-center rounded-md bg-[#49d77a]/10 text-xs font-bold text-[#73e994]">
@@ -482,7 +484,7 @@ interface AnimeRailProps {
   title: string;
   eyebrow: string;
   items: AnimeResult[];
-  link: string;
+  link: '/trending' | '/updates';
   icon?: 'trending' | 'new';
 }
 

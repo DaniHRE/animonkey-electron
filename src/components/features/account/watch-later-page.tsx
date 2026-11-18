@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
 import type { AnimeResult, WatchLaterItem } from '@/types/anime';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 
 function toAnime(item: WatchLaterItem): AnimeResult {
@@ -60,7 +60,11 @@ export function WatchLaterPage() {
             const image = getAnimeImage(anime);
             return (
               <article key={item.animeId} className="group relative min-w-0">
-                <Link to={`/anime/${item.animeId}`} className="block">
+                <Link
+                  to="/anime/$id"
+                  params={{ id: item.animeId }}
+                  className="block"
+                >
                   <div className="aspect-[0.71] overflow-hidden rounded-xl border border-white/[0.06] bg-[#161618]">
                     {image ? (
                       <img

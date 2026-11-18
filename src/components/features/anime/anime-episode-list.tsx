@@ -1,6 +1,6 @@
 import { Captions, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import {
   EpisodeListControls,
   type EpisodeViewMode,
@@ -96,7 +96,9 @@ export function AnimeEpisodeList({
           {visibleEpisodes.map((episode) => (
             <Link
               key={episode.id}
-              to={`/watch/${animeId}?ep=${encodeURIComponent(episode.id)}`}
+              to="/watch/$id"
+              params={{ id: animeId }}
+              search={{ ep: episode.id }}
               className={`group flex min-w-0 items-center gap-4 rounded-lg border border-white/[0.06] bg-white/[0.025] px-3 py-3 transition hover:border-[#49d77a]/25 hover:bg-white/[0.05] ${viewMode === 'grid' ? 'min-h-20' : ''}`}
             >
               <EpisodeThumbnail image={episode.image} className="w-24" />

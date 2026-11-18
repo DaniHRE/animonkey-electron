@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { getRouteApi, Link, useNavigate } from '@tanstack/react-router';
 import {
   ArrowDownUp,
   ArrowLeft,
@@ -68,6 +68,7 @@ const GENRE_LABELS: Record<string, string> = {
   'Mahou Shoujo': 'Garotas mágicas',
 };
 const PLAYER_EPISODE_PAGE_SIZE = 50;
+const watchRoute = getRouteApi('/watch/$id');
 type EpisodeAudioFilter = 'all' | 'sub' | 'dub';
 const ANIME_STATUS_LABELS: Record<string, string> = {
   FINISHED: 'Concluído',
@@ -101,16 +102,16 @@ function episodeHasId(episode: AnimeEpisode, episodeId: string): boolean {
 }
 
 export function WatchPage() {
-  const { id = '' } = useParams();
+  const { id } = watchRoute.useParams();
   return <WatchPageContent key={id} />;
 }
 
 function WatchPageContent() {
   const { titleLanguage } = useTitleLanguage();
   const prefersReducedMotion = useReducedMotion() ?? false;
-  const { id = '' } = useParams();
-  const [params, setParams] = useSearchParams();
-  const requestedEpisodeId = params.get('ep') ?? '';
+  const { id } = watchRoute.useParams();
+  const { ep: requestedEpisodeId = '' } = watchRoute.useSearch();
+  const navigate = useNavigate({ from: '/watch/$id' });
   const [animeState, setAnimeState] = useState<{
     id: string;
     anime: AnimeInfo | null;
@@ -271,10 +272,11 @@ function WatchPageContent() {
 
   useEffect(() => {
     if (!currentEpisodeId || currentEpisodeId === requestedEpisodeId) return;
-    const next = new URLSearchParams(params);
-    next.set('ep', currentEpisodeId);
-    setParams(next, { replace: true });
-  }, [currentEpisodeId, params, requestedEpisodeId, setParams]);
+    void navigate({
+      search: (previous) => ({ ...previous, ep: currentEpisodeId }),
+      replace: true,
+    });
+  }, [currentEpisodeId, navigate, requestedEpisodeId]);
 
   useEffect(() => {
     if (!currentEpisodeId) return;
@@ -365,9 +367,12 @@ function WatchPageContent() {
     episode: AnimeEpisode,
     audio: 'sub' | 'dub' = currentEpisodeAudio,
   ) => {
-    const next = new URLSearchParams(params);
-    next.set('ep', episodeIdForAudio(episode, audio));
-    setParams(next);
+    void navigate({
+      search: (previous) => ({
+        ...previous,
+        ep: episodeIdForAudio(episode, audio),
+      }),
+    });
   };
   const retryPlayer = () => {
     setManualEpisodePage(null);
@@ -557,7 +562,8 @@ function WatchPageContent() {
               </a>
               <Link
                 className="watch-page__details-link"
-                to={`/anime/${anime.id}`}
+                to="/anime/$id"
+                params={{ id: anime.id }}
               >
                 Ver detalhes <ArrowRight size={15} />
               </Link>
@@ -585,7 +591,8 @@ function WatchPageContent() {
             <Link to="/">Início</Link>
             <span aria-hidden="true">›</span>
             <Link
-              to={`/anime/${anime.id}`}
+              to="/anime/$id"
+              params={{ id: anime.id }}
               className="watch-page__breadcrumb-title"
             >
               {title}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { CheckCircle2, LoaderCircle, Play, Star } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
@@ -46,7 +46,8 @@ function ActivityCard({ item }: { item: ActivityFeedItem }) {
           </time>
         </div>
         <Link
-          to={`/anime/${item.animeId}`}
+          to="/anime/$id"
+          params={{ id: item.animeId }}
           className="mt-2 inline-flex items-center gap-2 rounded-md px-1 py-1 text-sm text-[#70e793] hover:underline"
         >
           Anime #{item.animeId}
