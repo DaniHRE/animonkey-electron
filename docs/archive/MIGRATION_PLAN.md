@@ -297,12 +297,12 @@ A migração permanece encerrada e não é reaberta por validações de release.
 - **Para preparar/validar no release 1.0:** validação real por provider e player; empacotamento/distribuição inicial Windows x64; assinatura, auto-update, pipeline, instalação/upgrade/rollback e monitoramento externo. Decidir eventual expansão de sistemas/canais, importação do perfil web ou enriquecimento AniZip adicional.
 - **Adiado fora do desktop:** Watch Together, admin, DMCA/termos e métricas próprias; não são bloqueios de migração.
 
-## Referências do repositório web
+## Referências do repositório Electron
 
-- [AGENTS.md](https://github.com/DaniHRE/animonkey/blob/main/AGENTS.md) — arquitetura, integrações e fluxo de trabalho do site.
-- [CLAUDE.md](https://github.com/DaniHRE/animonkey/blob/main/CLAUDE.md) — convenções atuais de frontend; regras específicas de Next devem ser reinterpretadas para o renderer Electron, não copiadas literalmente.
-- [docs/README.md](https://github.com/DaniHRE/animonkey/blob/main/docs/README.md) — índice de documentação.
-- [docs/implementation-progress.md](https://github.com/DaniHRE/animonkey/blob/main/docs/implementation-progress.md) — estado da implementação Auth + Sync.
-- [docs/sync-architecture.md](https://github.com/DaniHRE/animonkey/blob/main/docs/sync-architecture.md) — IndexedDB, Supabase, reconcile e LWW.
-- [docs/provider-streaming.md](https://github.com/DaniHRE/animonkey/blob/main/docs/provider-streaming.md) e [docs/player-subtitles.md](https://github.com/DaniHRE/animonkey/blob/main/docs/player-subtitles.md) — contratos e restrições do player.
-- [docs/env-variables.md](https://github.com/DaniHRE/animonkey/blob/main/docs/env-variables.md), [docs/nextauth-setup.md](https://github.com/DaniHRE/animonkey/blob/main/docs/nextauth-setup.md), [docs/supabase-setup.md](https://github.com/DaniHRE/animonkey/blob/main/docs/supabase-setup.md) e [docs/database-schema.md](https://github.com/DaniHRE/animonkey/blob/main/docs/database-schema.md) — segredos, auth e dados remotos.
+- [AGENTS.md](../../AGENTS.md) — arquitetura, integrações e regras de segurança deste app Electron.
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) — fluxo de branches, revisão e contribuição.
+- [README.md](../../README.md) e [README.pt-BR.md](../../README.pt-BR.md) — apresentação do projeto em inglês e português.
+- [Índice da documentação](../README.md) — localização dos documentos ativos e históricos.
+- [Roadmap 1.0](../releases/1.0-roadmap.md) e [checklist 1.0](../releases/1.0-checklist.md) — escopo e evidências atuais da preparação do release.
+- [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md) — tracker histórico preservado.
+- [Índice de débitos técnicos](../technical-debt/README.md) — itens adiados com critérios e evidências.
