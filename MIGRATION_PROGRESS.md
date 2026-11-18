@@ -736,3 +736,11 @@
 - Evidência de mídia: Vidstack exibiu vídeo real, o contador chegou a 2:34/24:37 e os quadros mudaram; captions em português estavam visíveis e a fonte listava PT-BR/EN. O player foi encerrado em seguida; não ficou processo `Animonkey` aberto.
 - Limites: uma amostra (ONE PIECE, episódio 1, AnimeDunya) não valida os demais providers, formatos, áudio audível, seleção/sincronização completa das legendas, seek/troca de fonte, capítulos/timestamps, previews, deep link externo, falha/recuperação da rede ou tela Taizen após a última mudança. Não registrar essa evidência como cobertura universal do player nem como aceite completo de release.
 - Validação não visual da sessão: o pacote usa o gitlink fixado em `fb337ea`; nenhuma alteração foi feita no submódulo/API ou no repositório web. Não rodei testes automatizados; o smoke CLI separado e os checks de código estão registrados na seção anterior.
+
+## Diagnóstico local Anivexa via IPC — 18/11/2026
+
+- Configurações agora mostra estado do processo local e os eventos recentes do runtime. A bridge tipada permite ler/limpar o snapshot e receber atualizações; os handlers IPC validam o sender confiável.
+- O main mantém no máximo 100 eventos em memória, sem persistência. O painel registra início/fim de `/episodes` e `/watch`, status HTTP, duração, falhas de inicialização/timeout e erros internos da Anivexa reconhecidos no `console.error` do worker.
+- Mensagens passam por sanitização no worker e novamente no main; payloads, URLs, headers, credenciais e stacks não são encaminhados ao renderer. O worker preserva a saída original de console, que continua sem destino persistente (`stdio: ignore`). Nenhum arquivo do submódulo/API ou do site web foi alterado.
+- Validação não visual: `pnpm typecheck`, `pnpm lint`, `pnpm format:check` e `git diff --check` passaram. Não rodei testes automatizados nem smoke empacotado/visual desta interface.
+- Próximo passo: conferir no pacote que a tela recebe um sucesso e uma falha reais, limpar o buffer e confirmar que nenhuma URL, header, payload, credencial ou stack aparece. A cobertura audiovisual e de providers não muda com esse painel.

@@ -1,4 +1,5 @@
 import {
+  BrowserWindow,
   app,
   ipcMain,
   utilityProcess,
@@ -8,26 +9,59 @@ import {
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type {
+  AnivexaDiagnosticEntry,
+  AnivexaDiagnosticLevel,
+  AnivexaDiagnosticsSnapshot,
   AnivexaDesktopRequest,
   AnivexaDesktopResponse,
+  AnivexaRuntimeStatus,
 } from '@/types/anivexa';
 
 const STARTUP_TIMEOUT_MS = 15_000;
 const MAX_PENDING_REQUESTS = 24;
+const MAX_DIAGNOSTIC_ENTRIES = 100;
 const REQUEST_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 
 interface PendingRequest {
   resolve: (response: AnivexaDesktopResponse) => void;
   reject: (error: Error) => void;
   timeout: ReturnType<typeof setTimeout>;
+  summary: string;
+  startedAt: number;
 }
 
 interface WorkerMessage {
-  type: 'ready' | 'startup-error' | 'response';
+  type: 'ready' | 'startup-error' | 'response' | 'diagnostic';
   requestId?: string;
   status?: number;
   body?: string;
   code?: string;
+  level?: string;
+  message?: string;
+}
+
+function sanitizeDiagnosticText(value: string): string {
+  return Array.from(value, (character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint < 32 || codePoint === 127 ? ' ' : character;
+  })
+    .join('')
+    .replace(/https?:\/\/[^\s"'<>]+/gi, '[URL]')
+    .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [redacted]')
+    .replace(
+      /((?:authorization|cookie|set-cookie|token|api[_-]?key|secret|password)\s*["']?\s*[:=]\s*["']?)[^\s,"'}]+/gi,
+      '$1[redacted]',
+    )
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 300);
+}
+
+function summarizeRequest(request: AnivexaDesktopRequest): string {
+  if (request.kind === 'episodes') {
+    return `GET /episodes/${request.animeId}`;
+  }
+  return `GET /watch/${request.provider}/${request.animeId}/${request.audio}/${request.episodeId}`;
 }
 
 function apiRoot(): string {
@@ -119,6 +153,25 @@ class AnivexaRuntime {
   private rejectStart: ((error: Error) => void) | null = null;
   private startTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly pending = new Map<string, PendingRequest>();
+  private runtimeStatus: AnivexaRuntimeStatus = 'stopped';
+  private diagnosticRevision = 0;
+  private nextDiagnosticId = 1;
+  private diagnosticEntries: AnivexaDiagnosticEntry[] = [];
+
+  getDiagnostics(): AnivexaDiagnosticsSnapshot {
+    return {
+      revision: this.diagnosticRevision,
+      status: this.runtimeStatus,
+      entries: [...this.diagnosticEntries],
+    };
+  }
+
+  clearDiagnostics(): AnivexaDiagnosticsSnapshot {
+    this.diagnosticEntries = [];
+    this.diagnosticRevision += 1;
+    this.broadcastDiagnostics();
+    return this.getDiagnostics();
+  }
 
   async request(
     requestId: string,
@@ -131,12 +184,20 @@ class AnivexaRuntime {
       throw new Error('A Anivexa está ocupada. Tente novamente.');
     }
     const route = requestRoute(request);
+    const summary = summarizeRequest(request);
+    this.recordDiagnostic('info', `${summary} iniciado.`);
     const timeoutMs = request.kind === 'episodes' ? 120_000 : 25_000;
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.cancel(requestId, new Error('Anivexa request timed out.'));
       }, timeoutMs);
-      this.pending.set(requestId, { resolve, reject, timeout });
+      this.pending.set(requestId, {
+        resolve,
+        reject,
+        timeout,
+        summary,
+        startedAt: Date.now(),
+      });
       void this.ensureStarted()
         .then(() => {
           if (!this.pending.has(requestId)) return;
@@ -165,6 +226,8 @@ class AnivexaRuntime {
         resolve,
         reject,
         timeout,
+        summary: 'Verificação local do runtime',
+        startedAt: Date.now(),
       });
       this.child?.postMessage({ type: 'smoke', requestId });
     });
@@ -188,6 +251,7 @@ class AnivexaRuntime {
     this.child = null;
     this.ready = false;
     this.startPromise = null;
+    this.setRuntimeStatus('stopped');
     this.rejectPending(new Error('Anivexa runtime stopped.'));
   }
 
@@ -197,17 +261,21 @@ class AnivexaRuntime {
     if (!app.isReady())
       return Promise.reject(new Error('Electron is not ready.'));
 
+    this.setRuntimeStatus('starting');
+    this.recordDiagnostic('info', 'Iniciando o processo local da Anivexa.');
     this.startPromise = new Promise<void>((resolve, reject) => {
       this.resolveStart = resolve;
       this.rejectStart = reject;
       this.startTimeout = setTimeout(() => {
-        this.failStart(new Error('Anivexa startup timed out.'));
+        this.failStart(
+          'O runtime da Anivexa excedeu o tempo de inicialização.',
+        );
       }, STARTUP_TIMEOUT_MS);
 
       const root = apiRoot();
       const workerPath = path.join(root, 'utility-worker.cjs');
       try {
-        this.child = utilityProcess.fork(workerPath, [], {
+        const child = utilityProcess.fork(workerPath, [], {
           env: {
             ANIVEXA_API_ROOT: root,
             CACHE_ENABLED: 'false',
@@ -220,20 +288,24 @@ class AnivexaRuntime {
           serviceName: 'Anivexa API',
           stdio: 'ignore',
         });
-        this.child.on('message', (message) => this.onWorkerMessage(message));
-        this.child.on('exit', () => this.onWorkerExit());
+        this.child = child;
+        child.on('message', (message) => this.onWorkerMessage(message, child));
+        child.on('exit', () => this.onWorkerExit(child));
       } catch {
-        this.failStart(new Error('Anivexa runtime could not be launched.'));
+        this.failStart('Não foi possível iniciar o processo local da Anivexa.');
       }
     });
     return this.startPromise;
   }
 
-  private onWorkerMessage(value: unknown): void {
+  private onWorkerMessage(value: unknown, child: UtilityProcess): void {
+    if (child !== this.child) return;
     if (!value || typeof value !== 'object') return;
     const message = value as WorkerMessage;
     if (message.type === 'ready') {
       this.ready = true;
+      this.setRuntimeStatus('ready');
+      this.recordDiagnostic('info', 'Runtime local da Anivexa pronto.');
       if (this.startTimeout) clearTimeout(this.startTimeout);
       this.startTimeout = null;
       this.resolveStart?.();
@@ -242,8 +314,20 @@ class AnivexaRuntime {
       return;
     }
     if (message.type === 'startup-error') {
-      const code = message.code ? ' (' + message.code + ')' : '';
-      this.failStart(new Error('Anivexa runtime failed to load' + code + '.'));
+      const code =
+        typeof message.code === 'string' &&
+        /^[a-z0-9_-]{1,40}$/i.test(message.code)
+          ? ' (' + message.code + ')'
+          : '';
+      this.failStart('Falha ao carregar o runtime da Anivexa' + code + '.');
+      return;
+    }
+    if (
+      message.type === 'diagnostic' &&
+      message.level === 'error' &&
+      typeof message.message === 'string'
+    ) {
+      this.recordDiagnostic('error', message.message);
       return;
     }
     if (
@@ -260,16 +344,28 @@ class AnivexaRuntime {
     }
   }
 
-  private onWorkerExit(): void {
-    if (!this.ready)
-      this.failStart(new Error('Anivexa runtime exited during startup.'));
+  private onWorkerExit(child: UtilityProcess): void {
+    if (child !== this.child) return;
+    const exitedDuringStartup = !this.ready;
     this.child = null;
     this.ready = false;
     this.startPromise = null;
-    this.rejectPending(new Error('Anivexa runtime stopped unexpectedly.'));
+    if (exitedDuringStartup && this.runtimeStatus !== 'error') {
+      this.failStart('O runtime da Anivexa encerrou durante a inicialização.');
+    } else if (!exitedDuringStartup) {
+      this.setRuntimeStatus('error');
+      this.recordDiagnostic(
+        'error',
+        'O processo local da Anivexa encerrou inesperadamente.',
+      );
+      this.rejectPending(new Error('Anivexa runtime stopped unexpectedly.'));
+    }
   }
 
-  private failStart(error: Error): void {
+  private failStart(message: string): void {
+    const error = new Error(message);
+    const child = this.child;
+    this.child = null;
     if (this.startTimeout) clearTimeout(this.startTimeout);
     this.startTimeout = null;
     this.rejectStart?.(error);
@@ -277,7 +373,9 @@ class AnivexaRuntime {
     this.rejectStart = null;
     this.startPromise = null;
     this.ready = false;
-    this.child?.kill();
+    this.setRuntimeStatus('error');
+    this.recordDiagnostic('error', message);
+    child?.kill();
   }
 
   private finishRequest(
@@ -289,9 +387,68 @@ class AnivexaRuntime {
     if (!pending) return;
     clearTimeout(pending.timeout);
     this.pending.delete(requestId);
-    if (error) pending.reject(error);
-    else if (response) pending.resolve(response);
-    else pending.reject(new Error('Anivexa returned an invalid response.'));
+    const durationMs = Date.now() - pending.startedAt;
+    if (error) {
+      if (error.message === 'Anivexa request timed out.') {
+        this.recordDiagnostic(
+          'error',
+          `${pending.summary} excedeu o tempo limite após ${durationMs} ms.`,
+        );
+      } else if (
+        error.message !== 'Anivexa request cancelled.' &&
+        error.message !== 'Anivexa runtime stopped.'
+      ) {
+        this.recordDiagnostic(
+          'error',
+          `${pending.summary} falhou antes de receber uma resposta.`,
+        );
+      }
+      pending.reject(error);
+    } else if (response) {
+      const level: AnivexaDiagnosticLevel =
+        response.status >= 500
+          ? 'error'
+          : response.status >= 400
+            ? 'warning'
+            : 'info';
+      this.recordDiagnostic(
+        level,
+        `${pending.summary} respondeu HTTP ${response.status} em ${durationMs} ms (${Buffer.byteLength(response.body, 'utf8')} bytes).`,
+      );
+      pending.resolve(response);
+    } else pending.reject(new Error('Anivexa returned an invalid response.'));
+  }
+
+  private setRuntimeStatus(status: AnivexaRuntimeStatus): void {
+    if (this.runtimeStatus === status) return;
+    this.runtimeStatus = status;
+    this.diagnosticRevision += 1;
+    this.broadcastDiagnostics();
+  }
+
+  private recordDiagnostic(
+    level: AnivexaDiagnosticLevel,
+    message: string,
+  ): void {
+    this.diagnosticEntries = [
+      ...this.diagnosticEntries.slice(-(MAX_DIAGNOSTIC_ENTRIES - 1)),
+      {
+        id: this.nextDiagnosticId++,
+        timestamp: Date.now(),
+        level,
+        message: sanitizeDiagnosticText(message),
+      },
+    ];
+    this.diagnosticRevision += 1;
+    this.broadcastDiagnostics();
+  }
+
+  private broadcastDiagnostics(): void {
+    const snapshot = this.getDiagnostics();
+    for (const window of BrowserWindow.getAllWindows()) {
+      if (window.isDestroyed() || window.webContents.isDestroyed()) continue;
+      window.webContents.send('anivexa:diagnostics:updated', snapshot);
+    }
   }
 
   private rejectPending(error: Error): void {
@@ -306,6 +463,14 @@ export const anivexaRuntime = new AnivexaRuntime();
 export function registerAnivexaIpc(
   assertTrustedSender: (event: IpcMainInvokeEvent) => void,
 ): void {
+  ipcMain.handle('anivexa:diagnostics:get', (event) => {
+    assertTrustedSender(event);
+    return anivexaRuntime.getDiagnostics();
+  });
+  ipcMain.handle('anivexa:diagnostics:clear', (event) => {
+    assertTrustedSender(event);
+    return anivexaRuntime.clearDiagnostics();
+  });
   ipcMain.handle('anivexa:request', (event, value: unknown) => {
     assertTrustedSender(event);
     const parsed = parseRequest(value);

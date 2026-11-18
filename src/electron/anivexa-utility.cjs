@@ -18,6 +18,50 @@ function send(message) {
   parentPort?.postMessage(message);
 }
 
+function sanitizeDiagnosticText(value) {
+  return Array.from(String(value), (character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint < 32 || codePoint === 127 ? ' ' : character;
+  })
+    .join('')
+    .replace(/https?:\/\/[^\s"'<>]+/gi, '[URL]')
+    .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [redacted]')
+    .replace(
+      /((?:authorization|cookie|set-cookie|token|api[_-]?key|secret|password)\s*["']?\s*[:=]\s*["']?)[^\s,"'}]+/gi,
+      '$1[redacted]',
+    )
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 220);
+}
+
+function captureApiError(args) {
+  const prefix = typeof args[0] === 'string' ? args[0] : '';
+  const match = /^\[(ep|bg):([a-z0-9_-]{1,48})\]$/i.exec(prefix);
+  if (!match) return;
+
+  const detail =
+    typeof args[1] === 'string'
+      ? args[1]
+      : args[1] && typeof args[1].message === 'string'
+        ? args[1].message
+        : '';
+  const safeDetail = sanitizeDiagnosticText(detail);
+  send({
+    type: 'diagnostic',
+    level: 'error',
+    message:
+      `Anivexa ${match[1].toLowerCase()} ${match[2]}` +
+      (safeDetail ? ': ' + safeDetail : ' reportou uma falha.'),
+  });
+}
+
+const originalConsoleError = console.error.bind(console);
+console.error = (...args) => {
+  captureApiError(args);
+  originalConsoleError(...args);
+};
+
 async function loadApi() {
   const root = process.env.ANIVEXA_API_ROOT;
   if (!root) throw new Error('Anivexa runtime path is missing.');

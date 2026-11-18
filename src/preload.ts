@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
   AccountBridge,
   AccountCredentials,
@@ -8,7 +8,10 @@ import type {
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
-import type { AnivexaBridge } from './types/anivexa';
+import {
+  isAnivexaDiagnosticsSnapshot,
+  type AnivexaBridge,
+} from './types/anivexa';
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -84,5 +87,15 @@ contextBridge.exposeInMainWorld('animonkey', {
     request: (request, requestId) =>
       ipcRenderer.invoke('anivexa:request', { request, requestId }),
     cancel: (requestId) => ipcRenderer.send('anivexa:cancel', requestId),
+    getDiagnostics: () => ipcRenderer.invoke('anivexa:diagnostics:get'),
+    clearDiagnostics: () => ipcRenderer.invoke('anivexa:diagnostics:clear'),
+    onDiagnosticsChanged: (callback) => {
+      const listener = (_event: IpcRendererEvent, value: unknown) => {
+        if (isAnivexaDiagnosticsSnapshot(value)) callback(value);
+      };
+      ipcRenderer.on('anivexa:diagnostics:updated', listener);
+      return () =>
+        ipcRenderer.removeListener('anivexa:diagnostics:updated', listener);
+    },
   } satisfies AnivexaBridge,
 });

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import {
+  Activity,
   Cloud,
   Download,
   LogOut,
@@ -13,6 +14,7 @@ import {
   exportLocalBackup,
   importLocalBackup,
 } from '@/services/cache/local-db';
+import type { AnivexaDiagnosticsSnapshot } from '@/types/anivexa';
 
 export function SettingsPage() {
   const {
@@ -39,6 +41,15 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [anivexaDiagnostics, setAnivexaDiagnostics] =
+    useState<AnivexaDiagnosticsSnapshot>({
+      revision: -1,
+      status: 'stopped',
+      entries: [],
+    });
+  const [anivexaDiagnosticsError, setAnivexaDiagnosticsError] = useState<
+    string | null
+  >(null);
   const [name, setName] = useState('');
   const [profileDraft, setProfileDraft] = useState<{
     userId: string;
@@ -51,6 +62,32 @@ export function SettingsPage() {
   const activityPrivacy =
     privacy?.userId === session?.user.id ? (privacy?.value ?? null) : null;
   const sessionUserId = session?.user.id ?? null;
+
+  useEffect(() => {
+    let active = true;
+    const applySnapshot = (snapshot: AnivexaDiagnosticsSnapshot) => {
+      if (!active) return;
+      setAnivexaDiagnostics((current) =>
+        snapshot.revision >= current.revision ? snapshot : current,
+      );
+    };
+    const unsubscribe =
+      window.animonkey.anivexa.onDiagnosticsChanged(applySnapshot);
+    void window.animonkey.anivexa
+      .getDiagnostics()
+      .then(applySnapshot)
+      .catch(() => {
+        if (active) {
+          setAnivexaDiagnosticsError(
+            'Não foi possível carregar o diagnóstico da Anivexa.',
+          );
+        }
+      });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!sessionUserId) return;
@@ -308,6 +345,25 @@ export function SettingsPage() {
       );
     }
   };
+
+  const clearAnivexaDiagnostics = async () => {
+    setAnivexaDiagnosticsError(null);
+    try {
+      const snapshot = await window.animonkey.anivexa.clearDiagnostics();
+      setAnivexaDiagnostics(snapshot);
+    } catch {
+      setAnivexaDiagnosticsError(
+        'Não foi possível limpar os registros da Anivexa.',
+      );
+    }
+  };
+
+  const runtimeStatusLabel = {
+    stopped: 'Parado',
+    starting: 'Iniciando',
+    ready: 'Ativo',
+    error: 'Falha',
+  }[anivexaDiagnostics.status];
 
   return (
     <section className="max-w-3xl">
@@ -634,6 +690,100 @@ export function SettingsPage() {
               {accountError}
             </p>
           )}
+        </section>
+
+        <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
+          <div className="flex items-start gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#49d77a]/10 text-[#49d77a]">
+              <Activity size={17} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-sm font-bold">Diagnóstico da Anivexa</h2>
+                <span
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                    anivexaDiagnostics.status === 'ready'
+                      ? 'border-[#49d77a]/20 bg-[#49d77a]/10 text-[#70e793]'
+                      : anivexaDiagnostics.status === 'error'
+                        ? 'border-red-300/20 bg-red-300/[0.08] text-red-200'
+                        : 'border-white/10 bg-white/[0.04] text-white/55'
+                  }`}
+                >
+                  Runtime {runtimeStatusLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-xs leading-relaxed text-white/45">
+                Eventos recentes do processo Anivexa e das chamadas feitas pelo
+                app. Os últimos 100 ficam somente na memória desta sessão; URLs,
+                headers, payloads e credenciais não são exibidos.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-white/40">
+              {anivexaDiagnostics.entries.length} de 100 eventos
+            </p>
+            <button
+              type="button"
+              disabled={anivexaDiagnostics.entries.length === 0}
+              onClick={() => void clearAnivexaDiagnostics()}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/70 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Trash2 size={13} /> Limpar registros
+            </button>
+          </div>
+
+          {anivexaDiagnosticsError && (
+            <p role="alert" className="mt-3 text-xs text-red-200/80">
+              {anivexaDiagnosticsError}
+            </p>
+          )}
+
+          <ol
+            role="log"
+            aria-label="Registros recentes da Anivexa"
+            aria-relevant="additions"
+            className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-lg border border-white/[0.07] bg-black/15 p-3"
+          >
+            {anivexaDiagnostics.entries.length ? (
+              [...anivexaDiagnostics.entries].reverse().map((entry) => (
+                <li
+                  key={entry.id}
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-white/[0.05] pb-2 last:border-0 last:pb-0"
+                >
+                  <time
+                    dateTime={new Date(entry.timestamp).toISOString()}
+                    className="shrink-0 font-mono text-[11px] text-white/35"
+                  >
+                    {new Date(entry.timestamp).toLocaleTimeString('pt-BR')}
+                  </time>
+                  <span
+                    className={`shrink-0 text-[11px] font-bold uppercase ${
+                      entry.level === 'error'
+                        ? 'text-red-200'
+                        : entry.level === 'warning'
+                          ? 'text-amber-200'
+                          : 'text-[#70e793]'
+                    }`}
+                  >
+                    {entry.level === 'warning'
+                      ? 'Aviso'
+                      : entry.level === 'error'
+                        ? 'Erro'
+                        : 'Info'}
+                  </span>
+                  <span className="min-w-0 flex-1 break-words text-xs leading-relaxed text-white/70">
+                    {entry.message}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li className="py-5 text-center text-xs text-white/35">
+                Ainda não há eventos registrados nesta sessão.
+              </li>
+            )}
+          </ol>
         </section>
 
         <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-5">
