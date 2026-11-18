@@ -7,7 +7,7 @@ export interface AnimeTitle {
 export interface AnimeArtworkBridge {
   getMetadata(
     identities: AnimeArtworkIdentity[],
-  ): Promise<AnimeTaizenMetadata[]>;
+  ): Promise<AnimeArtworkMetadataResponse>;
 }
 
 export interface AnimeArtworkIdentity {
@@ -19,6 +19,11 @@ export interface AnimeTaizenMetadata {
   animeId: string;
   banner?: string;
   logo?: string;
+}
+
+export interface AnimeArtworkMetadataResponse {
+  items: AnimeTaizenMetadata[];
+  retryable: boolean;
 }
 
 export interface AnimeResult {

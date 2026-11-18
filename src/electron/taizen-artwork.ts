@@ -1,4 +1,7 @@
-import type { AnimeTaizenMetadata } from '../types/anime';
+import type {
+  AnimeArtworkMetadataResponse,
+  AnimeTaizenMetadata,
+} from '../types/anime';
 
 const TAIZEN_GRAPHQL_URL = 'https://taizen.moe/api/graphql';
 const REQUEST_TIMEOUT_MS = 5_000;
@@ -21,6 +24,12 @@ interface ArtworkCacheEntry {
   metadata: AnimeTaizenMetadata | null;
   expiresAt: number;
   staleUntil: number;
+  retryable: boolean;
+}
+
+interface ArtworkRequestResult {
+  metadataByKey: Map<string, AnimeTaizenMetadata | null>;
+  retryable: boolean;
 }
 
 /** Untrusted subset of Taizen's raw GraphQL response; validate before mapping. */
@@ -39,10 +48,7 @@ interface CacheRead {
 }
 
 const artworkCache = new Map<string, ArtworkCacheEntry>();
-const artworkRequests = new Map<
-  string,
-  Promise<Map<string, AnimeTaizenMetadata | null>>
->();
+const artworkRequests = new Map<string, Promise<ArtworkRequestResult>>();
 let activeRequests = 0;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -308,16 +314,20 @@ function getStaleMetadata(
 
 export async function getTaizenMetadata(
   identitiesValue: unknown,
-): Promise<AnimeTaizenMetadata[]> {
+): Promise<AnimeArtworkMetadataResponse> {
   const identities = sanitizeIdentities(identitiesValue);
-  if (!identities.length) return [];
+  if (!identities.length) return { items: [], retryable: false };
 
   const now = Date.now();
   const resolved = new Map<string, AnimeTaizenMetadata | null>();
+  let retryable = false;
   const cacheReads: CacheRead[] = identities.map((identity) => {
     const key = makeCacheKey(identity);
     const entry = getCachedEntry(key);
-    if (entry && entry.expiresAt > now) resolved.set(key, entry.metadata);
+    if (entry && entry.expiresAt > now) {
+      resolved.set(key, entry.metadata);
+      retryable ||= entry.retryable;
+    }
     return { entry, identity, key };
   });
   const misses = cacheReads.filter(({ key }) => !resolved.has(key));
@@ -342,9 +352,10 @@ export async function getTaizenMetadata(
               expiresAt:
                 fetchedAt + (metadata ? LOGO_CACHE_TTL_MS : MISS_CACHE_TTL_MS),
               staleUntil: fetchedAt + STALE_CACHE_TTL_MS,
+              retryable: false,
             });
           }
-          return metadataByKey;
+          return { metadataByKey, retryable: false };
         })
         .catch(() => {
           const failedAt = Date.now();
@@ -356,14 +367,18 @@ export async function getTaizenMetadata(
                 entry?.metadata && entry.staleUntil > failedAt
                   ? entry.staleUntil
                   : failedAt + FAILURE_RETRY_MS,
+              retryable: true,
             });
           }
-          return new Map(
-            misses.map(({ entry, key }) => [
-              key,
-              getStaleMetadata(entry, failedAt),
-            ]),
-          );
+          return {
+            metadataByKey: new Map(
+              misses.map(({ entry, key }) => [
+                key,
+                getStaleMetadata(entry, failedAt),
+              ]),
+            ),
+            retryable: true,
+          };
         })
         .finally(() => {
           artworkRequests.delete(requestKey);
@@ -373,15 +388,22 @@ export async function getTaizenMetadata(
     }
 
     if (request) {
-      for (const [key, metadata] of await request) resolved.set(key, metadata);
+      const result = await request;
+      retryable ||= result.retryable;
+      for (const [key, metadata] of result.metadataByKey)
+        resolved.set(key, metadata);
     } else {
+      retryable = true;
       for (const { entry, key } of misses)
         resolved.set(key, getStaleMetadata(entry, now));
     }
   }
 
-  return identities.flatMap((identity) => {
-    const metadata = resolved.get(makeCacheKey(identity));
-    return metadata ? [metadata] : [];
-  });
+  return {
+    items: identities.flatMap((identity) => {
+      const metadata = resolved.get(makeCacheKey(identity));
+      return metadata ? [metadata] : [];
+    }),
+    retryable,
+  };
 }

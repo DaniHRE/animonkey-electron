@@ -3,6 +3,7 @@ import { AnivexaCatalog } from '@/services/anivexa.service';
 import { AniListCatalog } from '@/services/anilist.service';
 import type {
   AnimeArtworkIdentity,
+  AnimeArtworkMetadataResponse,
   AnimeInfo,
   AnimeResult,
   AnimeSearchFilters,
@@ -50,7 +51,9 @@ async function loadTaizen(
   if (!bridge) return null;
   try {
     const result = await bridge.getMetadata([identity]);
-    return result.find((item) => item.animeId === identity.animeId) ?? null;
+    return (
+      result.items.find((item) => item.animeId === identity.animeId) ?? null
+    );
   } catch {
     return null;
   }
@@ -61,7 +64,7 @@ export const animeQueryKeys = {
   spotlight: (identities: AnimeArtworkIdentity[]) =>
     [
       'anime',
-      'spotlight',
+      'spotlight-v2',
       identities.map((identity) => [
         identity.animeId,
         ...identity.expectedTitles,
@@ -107,24 +110,33 @@ export const animeQueries = {
       queryKey: animeQueryKeys.spotlight(identities),
       staleTime: DAY,
       gcTime: 7 * DAY,
-      queryFn: async (): Promise<AnimeTaizenMetadata[]> => {
+      queryFn: async (): Promise<AnimeArtworkMetadataResponse> => {
         const bridge = window.animonkey?.artwork;
-        if (!bridge || !identities.length) return [];
-        const metadata = await bridge.getMetadata(identities);
+        if (!identities.length) return { items: [], retryable: false };
+        if (!bridge) return { items: [], retryable: true };
+        const response = await bridge.getMetadata(identities);
         const byId = new Map(
-          metadata.map((item) => [item.animeId, item] as const),
+          response.items.map((item) => [item.animeId, item] as const),
         );
         for (const identity of identities) {
-          client.setQueryData(
-            animeQueryKeys.taizen(identity.animeId),
-            byId.get(identity.animeId) ?? null,
-          );
+          const metadata = byId.get(identity.animeId);
+          if (metadata || !response.retryable)
+            client.setQueryData(
+              animeQueryKeys.taizen(identity.animeId),
+              metadata ?? null,
+            );
         }
-        return identities.flatMap((identity) => {
-          const item = byId.get(identity.animeId);
-          return item ? [item] : [];
-        });
+        return {
+          items: identities.flatMap((identity) => {
+            const item = byId.get(identity.animeId);
+            return item ? [item] : [];
+          }),
+          retryable: response.retryable,
+        };
       },
+      refetchInterval: (query) =>
+        query.state.data?.retryable ? 65_000 : false,
+      refetchIntervalInBackground: false,
     });
   },
   schedule(date: Date) {

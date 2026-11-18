@@ -50,7 +50,7 @@ export function HomePage() {
     enabled: Boolean(home),
   });
   const spotlightMetadata = new Map(
-    (spotlightQuery.data ?? []).map((item) => [item.animeId, item]),
+    (spotlightQuery.data?.items ?? []).map((item) => [item.animeId, item]),
   );
   const schedule = scheduleQuery.data ?? [];
   const loading = homeQuery.isPending;
