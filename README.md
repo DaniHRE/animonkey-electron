@@ -1,7 +1,5 @@
 # Animonkey Desktop
 
-[![Weekly source health](https://github.com/DaniHRE/animonkey-electron/actions/workflows/source-health.yml/badge.svg)](https://github.com/DaniHRE/animonkey-electron/actions/workflows/source-health.yml)
-
 Migração gradual do app web Animonkey para Electron. O app web em `../animonkey` permanece funcional e independente durante toda a transição. Veja o [plano de migração](./MIGRATION_PLAN.md) e o [tracker de progresso](./MIGRATION_PROGRESS.md).
 
 ## Estado atual
