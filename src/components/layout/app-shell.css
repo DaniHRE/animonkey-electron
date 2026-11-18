@@ -270,6 +270,18 @@
   outline-offset: 3px;
 }
 
+.app-header__brand-motion {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.app-header__brand-logo {
+  display: block;
+  width: 176px;
+  height: auto;
+  user-select: none;
+}
+
 .app-header {
   isolation: isolate;
   border-bottom: 1px solid
@@ -396,8 +408,8 @@
 }
 
 @media (max-width: 600px) {
-  .app-header__brand > span:last-child {
-    display: none;
+  .app-header__brand-logo {
+    width: clamp(108px, 32vw, 138px);
   }
 
   .app-header__search {

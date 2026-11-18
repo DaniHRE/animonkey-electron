@@ -5,7 +5,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Clapperboard,
   Compass,
   Flame,
   History,
@@ -23,7 +22,9 @@ import {
   useNavigate,
   useRouterState,
 } from '@tanstack/react-router';
+import { motion, useReducedMotion } from 'motion/react';
 import { useAccount } from '@/context/account-state';
+import animonkeyLogoUrl from '@/assets/brand/animonkey-logo.svg';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { useTitleLanguage } from '@/hooks/use-title-language';
@@ -47,6 +48,7 @@ export function AppShell() {
   const [search, setSearch] = useState('');
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const shellRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const showSidebarRef = useRef<HTMLButtonElement | null>(null);
@@ -283,14 +285,21 @@ export function AppShell() {
           <Link
             to="/"
             aria-label="Ir para o início do Animonkey"
-            className="app-header__brand flex shrink-0 items-center gap-2"
+            className="app-header__brand flex shrink-0 items-center"
           >
-            <span className="grid size-10 place-items-center rounded-lg bg-[#49d77a] text-[#07110a]">
-              <Clapperboard size={21} strokeWidth={2.2} />
-            </span>
-            <span className="text-lg font-extrabold tracking-tight text-white">
-              ani<span className="text-[#49d77a]">monkey</span>
-            </span>
+            <motion.span
+              className="app-header__brand-motion"
+              whileHover={shouldReduceMotion ? undefined : { scale: 1.025 }}
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+              transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+            >
+              <img
+                src={animonkeyLogoUrl}
+                alt=""
+                draggable={false}
+                className="app-header__brand-logo"
+              />
+            </motion.span>
           </Link>
 
           {pathname !== '/search' && (
