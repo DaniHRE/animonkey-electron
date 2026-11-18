@@ -7,7 +7,7 @@ const TAIZEN_GRAPHQL_URL = 'https://taizen.moe/api/graphql';
 const REQUEST_TIMEOUT_MS = 5_000;
 const MAX_RESPONSE_BYTES = 3 * 1024 * 1024;
 const MAX_CACHE_ENTRIES = 48;
-const LOGO_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const ARTWORK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MISS_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const FAILURE_RETRY_MS = 60 * 1000;
 const STALE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -36,7 +36,7 @@ interface ArtworkRequestResult {
 interface TaizenAnime {
   id?: unknown;
   title?: unknown;
-  bannerImage?: unknown;
+  art?: unknown;
   clearlogos?: unknown;
   hdtvlogos?: unknown;
 }
@@ -214,18 +214,24 @@ function getEnglishLogo(anime: TaizenAnime): string | null {
   return null;
 }
 
-function safeTaizenImage(value: unknown): string | undefined {
+function safeTaizenBackground(
+  value: unknown,
+  animeId: unknown,
+): string | undefined {
   if (typeof value !== 'string') return undefined;
+  if (typeof animeId !== 'number' || !Number.isSafeInteger(animeId))
+    return undefined;
   try {
     const url = new URL(value);
+    const validVersion = !url.search || /^\?v=[a-f\d]{8}$/i.test(url.search);
     if (
       url.protocol === 'https:' &&
       url.hostname === 'taizen.moe' &&
       !url.port &&
       !url.username &&
       !url.password &&
-      url.pathname.startsWith('/i/') &&
-      !url.search &&
+      url.pathname === `/i/a/${animeId}/art` &&
+      validVersion &&
       !url.hash
     )
       return url.toString();
@@ -238,10 +244,10 @@ function safeTaizenImage(value: unknown): string | undefined {
 function mapTaizenMetadata(anime: TaizenAnime): AnimeTaizenMetadata | null {
   const metadata: AnimeTaizenMetadata = {
     animeId: String(anime.id),
-    banner: safeTaizenImage(anime.bannerImage),
+    background: safeTaizenBackground(anime.art, anime.id),
     logo: getEnglishLogo(anime) ?? undefined,
   };
-  return metadata.banner || metadata.logo ? metadata : null;
+  return metadata.background || metadata.logo ? metadata : null;
 }
 
 async function requestTaizenMetadata(
@@ -256,7 +262,7 @@ async function requestTaizenMetadata(
       items {
         id
         title { english romaji native }
-        bannerImage
+        art
         clearlogos: artwork(type: CLEARLOGO, limit: 100) { type url lang }
         hdtvlogos: artwork(type: HDTVLOGO, limit: 100) { type url lang }
       }
@@ -350,7 +356,8 @@ export async function getTaizenMetadata(
             setCachedEntry(key, {
               metadata,
               expiresAt:
-                fetchedAt + (metadata ? LOGO_CACHE_TTL_MS : MISS_CACHE_TTL_MS),
+                fetchedAt +
+                (metadata ? ARTWORK_CACHE_TTL_MS : MISS_CACHE_TTL_MS),
               staleUntil: fetchedAt + STALE_CACHE_TTL_MS,
               retryable: false,
             });

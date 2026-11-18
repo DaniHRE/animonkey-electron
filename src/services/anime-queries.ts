@@ -39,7 +39,7 @@ function mergeTaizen<T extends AnimeResult>(
   if (!metadata || metadata.animeId !== anime.id) return anime;
   return {
     ...anime,
-    banner: metadata.banner || anime.banner,
+    banner: metadata.background || anime.banner,
     logo: metadata.logo || anime.logo,
   };
 }

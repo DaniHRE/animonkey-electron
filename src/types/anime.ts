@@ -17,7 +17,7 @@ export interface AnimeArtworkIdentity {
 
 export interface AnimeTaizenMetadata {
   animeId: string;
-  banner?: string;
+  background?: string;
   logo?: string;
 }
 

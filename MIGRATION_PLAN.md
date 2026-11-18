@@ -105,7 +105,7 @@ O escopo de recursos adicionais derivados do AniZip permanece aberto até a revi
 - Migrar primeiro contratos (`types`), funções puras (`lib`), normalização AniList/Anivexa sem segredo e serviços/cache desacoplados.
 - Classificar cada import por ambiente: renderer-safe, main-only, web-only ou precisa de adapter. Remover `next/image`, `next/link`, `next/navigation`, `next/headers`, `server-only`, `process.env` do bundle renderer e `fetch` específico de Route Handler.
 - Integrar as consultas existentes do catálogo AniList ao TanStack Query e migrar Home, busca, agenda, trending e recentes; preservar AniList como fonte dos metadados gerais, o filtro adulto, cache offline e contratos de query/cancelamento.
-- No destaque da Home, usar Taizen apenas para o logo inglês validado e `bannerImage`; os outros metadados seguem vindo do AniList e o banner AniList é o fallback.
+- No destaque da Home, usar Taizen apenas para o logo inglês validado e `art` (fundo `SHOWBACKGROUND` do hero); os outros metadados seguem vindo do AniList e `AniList.banner` é o fallback.
 - Definir CSP/connect-src e permissões de rede apenas para destinos necessários.
 
 **Saída:** catálogo e navegação de descoberta equivalentes, com estados de erro/offline e cache preservados.
