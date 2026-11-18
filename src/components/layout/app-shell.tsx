@@ -259,7 +259,7 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header className="app-header fixed inset-x-0 top-0 z-40 flex h-[81px] items-center gap-3 pr-4 pl-6">
+        <header className="app-header fixed inset-x-0 top-0 z-40 h-[81px] pr-4 pl-6">
           <div
             className="app-header__edge app-header__edge--left"
             aria-hidden="true"
@@ -321,7 +321,7 @@ export function AppShell() {
             </form>
           )}
 
-          <div className="ml-auto flex items-center gap-4">
+          <div className="app-header__actions flex items-center gap-4">
             <button
               type="button"
               className="app-header__language"

@@ -299,10 +299,10 @@ A migração permanece encerrada e não é reaberta por validações de release.
 
 ## Referências do repositório web
 
-- [AGENTS.md](../animonkey/AGENTS.md) — arquitetura, integrações e fluxo de trabalho do site.
-- [CLAUDE.md](../animonkey/CLAUDE.md) — convenções atuais de frontend; regras específicas de Next devem ser reinterpretadas para o renderer Electron, não copiadas literalmente.
-- [docs/README.md](../animonkey/docs/README.md) — índice de documentação.
-- [docs/implementation-progress.md](../animonkey/docs/implementation-progress.md) — estado da implementação Auth + Sync.
-- [docs/sync-architecture.md](../animonkey/docs/sync-architecture.md) — IndexedDB, Supabase, reconcile e LWW.
-- [docs/provider-streaming.md](../animonkey/docs/provider-streaming.md) e [docs/player-subtitles.md](../animonkey/docs/player-subtitles.md) — contratos e restrições do player.
-- [docs/env-variables.md](../animonkey/docs/env-variables.md), [docs/nextauth-setup.md](../animonkey/docs/nextauth-setup.md), [docs/supabase-setup.md](../animonkey/docs/supabase-setup.md) e [docs/database-schema.md](../animonkey/docs/database-schema.md) — segredos, auth e dados remotos.
+- [AGENTS.md](https://github.com/DaniHRE/animonkey/blob/main/AGENTS.md) — arquitetura, integrações e fluxo de trabalho do site.
+- [CLAUDE.md](https://github.com/DaniHRE/animonkey/blob/main/CLAUDE.md) — convenções atuais de frontend; regras específicas de Next devem ser reinterpretadas para o renderer Electron, não copiadas literalmente.
+- [docs/README.md](https://github.com/DaniHRE/animonkey/blob/main/docs/README.md) — índice de documentação.
+- [docs/implementation-progress.md](https://github.com/DaniHRE/animonkey/blob/main/docs/implementation-progress.md) — estado da implementação Auth + Sync.
+- [docs/sync-architecture.md](https://github.com/DaniHRE/animonkey/blob/main/docs/sync-architecture.md) — IndexedDB, Supabase, reconcile e LWW.
+- [docs/provider-streaming.md](https://github.com/DaniHRE/animonkey/blob/main/docs/provider-streaming.md) e [docs/player-subtitles.md](https://github.com/DaniHRE/animonkey/blob/main/docs/player-subtitles.md) — contratos e restrições do player.
+- [docs/env-variables.md](https://github.com/DaniHRE/animonkey/blob/main/docs/env-variables.md), [docs/nextauth-setup.md](https://github.com/DaniHRE/animonkey/blob/main/docs/nextauth-setup.md), [docs/supabase-setup.md](https://github.com/DaniHRE/animonkey/blob/main/docs/supabase-setup.md) e [docs/database-schema.md](https://github.com/DaniHRE/animonkey/blob/main/docs/database-schema.md) — segredos, auth e dados remotos.
