@@ -1,10 +1,10 @@
 # Animonkey Desktop
 
-Aplicativo desktop Electron do Animonkey. A passagem funcional para desktop foi encerrada por decisão de produto; o app web em `../animonkey` continua funcional e independente. A preparação da distribuição 1.0 ainda tem decisões e validações próprias. Veja o [plano de migração](./MIGRATION_PLAN.md) e o [tracker de progresso](./MIGRATION_PROGRESS.md).
+Aplicativo desktop Electron do Animonkey. A passagem funcional para desktop foi encerrada por decisão de produto; o app web em `../animonkey` continua funcional e independente. A preparação da distribuição 1.0 ainda tem decisões e validações próprias. Veja o [plano histórico de migração](./MIGRATION_PLAN.md), o [checklist ativo do release 1.0](./docs/releases/1.0-checklist.md) e o [histórico arquivado](./docs/archive/MIGRATION_PROGRESS.md).
 
 ## Estado atual
 
-O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, biblioteca local, backup importável/exportável, conta/sync, feed e o player Vidstack com fontes Anivexa e proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Watch Together, painel admin e páginas institucionais permanecem no site web; não fazem parte do escopo desktop atual. A distribuição conjunta da Anivexa e os demais critérios de release 1.0 estão em preparação; veja [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) e [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md).
+O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, biblioteca local, backup importável/exportável, conta/sync, feed e o player Vidstack com fontes Anivexa e proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Watch Together, painel admin e páginas institucionais permanecem no site web; não fazem parte do escopo desktop atual. A distribuição conjunta da Anivexa e os demais critérios de release 1.0 estão em preparação; veja [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) e [docs/releases/1.0-checklist.md](./docs/releases/1.0-checklist.md).
 
 ## Requisitos e comandos
 

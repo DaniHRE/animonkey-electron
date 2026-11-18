@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Aplicativo desktop do Animonkey. A migração funcional da experiência para Electron está encerrada; o site `../animonkey` continua independente e não deve depender do Electron nem ser alterado como consequência dessa decisão. `MIGRATION_PLAN.md` preserva decisões/evidências históricas e classifica a preparação do release 1.0; não representa uma migração contínua.
+Aplicativo desktop do Animonkey. A migração funcional da experiência para Electron está encerrada; o site `../animonkey` continua independente e não deve depender do Electron nem ser alterado como consequência dessa decisão. `MIGRATION_PLAN.md` preserva decisões/evidências históricas; `docs/releases/1.0-checklist.md` é a fonte ativa da preparação do release 1.0. `docs/archive/MIGRATION_PROGRESS.md` preserva o tracker histórico e não é mais ativo.
 
 ## Stack e estrutura
 
@@ -46,10 +46,10 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 
 ## Etapas e commits da migração
 
-- Trabalhar em etapas pequenas, verticais e revisáveis. Cada etapa deve atualizar este `AGENTS.md` com regras novas aprendidas durante o trabalho e atualizar `MIGRATION_PROGRESS.md` com escopo, estado, evidência, validações e próximo passo.
+- Trabalhar em etapas pequenas, verticais e revisáveis. Cada etapa deve atualizar este `AGENTS.md` com regras novas aprendidas durante o trabalho; trabalhos do release atualizam `docs/releases/1.0-checklist.md` com escopo, estado, evidência, validações, limitações e próximo passo. `docs/archive/MIGRATION_PROGRESS.md` é histórico preservado, não um tracker ativo.
 - Ao concluir cada etapa coerente, criar um commit local Conventional Commit que inclua a implementação e as atualizações correspondentes de documentação. Não acumular etapas concluídas em um único commit; não fazer push sem solicitação explícita.
 - Antes de iniciar uma etapa, conferir `git status`, branch e diff. Preservar alterações locais e nunca incluir arquivos não relacionados ou segredos no commit. Se alterações preexistentes não puderem ser separadas com segurança, registrar isso e manter o conjunto intacto até uma fronteira de commit clara.
-- Após a implementação da etapa, rodar as validações proporcionais ao escopo, revisar o diff e `git diff --check`, atualizar os documentos e então commitar. Registrar no tracker o hash do commit e as verificações feitas.
+- Após a implementação da etapa, rodar as validações proporcionais ao escopo, revisar o diff e `git diff --check`, atualizar os documentos e então commitar. Registrar no checklist ativo de release o hash do commit e as verificações feitas quando a etapa pertencer à preparação 1.0.
 - Player e streaming só podem ser marcados como paridade completa após smoke audiovisual no app empacotado para os formatos e legendas suportados; compilação ou contenção de erro, isoladamente, não confirma reprodução.
 - A migração exige uma etapa transversal de paridade visual: comparar as telas web/Electron no mesmo viewport e conferir navegação, espaçamento, hierarquia, imagens, loading/erro e estados interativos. Player e informações do anime exigem paridade visual total antes do aceite final.
 - Ao revisar visualmente uma página, use o site `../animonkey` como referência de tipografia e identidade. A fonte de marca é Rubik; mantenha-a carregada localmente no Electron (incluindo Vidstack) para o pacote não depender de fontes remotas. Trate a sidebar/topbar como adaptação desktop, mas compare tokens e conteúdo rota por rota.
@@ -108,6 +108,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 - Em qualquer comparação ou migração de UI antiga para nova, inspecionar primeiro o componente, hooks, services, tipos e estilos exatos da implementação em `../animonkey`; usar esse código como autoridade para layout, estados e comportamento, e seguir os dados/contracts até sua origem. Capturas de tela servem para confirmar a renderização, mas não substituem a leitura do código. Registrar os caminhos legados consultados e justificar diferenças inevitáveis do shell desktop; não substituir recursos antigos por uma aproximação baseada só na imagem.
 
 - QA registrado em 16/11/2026: confirmar a presença do executável ao empacotar. Nesta máquina, o Forge encerrou sem artefato com Node 26 e concluiu com Node 22. Registrar o viewport CSS de cada interface, pois a dimensão da captura da janela inclui a moldura e o menu.
+- QA registrado em 18/11/2026: com Node 26.13.1, pnpm make e pnpm package retornaram exit code 0 sem deixar o executável ou atualizar Squirrel. Confirme a presença do artefato e seu LastWriteTime antes de tratar o build como aprovado; exit code zero isolado não basta.
 - Antes de aceitar um smoke empacotado após correção do player, fechar instâncias antigas e conferir o `LastWriteTime` do artefato e o caminho do processo da janela; registrar commit, provider e sequência reproduzida.
 - Vidstack: declarar a faixa WebVTT de capítulos como padrão para ativá-la na timeline e preservar a precisão dos timestamps até milissegundos.
 - Vidstack: desenhar separadores dos capítulos como pontos pequenos, centralizados na faixa e com contraste próprio; não usar a altura inteira do slider para marcadores verticais que se estendam sobre o vídeo.
