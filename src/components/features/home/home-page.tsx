@@ -20,7 +20,7 @@ import {
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
-import { animeQueries } from '@/services/anime-queries';
+import { animeQueries, mergeAnimeMetadata } from '@/services/anime-queries';
 import type { AnimeResult } from '@/types/anime';
 
 const CLEARLOGO_IMAGE_TIMEOUT_MS = 10_000;
@@ -42,9 +42,16 @@ function getHeroFormatLabel(format: string | undefined): string | undefined {
 
 export function HomePage() {
   const queryClient = useQueryClient();
-  const homeQuery = useQuery(animeQueries.home(queryClient));
+  const homeQuery = useQuery(animeQueries.home());
   const scheduleQuery = useQuery(animeQueries.schedule(new Date()));
   const home = homeQuery.data;
+  const spotlightQuery = useQuery({
+    ...animeQueries.spotlight(queryClient, home?.banner ?? []),
+    enabled: Boolean(home),
+  });
+  const spotlightMetadata = new Map(
+    (spotlightQuery.data ?? []).map((item) => [item.animeId, item]),
+  );
   const schedule = scheduleQuery.data ?? [];
   const loading = homeQuery.isPending;
   const error = homeQuery.error?.message ?? null;
@@ -67,7 +74,13 @@ export function HomePage() {
     return () => window.clearInterval(interval);
   }, [home]);
 
-  const featured = home?.banner[activeSlide] ?? home?.banner[0];
+  const featuredCandidate = home?.banner[activeSlide] ?? home?.banner[0];
+  const featured = featuredCandidate
+    ? mergeAnimeMetadata(
+        featuredCandidate,
+        spotlightMetadata.get(featuredCandidate.id) ?? null,
+      )
+    : undefined;
   const featuredTitle = featured
     ? resolveAnimeTitle(featured.title, titleLanguage)
     : 'Descubra seu próximo anime';

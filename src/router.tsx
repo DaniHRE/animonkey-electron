@@ -49,9 +49,7 @@ const homeRoute = createRoute({
   path: '/',
   loader: ({ context }) => {
     void context.queryClient.prefetchQuery(animeQueries.schedule(new Date()));
-    return context.queryClient.ensureQueryData(
-      animeQueries.home(context.queryClient),
-    );
+    return context.queryClient.ensureQueryData(animeQueries.home());
   },
   component: HomePage,
 });

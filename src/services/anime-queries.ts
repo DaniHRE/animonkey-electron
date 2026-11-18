@@ -56,25 +56,17 @@ async function loadTaizen(
   }
 }
 
-function seedAndMergeHero(
-  client: QueryClient,
-  home: Awaited<ReturnType<typeof AniListCatalog.home>>,
-  metadata: AnimeTaizenMetadata[],
-) {
-  const byId = new Map(metadata.map((item) => [item.animeId, item]));
-  for (const item of metadata) {
-    client.setQueryData(animeQueryKeys.taizen(item.animeId), item);
-  }
-  return {
-    ...home,
-    banner: home.banner.map((anime) =>
-      mergeTaizen(anime, byId.get(anime.id) ?? null),
-    ),
-  };
-}
-
 export const animeQueryKeys = {
   home: ['catalog', 'home'] as const,
+  spotlight: (identities: AnimeArtworkIdentity[]) =>
+    [
+      'anime',
+      'spotlight',
+      identities.map((identity) => [
+        identity.animeId,
+        ...identity.expectedTitles,
+      ]),
+    ] as const,
   schedule: (date: string) => ['catalog', 'schedule', date] as const,
   list: (sort: string[], status: string | undefined, page: number) =>
     ['catalog', 'list', sort, status ?? null, page] as const,
@@ -94,25 +86,44 @@ export const animeQueryKeys = {
 };
 
 export const animeQueries = {
-  home(client: QueryClient) {
+  home() {
     return queryOptions({
       queryKey: animeQueryKeys.home,
       staleTime: 30 * MINUTE,
       gcTime: 2 * DAY,
-      queryFn: async ({ signal }) => {
-        const home = await AniListCatalog.home(signal);
-        const identities = home.banner.slice(0, 6).flatMap((anime) => {
+      queryFn: ({ signal }) => AniListCatalog.home(signal),
+    });
+  },
+  spotlight(client: QueryClient, candidates: AnimeResult[]) {
+    const identities = [
+      ...new Map(
+        candidates.slice(0, 6).flatMap((anime) => {
           const identity = artworkIdentity(anime);
-          return identity ? [identity] : [];
-        });
-        if (!identities.length || !window.animonkey?.artwork) return home;
-        try {
-          const metadata =
-            await window.animonkey.artwork.getMetadata(identities);
-          return seedAndMergeHero(client, home, metadata);
-        } catch {
-          return home;
+          return identity ? [[identity.animeId, identity] as const] : [];
+        }),
+      ).values(),
+    ];
+    return queryOptions({
+      queryKey: animeQueryKeys.spotlight(identities),
+      staleTime: DAY,
+      gcTime: 7 * DAY,
+      queryFn: async (): Promise<AnimeTaizenMetadata[]> => {
+        const bridge = window.animonkey?.artwork;
+        if (!bridge || !identities.length) return [];
+        const metadata = await bridge.getMetadata(identities);
+        const byId = new Map(
+          metadata.map((item) => [item.animeId, item] as const),
+        );
+        for (const identity of identities) {
+          client.setQueryData(
+            animeQueryKeys.taizen(identity.animeId),
+            byId.get(identity.animeId) ?? null,
+          );
         }
+        return identities.flatMap((identity) => {
+          const item = byId.get(identity.animeId);
+          return item ? [item] : [];
+        });
       },
     });
   },
@@ -188,9 +199,23 @@ export const animeQueries = {
         const identity = artworkIdentity(anime);
         if (!identity) return anime;
         try {
-          const metadata = await client.fetchQuery(
-            animeQueries.taizen(identity),
+          const home = client.getQueryData<
+            Awaited<ReturnType<typeof AniListCatalog.home>>
+          >(animeQueryKeys.home);
+          const spotlight = home?.banner.slice(0, 6) ?? [];
+          const isSpotlight = spotlight.some(
+            (candidate) => candidate.id === anime.id,
           );
+          let metadata: AnimeTaizenMetadata | null;
+          if (isSpotlight) {
+            await client.fetchQuery(animeQueries.spotlight(client, spotlight));
+            metadata =
+              client.getQueryData<AnimeTaizenMetadata | null>(
+                animeQueryKeys.taizen(anime.id),
+              ) ?? null;
+          } else {
+            metadata = await client.fetchQuery(animeQueries.taizen(identity));
+          }
           return mergeTaizen(anime, metadata);
         } catch {
           return anime;
