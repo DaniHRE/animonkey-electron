@@ -72,6 +72,7 @@ O pacote prepara o submódulo fixado [`vendor/anivexa-api`](vendor/anivexa-api) 
 
 ## Créditos e inspirações
 
+- Agradecemos a [JulioC090](https://github.com/JulioC090) pelo [Accendo Electron React App Template](https://github.com/JulioC090/accendo-templates/tree/main/accendo-electron-react-app-template), que tornou o início deste projeto muito mais fácil e rápido.
 - [AniList](https://anilist.co/) fornece metadados do catálogo e da agenda.
 - [Anivexa API](https://github.com/DaniHRE/Anivexa-API) fornece a integração de episódios e providers pelo submódulo fixado neste repositório.
 - [Taizen](https://taizen.moe/) pode enriquecer títulos em destaque com artes.

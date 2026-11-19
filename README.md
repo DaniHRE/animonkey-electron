@@ -72,6 +72,7 @@ The package prepares the pinned [`vendor/anivexa-api`](vendor/anivexa-api) submo
 
 ## Credits and inspiration
 
+- Thanks to [JulioC090](https://github.com/JulioC090) for the [Accendo Electron React App Template](https://github.com/JulioC090/accendo-templates/tree/main/accendo-electron-react-app-template), which made it much easier and faster to get this project started.
 - [AniList](https://anilist.co/) supplies catalog metadata and schedule data.
 - [Anivexa API](https://github.com/DaniHRE/Anivexa-API) supplies episode and provider integration through the pinned submodule in this repository.
 - [Taizen](https://taizen.moe/) can enrich featured titles with artwork.
