@@ -1,7 +1,7 @@
 {
   "name": "animonkey-electron",
   "productName": "Animonkey",
-  "description": "Offline-first anime discovery and streaming app for desktop",
+  "description": "Desktop anime discovery and personal library with offline tracking, optional account sync, and playback from available Anivexa sources",
   "author": "DaniHRE",
   "version": "1.0.0",
   "main": ".vite/build/main.js",
