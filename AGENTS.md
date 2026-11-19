@@ -48,6 +48,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 
 - Cada branch de trabalho tem um objetivo explícito. Não reutilizar uma branch concluída para iniciar outro objetivo.
 - Nunca iniciar nomes de branch com `Codex` ou `codex`; usar um tipo e objetivo descritivos, como `feat/...`, `fix/...`, `chore/...` ou `release/...`.
+- Durante a preparação do release 1.0, manter todo o escopo aprovado — incluindo marca, interface, pipeline, estrutura, compilação e empacotamento — na branch de release designada pelo usuário; não abrir branches de subtrabalho sem pedido explícito.
 - `dev` é a branch permanente de integração/staging. Ao concluir e revisar uma branch de trabalho, mesclar nela, confirmar o merge e encerrar/apagar a branch concluída. A próxima branch deve nascer do `dev` atualizado.
 - Promover de `dev` para `main` somente quando o release estável estiver aprovado. Não fazer push, force-push nem reescrever histórico sem pedido explícito.
 
@@ -55,6 +56,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 
 - Manter a identidade alinhada entre `package.json` (`productName`, `author`, `description`), `packagerConfig.win32metadata`, as opções do Squirrel Maker e `app.setAppUserModelId`; o `name` do Squirrel e o App User Model ID precisam permanecer compatíveis para preservar atalhos e notificações.
 - Manter o SVG de origem e os ícones gerados em `src/assets/brand`; alinhar o ícone do executável, o `BrowserWindow.icon` e o `setupIcon` do instalador. Não inventar entidade publicadora: assinatura Authenticode só pode ser declarada quando o pacote tiver sido assinado com identidade verificada.
+- Apresentar conceitos de logo/ícone junto da marca atual do navbar e obter aprovação do usuário antes de integrar assets ou alterar referências/configuração. Para a 1.0, preservar a essência aprovada da wordmark do navbar durante o alinhamento com o ícone do app.
 
 ## Etapas e commits da migração
 
