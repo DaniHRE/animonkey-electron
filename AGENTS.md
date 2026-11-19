@@ -83,6 +83,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 ## Controle do computador
 
 - QA registrado em 15/11/2026: quando a árvore de acessibilidade permanecer na rota anterior após navegação, conferir a captura atual antes de reutilizar índices. Miniaturas quebradas em detalhes/player devem ser tratadas como falha visual e impedem o aceite dessas listas.
+- Para screenshots de apresentação no README, quando o usuário fornecer a captura original para uso, preservá-la sem edição; qualquer composição visual deve ser mostrada fora do repositório antes de ser adicionada.
 
 - Não usar controle do computador, captura de tela, interação com janelas ou automação de interface nesta máquina, a menos que o usuário solicite formalmente essa ação e a aprove explicitamente. Aprovação para uma tarefa não se estende a tarefas futuras.
 - Preferir inspeção por código, terminal e ferramentas de validação não visuais. Não iniciar ou retomar uma sessão de controle visual sem a aprovação exigida acima.

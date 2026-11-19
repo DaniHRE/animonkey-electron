@@ -33,7 +33,7 @@ A disponibilidade de providers, episódios, áudios e legendas varia conforme a 
 
 ## Capturas de tela
 
-As capturas da build empacotada serão adicionadas aqui após concluir a captura em um perfil limpo e sem sessão de conta.
+![Página inicial do Animonkey Desktop](docs/screenshots/home.png)
 
 ## Tecnologias
 

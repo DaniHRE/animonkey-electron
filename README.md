@@ -33,7 +33,7 @@ Provider, episode, audio, and caption availability depends on the source and can
 
 ## Screenshots
 
-Screenshots from the current packaged build will be added here after the clean, signed-out profile capture is complete.
+![Animonkey Desktop Home page](docs/screenshots/home.png)
 
 ## Technology
 
