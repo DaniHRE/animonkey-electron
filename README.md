@@ -1,8 +1,6 @@
 <div align="center">
   <img src="src/assets/brand/animonkey-logo.svg" alt="Animonkey" width="420" />
 
-  <h1>Animonkey Desktop</h1>
-
   <p>Discover anime, manage your personal library, and watch episodes from available sources.</p>
 
   <p>
