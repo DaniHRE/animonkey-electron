@@ -1,5 +1,8 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
+import {
+  MakerSquirrel,
+  type MakerSquirrelConfig,
+} from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
@@ -8,6 +11,20 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+
+type SquirrelMakerConfigWithAdditionalFiles = MakerSquirrelConfig & {
+  additionalFiles: Array<{ src: string; target: string }>;
+};
+
+const squirrelMakerConfig = {
+  setupIcon: path.resolve('src/assets/brand/animonkey-app-icon.ico'),
+  additionalFiles: [
+    {
+      src: 'LICENSES.chromium.html',
+      target: 'lib\\net45',
+    },
+  ],
+} satisfies SquirrelMakerConfigWithAdditionalFiles;
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -39,9 +56,7 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({
-      setupIcon: path.resolve('src/assets/brand/animonkey-app-icon.ico'),
-    }),
+    new MakerSquirrel(squirrelMakerConfig),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
