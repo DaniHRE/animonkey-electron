@@ -285,7 +285,7 @@
 
 .app-header__brand-logo {
   display: block;
-  width: 176px;
+  width: 192px;
   height: auto;
   user-select: none;
 }
@@ -458,7 +458,7 @@
 
 @media (max-width: 600px) {
   .app-header__brand-logo {
-    width: clamp(104px, 26vw, 136px);
+    width: clamp(112px, 28vw, 148px);
   }
 
   .app-header {
@@ -479,7 +479,7 @@
   }
 
   .app-header:has(.app-header__show-sidebar) .app-header__brand-logo {
-    width: clamp(104px, 26vw, 125px);
+    width: clamp(112px, 28vw, 136px);
   }
 }
 
