@@ -12,7 +12,17 @@ import path from 'node:path';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    extraResource: ['anivexa-runtime'],
+    icon: path.resolve('src/assets/brand/animonkey-app-icon'),
+    extraResource: [
+      'anivexa-runtime',
+      'src/assets/brand/animonkey-app-icon.png',
+    ],
+    win32metadata: {
+      FileDescription: 'Desktop anime discovery and personal library',
+      InternalName: 'Animonkey',
+      OriginalFilename: 'Animonkey.exe',
+      ProductName: 'Animonkey',
+    },
   },
   hooks: {
     generateAssets: async (_forgeConfig, platform, arch) => {
@@ -29,7 +39,9 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({
+      setupIcon: path.resolve('src/assets/brand/animonkey-app-icon.ico'),
+    }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),

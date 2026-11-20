@@ -27,6 +27,21 @@ if (started) {
   app.quit();
 }
 
+if (process.platform === 'win32') {
+  // MakerSquirrel normalizes the package name's hyphen to an underscore.
+  app.setAppUserModelId('com.squirrel.animonkey_electron.Animonkey');
+}
+
+const appIconPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'animonkey-app-icon.png')
+  : path.join(
+      app.getAppPath(),
+      'src',
+      'assets',
+      'brand',
+      'animonkey-app-icon.png',
+    );
+
 const EXTERNAL_LINK_HOSTS = new Set([
   'anilist.co',
   'youtube.com',
@@ -342,6 +357,7 @@ const createWindow = () => {
     minWidth: 900,
     minHeight: 640,
     backgroundColor: '#0b0b0c',
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
