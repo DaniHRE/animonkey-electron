@@ -24,7 +24,7 @@ import {
 } from '@tanstack/react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import { useAccount } from '@/context/account-state';
-import animonkeyLogoUrl from '@/assets/brand/animonkey-logo.svg';
+import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { useTitleLanguage } from '@/hooks/use-title-language';
