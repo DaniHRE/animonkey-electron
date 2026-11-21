@@ -260,7 +260,9 @@
 }
 
 .app-header__show-sidebar {
-  flex: 0 0 40px;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
 }
 
 .app-header__brand:focus-visible,
@@ -275,18 +277,34 @@
   flex: 0 0 auto;
 }
 
+.app-header__brand {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+
 .app-header__brand-logo {
   display: block;
-  width: 176px;
+  width: 192px;
   height: auto;
   user-select: none;
 }
 
 .app-header {
+  display: grid;
+  grid-template-columns:
+    minmax(280px, 1fr) minmax(0, min(800px, calc(100vw - 632px)))
+    minmax(280px, 1fr);
+  column-gap: 16px;
+  align-items: center;
   isolation: isolate;
   border-bottom: 1px solid
     rgb(255 255 255 / calc(var(--app-scroll-progress) * 5%));
   background: transparent;
+}
+
+.app-header:has(.app-header__show-sidebar) .app-header__brand {
+  margin-left: 52px;
 }
 
 .app-header::before {
@@ -322,9 +340,20 @@
 }
 
 .app-header__search {
-  width: 320px;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+  width: 100%;
+  max-width: 800px;
   min-width: 0;
-  flex: 0 1 320px;
+  flex: none;
+}
+
+.app-header__actions {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-width: 0;
 }
 
 .app-header__search-input {
@@ -407,13 +436,14 @@
     padding-left 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-@media (max-width: 600px) {
-  .app-header__brand-logo {
-    width: clamp(108px, 32vw, 138px);
+@media (max-width: 1024px) {
+  .app-header__actions {
+    gap: 8px;
   }
 
-  .app-header__search {
-    flex-basis: 260px;
+  .app-header__language {
+    width: 68px;
+    flex-basis: 68px;
   }
 
   .app-header__account > span,
@@ -423,6 +453,33 @@
 
   .app-header__account {
     padding: 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-header__brand-logo {
+    width: clamp(112px, 28vw, 148px);
+  }
+
+  .app-header {
+    grid-template-columns:
+      minmax(0, 1fr) minmax(112px, min(240px, 42vw))
+      minmax(0, 1fr);
+    column-gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-header__search {
+    display: none;
+  }
+
+  .app-header:has(.app-header__show-sidebar) .app-header__brand {
+    margin-left: 48px;
+  }
+
+  .app-header:has(.app-header__show-sidebar) .app-header__brand-logo {
+    width: clamp(112px, 28vw, 136px);
   }
 }
 

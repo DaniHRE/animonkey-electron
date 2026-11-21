@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Animonkey A icon concept</title>
+  <defs>
+    <linearGradient id="rim" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8FE14B"/>
+      <stop offset=".23" stop-color="#42D1A7"/>
+      <stop offset=".48" stop-color="#448BE1"/>
+      <stop offset=".68" stop-color="#9457D8"/>
+      <stop offset=".84" stop-color="#D94FA3"/>
+      <stop offset="1" stop-color="#E59A42"/>
+    </linearGradient>
+    <linearGradient id="surface" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#242528"/>
+      <stop offset="1" stop-color="#151619"/>
+    </linearGradient>
+    <filter id="markShadow" x="-25%" y="-25%" width="150%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#000000" flood-opacity=".28"/>
+    </filter>
+  </defs>
+
+  <rect x="8" y="8" width="1008" height="1008" rx="236" fill="url(#rim)"/>
+  <rect x="25" y="25" width="974" height="974" rx="218" fill="url(#surface)"/>
+  <rect x="27" y="27" width="970" height="970" rx="216" fill="none" stroke="#FFFFFF" stroke-opacity=".045" stroke-width="4"/>
+
+  <g transform="translate(0 50)" filter="url(#markShadow)">
+    <path d="
+      M512 220
+      C494 220 479 231 470 249
+      L291 655
+      C281 679 298 704 325 704
+      H410
+      C424 704 433 696 439 683
+      L512 520
+      L585 683
+      C591 696 600 704 614 704
+      H699
+      C726 704 743 679 733 655
+      L554 249
+      C545 231 530 220 512 220Z
+      M512 337
+      L601 535
+      H423Z"
+      fill="#F7F7F5" fill-rule="evenodd"/>
+    <path d="M403 510H621V568H403Z" fill="#F7F7F5"/>
+  </g>
+</svg>

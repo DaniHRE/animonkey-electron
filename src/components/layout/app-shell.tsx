@@ -24,8 +24,9 @@ import {
 } from '@tanstack/react-router';
 import { motion, useReducedMotion } from 'motion/react';
 import { useAccount } from '@/context/account-state';
-import animonkeyLogoUrl from '@/assets/brand/animonkey-logo.svg';
+import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import './app-shell.css';
@@ -259,7 +260,7 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header className="app-header fixed inset-x-0 top-0 z-40 flex h-[81px] items-center gap-3 pr-4 pl-6">
+        <header className="app-header fixed inset-x-0 top-0 z-40 h-[81px] pr-4 pl-6">
           <div
             className="app-header__edge app-header__edge--left"
             aria-hidden="true"
@@ -321,7 +322,8 @@ export function AppShell() {
             </form>
           )}
 
-          <div className="ml-auto flex items-center gap-4">
+          <div className="app-header__actions flex items-center gap-4">
+            <AppUpdateCenter />
             <button
               type="button"
               className="app-header__language"

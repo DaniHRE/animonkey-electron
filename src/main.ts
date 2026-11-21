@@ -1,5 +1,6 @@
 import {
   app,
+  autoUpdater,
   BrowserWindow,
   ipcMain,
   shell,
@@ -19,6 +20,7 @@ import type {
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeRating } from './types/anime';
+import type { AppUpdateSnapshot, AppUpdateStatus } from './types/updates';
 
 registerMediaScheme();
 
@@ -26,6 +28,21 @@ registerMediaScheme();
 if (started) {
   app.quit();
 }
+
+if (process.platform === 'win32') {
+  // MakerSquirrel normalizes the package name's hyphen to an underscore.
+  app.setAppUserModelId('com.squirrel.animonkey_electron.Animonkey');
+}
+
+const appIconPath = app.isPackaged
+  ? path.join(process.resourcesPath, 'animonkey-app-icon.png')
+  : path.join(
+      app.getAppPath(),
+      'src',
+      'assets',
+      'brand',
+      'animonkey-app-icon.png',
+    );
 
 const EXTERNAL_LINK_HOSTS = new Set([
   'anilist.co',
@@ -40,6 +57,64 @@ const ANIME_DEEP_LINK = /^app:run:\/\/anime\/(\d+)\/?$/i;
 let mainWindow: BrowserWindow | null = null;
 let pendingAnimeId: string | null = null;
 let rendererReady = false;
+
+const AUTO_UPDATE_START_DELAY_MS = 10_000;
+const AUTO_UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+const UPDATE_FEED_BASE_URL =
+  'https://update.electronjs.org/DaniHRE/animonkey-electron';
+const supportsAutoUpdates =
+  app.isPackaged && process.platform === 'win32' && process.arch === 'x64';
+let updateSnapshot: AppUpdateSnapshot = {
+  revision: 0,
+  status: supportsAutoUpdates ? 'idle' : 'unsupported',
+  currentVersion: app.getVersion(),
+};
+
+function publishUpdateStatus(status: AppUpdateStatus): void {
+  updateSnapshot = {
+    revision: updateSnapshot.revision + 1,
+    status,
+    currentVersion: app.getVersion(),
+  };
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updates:state', updateSnapshot);
+  }
+}
+
+function checkForUpdates(): void {
+  if (
+    !supportsAutoUpdates ||
+    ['checking', 'downloading', 'ready'].includes(updateSnapshot.status)
+  ) {
+    return;
+  }
+
+  publishUpdateStatus('checking');
+  try {
+    autoUpdater.checkForUpdates();
+  } catch {
+    publishUpdateStatus('error');
+  }
+}
+
+function configureAutoUpdates(): void {
+  if (!supportsAutoUpdates) return;
+
+  autoUpdater.setFeedURL({
+    url: `${UPDATE_FEED_BASE_URL}/win32-x64/${app.getVersion()}`,
+  });
+
+  autoUpdater.on('checking-for-update', () => publishUpdateStatus('checking'));
+  autoUpdater.on('update-available', () => publishUpdateStatus('downloading'));
+  autoUpdater.on('update-not-available', () => publishUpdateStatus('current'));
+  autoUpdater.on('update-downloaded', () => publishUpdateStatus('ready'));
+  autoUpdater.on('error', () => publishUpdateStatus('error'));
+
+  // Squirrel holds a file lock briefly after first run, so defer the first check.
+  setTimeout(checkForUpdates, AUTO_UPDATE_START_DELAY_MS);
+  setInterval(checkForUpdates, AUTO_UPDATE_INTERVAL_MS);
+}
 
 function animeIdFromDeepLink(value: string): string | null {
   const match = ANIME_DEEP_LINK.exec(value);
@@ -107,6 +182,21 @@ function asObject(value: unknown): Record<string, unknown> {
     throw new Error('Dados da conta inválidos.');
   }
   return value as Record<string, unknown>;
+}
+
+function registerUpdateIpc(): void {
+  ipcMain.handle('updates:get-state', (event) => {
+    assertTrustedIpcSender(event);
+    return updateSnapshot;
+  });
+  ipcMain.handle('updates:check', (event) => {
+    assertTrustedIpcSender(event);
+    checkForUpdates();
+  });
+  ipcMain.handle('updates:install', (event) => {
+    assertTrustedIpcSender(event);
+    if (updateSnapshot.status === 'ready') autoUpdater.quitAndInstall();
+  });
 }
 
 function parseCredentials(value: unknown): AccountCredentials {
@@ -342,6 +432,7 @@ const createWindow = () => {
     minWidth: 900,
     minHeight: 640,
     backgroundColor: '#0b0b0c',
+    icon: appIconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -381,6 +472,7 @@ const createWindow = () => {
   }
 };
 
+registerUpdateIpc();
 registerAccountIpc();
 registerAnimeArtworkIpc();
 registerAnivexaIpc(assertTrustedIpcSender);
@@ -417,6 +509,7 @@ app.on('ready', () => {
   installMediaProxy();
   void anivexaRuntime.start().catch(() => {});
   createWindow();
+  configureAutoUpdates();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

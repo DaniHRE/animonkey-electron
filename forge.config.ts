@@ -1,5 +1,8 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
+import {
+  MakerSquirrel,
+  type MakerSquirrelConfig,
+} from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
@@ -9,10 +12,36 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
+type SquirrelMakerConfigWithAdditionalFiles = MakerSquirrelConfig & {
+  additionalFiles: Array<{ src: string; target: string }>;
+};
+
+const squirrelMakerConfig = {
+  iconUrl:
+    'https://raw.githubusercontent.com/DaniHRE/animonkey-electron/c82681ba65a9bcd1fc2b6630f71200d610541c2c/src/assets/brand/animonkey-app-icon.ico',
+  setupIcon: path.resolve('src/assets/brand/animonkey-app-icon.ico'),
+  additionalFiles: [
+    {
+      src: 'LICENSES.chromium.html',
+      target: 'lib\\net45',
+    },
+  ],
+} satisfies SquirrelMakerConfigWithAdditionalFiles;
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    extraResource: ['anivexa-runtime'],
+    icon: path.resolve('src/assets/brand/animonkey-app-icon'),
+    extraResource: [
+      'anivexa-runtime',
+      'src/assets/brand/animonkey-app-icon.png',
+    ],
+    win32metadata: {
+      FileDescription: 'Desktop anime discovery and personal library',
+      InternalName: 'Animonkey',
+      OriginalFilename: 'Animonkey.exe',
+      ProductName: 'Animonkey',
+    },
   },
   hooks: {
     generateAssets: async (_forgeConfig, platform, arch) => {
@@ -29,7 +58,7 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel(squirrelMakerConfig),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),

@@ -1,37 +1,84 @@
-# Animonkey Desktop
+<div align="center">
+  <img src="src/assets/brand/animonkey-logo.svg" alt="Animonkey" width="420" />
 
-Aplicativo desktop Electron do Animonkey. A passagem funcional para desktop foi encerrada por decisão de produto; o app web em `../animonkey` continua funcional e independente. A preparação da distribuição 1.0 ainda tem decisões e validações próprias. Veja o [plano histórico de migração](./docs/archive/MIGRATION_PLAN.md), o [checklist ativo do release 1.0](./docs/releases/1.0-checklist.md) e o [histórico arquivado](./docs/archive/MIGRATION_PROGRESS.md).
+  <p>Discover anime, manage your personal library, and watch episodes from available sources.</p>
 
-## Estado atual
+  <p>
+    <a href="README.pt-BR.md">Português (Brasil)</a> ·
+    <a href="https://github.com/DaniHRE/animonkey-electron">GitHub repository</a>
+  </p>
 
-O app inclui shell desktop, descoberta do AniList, busca com filtros, detalhes, agenda, cache offline, biblioteca local, backup importável/exportável, conta/sync, feed e o player Vidstack com fontes Anivexa e proxy de mídia no processo principal para HLS/DASH, headers, Range e legendas. Watch Together, painel admin e páginas institucionais permanecem no site web; não fazem parte do escopo desktop atual. A distribuição conjunta da Anivexa e os demais critérios de release 1.0 estão em preparação; veja [docs/archive/MIGRATION_PLAN.md](./docs/archive/MIGRATION_PLAN.md) e [docs/releases/1.0-checklist.md](./docs/releases/1.0-checklist.md).
+  <p>
+    <img src="https://img.shields.io/badge/Electron-43.4.0-47848F?logo=electron&logoColor=white" alt="Electron 43.4.0" />
+    <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+    <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white" alt="TypeScript 6.0" />
+    <img src="https://img.shields.io/badge/pnpm-10.33.3-F69220?logo=pnpm&logoColor=white" alt="pnpm 10.33.3" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-4CAF50.svg" alt="MIT License" /></a>
+  </p>
+</div>
 
-## Requisitos e comandos
+Animonkey Desktop brings anime discovery and personal watch tracking into a desktop app. Explore the AniList catalog and schedule, keep your library on this device, and use the bundled Anivexa runtime to find episode sources supported by Vidstack.
 
-- Node.js 26.x e pnpm 10.
-- `pnpm install` instala dependências a partir do `pnpm-lock.yaml`.
-- `pnpm start` executa o app em desenvolvimento.
-- `pnpm typecheck`, `pnpm lint` e `pnpm format:check` validam o código.
-- `pnpm package` empacota o app; `pnpm make` cria os instaladores da plataforma atual.
+> **Release status:** Version 1.0 is in preparation. Windows x64 is the initial distribution target; there is no public installer yet. Support for other release platforms has not been confirmed.
 
-## API de episódios e player
+## Home
 
-- Desenvolvimento local usa `http://localhost:4000` como padrão para a API Anivexa.
-- Para apontar para outra instância, configure `VITE_ANIVEXA_API_URL` antes de iniciar ou empacotar. Builds de produção aceitam apenas HTTPS.
-- HTTP para `localhost` em pacote de QA exige o opt-in `VITE_ALLOW_LOCAL_HTTP_API_FOR_TESTS=true`; não use esse modo em distribuição.
-- A API Anivexa fornece episódios e fontes, não um proxy de mídia. O processo principal do Electron faz o proxy local e reescreve playlists HLS e manifests DASH, encaminhando Range e headers exigidos. Nenhuma chave privada da Anivexa deve entrar no app.
-- A reprodução depende da Anivexa. A decisão é distribuí-la junto com o Electron; o modelo de empacotamento e execução será fechado na preparação do release 1.0.
+![Animonkey Desktop home page](docs/screenshots/home.png)
 
-## Arquitetura
+## What you can do
 
-- `src/main.ts`: janela e ciclo de vida Electron.
-- `src/preload.ts`: bridge `window.animonkey` pequena e tipada.
-- `src/app.tsx` e `src/components/`: rotas e interface React.
-- `src/services/`: integrações desacopladas da UI.
-- `src/lib/`, `src/hooks/`, `src/context/`, `src/types/`: domínio compartilhado do renderer.
+- **Discover anime:** Browse seasonal titles, search with catalog filters, check the schedule, and open anime details backed by AniList metadata.
+- **Manage a personal library:** Keep your watchlist, ratings, and episode progress locally. These features work without an account and remain available offline.
+- **Back up your data:** Import and export a versioned local backup.
+- **Sync optionally:** Sign in to sync supported library data and use the activity feed.
+- **Watch available episodes:** Get episode and provider listings from Anivexa and play supported sources with Vidstack.
 
-O renderer não recebe acesso a Node. Segredos de servidor nunca são distribuídos dentro do pacote. Consulte [AGENTS.md](./AGENTS.md) antes de implementar features.
+Playback depends on the episode, provider, and stream currently available. The app does not host anime or guarantee that a particular source, audio track, or caption will be available.
 
-## Contribuição
+## Technology
 
-Veja [CONTRIBUTING.md](./CONTRIBUTING.md) para a regra de objetivo, merge e encerramento de branches.
+- **Desktop and build:** Electron Forge, Vite, React 19, and TypeScript 6
+- **Interface:** Tailwind CSS 4, shadcn/Radix, TanStack Router, and TanStack Query
+- **Playback:** Vidstack, HLS.js, and dash.js
+- **Package manager:** pnpm 10
+- **Catalog:** AniList; episode-source integration through the pinned Anivexa API submodule
+
+## Run from source
+
+There is no public installer yet. To start the development app, install [Node.js 26.x](https://nodejs.org/) and pnpm 10.33.3, then run:
+
+```sh
+pnpm install
+pnpm start
+```
+
+Account and sync features are optional. They require the desktop API settings described in [`.env.example`](.env.example). Use only the publishable client key in the desktop app; never add server secrets such as a Supabase `service_role` key.
+
+To create a Windows x64 package locally:
+
+```sh
+pnpm make --platform=win32 --arch=x64
+```
+
+The package prepares the pinned [`vendor/anivexa-api`](vendor/anivexa-api) submodule as a local Electron utility process. Episode and provider requests use typed IPC between the renderer and the main process.
+
+## Documentation
+
+- [Documentation index](docs/README.md)
+- [1.0 release roadmap](docs/releases/1.0-roadmap.md)
+- [Active 1.0 release checklist](docs/releases/1.0-checklist.md)
+- [Archived migration plan](docs/archive/MIGRATION_PLAN.md)
+- [Contributing guide](CONTRIBUTING.md)
+
+## Credits and inspiration
+
+- Thanks to [JulioC090](https://github.com/JulioC090) for the [Accendo Electron React App Template](https://github.com/JulioC090/accendo-templates/tree/main/accendo-electron-react-app-template), which made it much easier and faster to get this project started.
+- [AniList](https://anilist.co/) supplies catalog metadata and schedule data.
+- [Anivexa API](https://github.com/DaniHRE/Anivexa-API) supplies episode and provider integration through the pinned submodule in this repository.
+- [Taizen](https://taizen.moe/) can enrich featured titles with artwork.
+- [Vidstack](https://vidstack.io/) provides the media-player framework and caption interfaces.
+- The watch-page information hierarchy draws inspiration from [Re:ANIME](https://reanime.cz/). The Animonkey desktop interface and styling are independently implemented.
+
+## License
+
+This repository is licensed under the [MIT License](LICENSE). Third-party projects, artwork, and APIs retain their own licenses and terms.
