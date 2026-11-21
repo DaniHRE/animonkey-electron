@@ -1,4 +1,26 @@
 {
+  "1.0.1": {
+    "eyebrow": "ATUALIZAÇÃO 1.0.1",
+    "title": "O Animonkey recebe atualizações pelo próprio app.",
+    "summary": "A primeira atualização para quem já usa a 1.0.0 traz o ícone aprovado para o aplicativo e o setup, além de avisos para acompanhar novas versões, downloads e reinicialização.",
+    "highlights": [
+      {
+        "icon": "sync",
+        "title": "Atualizações pelo aplicativo",
+        "description": "Veja quando uma nova versão está disponível, acompanhe o download e escolha quando reiniciar."
+      },
+      {
+        "icon": "discover",
+        "title": "Ícone alinhado no Windows",
+        "description": "O ícone aprovado identifica o aplicativo instalado, as janelas e o setup."
+      },
+      {
+        "icon": "library",
+        "title": "Novidades por versão",
+        "description": "Consulte o que mudou após cada atualização e reabra as notas pelo centro de atualizações."
+      }
+    ]
+  },
   "1.0.0": {
     "eyebrow": "PRIMEIRO LANÇAMENTO",
     "title": "Anime para descobrir e acompanhar.",
