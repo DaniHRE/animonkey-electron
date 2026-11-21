@@ -17,6 +17,8 @@ type SquirrelMakerConfigWithAdditionalFiles = MakerSquirrelConfig & {
 };
 
 const squirrelMakerConfig = {
+  iconUrl:
+    'https://raw.githubusercontent.com/DaniHRE/animonkey-electron/main/src/assets/brand/animonkey-app-icon.ico',
   setupIcon: path.resolve('src/assets/brand/animonkey-app-icon.ico'),
   additionalFiles: [
     {
