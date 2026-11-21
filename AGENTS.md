@@ -47,8 +47,22 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 ## Fluxo de branches
 
 - Cada branch de trabalho tem um objetivo explícito. Não reutilizar uma branch concluída para iniciar outro objetivo.
-- Quando o objetivo for concluído e revisado, mesclar em `main` para trabalho estável aprovado ou em `develop` para integração; confirmar o merge e então fechar/apagar a branch local e remota.
-- A regra de ciclo de branch em `CONTRIBUTING.md` é autorização explícita para esse merge e fechamento; não autoriza force-push nem reescrita de histórico.
+- Nunca iniciar nomes de branch com `Codex` ou `codex`; usar um tipo e objetivo descritivos, como `feat/...`, `fix/...`, `chore/...` ou `release/...`.
+- Durante a preparação do release 1.0, manter todo o escopo aprovado — incluindo marca, interface, pipeline, estrutura, compilação e empacotamento — na branch de release designada pelo usuário; não abrir branches de subtrabalho sem pedido explícito.
+- `dev` é a branch permanente de integração/staging. Ao concluir e revisar uma branch de trabalho, mesclar nela, confirmar o merge e encerrar/apagar a branch concluída. A próxima branch deve nascer do `dev` atualizado.
+- Promover de `dev` para `main` somente quando o release estável estiver aprovado. Não fazer push, force-push nem reescrever histórico sem pedido explícito.
+
+## Identidade do pacote Windows
+
+- Manter a identidade alinhada entre `package.json` (`productName`, `author`, `description`), `packagerConfig.win32metadata`, as opções do Squirrel Maker e `app.setAppUserModelId`; o `name` do Squirrel e o App User Model ID precisam permanecer compatíveis para preservar atalhos e notificações.
+- Manter o SVG de origem e os ícones gerados em `src/assets/brand`; alinhar o ícone do executável, o `BrowserWindow.icon` e o `setupIcon` do instalador. Não inventar entidade publicadora: assinatura Authenticode só pode ser declarada quando o pacote tiver sido assinado com identidade verificada.
+- Para o auto-update Windows/Squirrel, inicializar `autoUpdater` somente no pacote Win32 x64, aguardar pelo menos 10 segundos após a inicialização por causa do bloqueio de arquivo do primeiro run e solicitar reinicialização depois do download; não expor a API nativa pelo preload.
+- A interface de atualização recebe apenas estados sanitizados por IPC tipado do processo main; apresentar download, pronto, erro e ação de reinício sem expor URL/feed nem aceitar comandos genéricos.
+- Manter notas “Novidades” versionadas em `src/data/release-notes.json`, abrir a versão nova após detectar a atualização instalada e validar que `package.json.version` tenha notas completas antes de empacotar. Este catálogo de conteúdo não gera nem substitui changelog.
+- No canal estável GitHub, push em `main` compila e guarda artefatos de CI; somente uma release estável SemVer publicada a partir de commit alcançável por `main` envia Setup, `RELEASES` e o `.nupkg` completo ao GitHub Releases. O workflow não cria tags/releases nem faz push; a publicação da release é uma ação explícita da pessoa responsável.
+- Na auditoria Windows, considere que `@electron/packager` pode inferir `CompanyName` de `package.json.author`; isso é metadado do arquivo, não identidade verificada nem prova de assinatura. Confira também licenças/notices no artefato efetivamente distribuído (como o `.nupkg` do Squirrel), não só na pasta intermediária do app.
+- Audite o fuse wire do executável empacotado (`electron-fuses read --app`), registre as versões de Electron e `@electron/fuses` e correlacione bits sem nome com o schema upstream antes de concluir o gate; a configuração do Forge, isoladamente, não prova o estado final.
+- Apresentar conceitos de logo/ícone junto da marca atual do navbar e obter aprovação do usuário antes de integrar assets ou alterar referências/configuração. Para a 1.0, preservar a essência aprovada da wordmark do navbar durante o alinhamento com o ícone do app.
 
 ## Etapas e commits da migração
 
@@ -83,6 +97,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 ## Controle do computador
 
 - QA registrado em 15/11/2026: quando a árvore de acessibilidade permanecer na rota anterior após navegação, conferir a captura atual antes de reutilizar índices. Miniaturas quebradas em detalhes/player devem ser tratadas como falha visual e impedem o aceite dessas listas.
+- Para screenshots de apresentação no README, quando o usuário fornecer a captura original para uso, preservá-la sem edição; qualquer composição visual deve ser mostrada fora do repositório antes de ser adicionada.
 
 - Não usar controle do computador, captura de tela, interação com janelas ou automação de interface nesta máquina, a menos que o usuário solicite formalmente essa ação e a aprove explicitamente. Aprovação para uma tarefa não se estende a tarefas futuras.
 - Preferir inspeção por código, terminal e ferramentas de validação não visuais. Não iniciar ou retomar uma sessão de controle visual sem a aprovação exigida acima.

@@ -1,0 +1,51 @@
+{
+  "1.0.1": {
+    "eyebrow": "ATUALIZAÇÃO 1.0.1",
+    "title": "O Animonkey recebe atualizações pelo próprio app.",
+    "summary": "A primeira atualização para quem já usa a 1.0.0 traz o ícone aprovado para o aplicativo e o setup, além de avisos para acompanhar novas versões, downloads e reinicialização.",
+    "highlights": [
+      {
+        "icon": "sync",
+        "title": "Atualizações pelo aplicativo",
+        "description": "Veja quando uma nova versão está disponível, acompanhe o download e escolha quando reiniciar."
+      },
+      {
+        "icon": "discover",
+        "title": "Ícone alinhado no Windows",
+        "description": "O ícone aprovado identifica o aplicativo instalado, as janelas e o setup."
+      },
+      {
+        "icon": "library",
+        "title": "Novidades por versão",
+        "description": "Consulte o que mudou após cada atualização e reabra as notas pelo centro de atualizações."
+      }
+    ]
+  },
+  "1.0.0": {
+    "eyebrow": "PRIMEIRO LANÇAMENTO",
+    "title": "Anime para descobrir e acompanhar.",
+    "summary": "O Animonkey chega ao desktop com uma experiência feita para explorar animes, organizar sua biblioteca e continuar de onde parou.",
+    "highlights": [
+      {
+        "icon": "discover",
+        "title": "Explore o catálogo",
+        "description": "Encontre títulos, veja detalhes e acompanhe a agenda com dados do AniList."
+      },
+      {
+        "icon": "library",
+        "title": "Sua biblioteca, no seu dispositivo",
+        "description": "Salve progresso, avaliações e listas localmente. Os dados continuam disponíveis offline."
+      },
+      {
+        "icon": "sync",
+        "title": "Sincronização opcional",
+        "description": "Entre na sua conta quando quiser sincronizar os dados compatíveis entre dispositivos."
+      },
+      {
+        "icon": "play",
+        "title": "Assista a episódios disponíveis",
+        "description": "Consulte fontes da Anivexa e reproduza os streams compatíveis com o player."
+      }
+    ]
+  }
+}

@@ -1,9 +1,9 @@
 {
   "name": "animonkey-electron",
   "productName": "Animonkey",
-  "description": "Offline-first anime discovery and streaming app for desktop",
+  "description": "Desktop anime discovery and personal library with offline tracking, optional account sync, and playback from available Anivexa sources",
   "author": "DaniHRE",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": ".vite/build/main.js",
   "private": true,
   "engines": {
@@ -15,6 +15,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "validate:release-notes": "node scripts/validate-release-notes.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit -p .",
