@@ -9,12 +9,18 @@ on:
     types:
       - published
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Published stable tag to receive the freshly built assets
+        type: string
+        required: false
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-stable-${{ github.event.release.tag_name || github.ref }}
+  group: windows-stable-${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -46,10 +52,10 @@ jobs:
         run: pnpm validate:release-notes
 
       - name: Validate stable release source
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
         shell: pwsh
         env:
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
         run: |
           $package = Get-Content package.json -Raw | ConvertFrom-Json
           if ($env:RELEASE_TAG -ne "v$($package.version)") {
@@ -115,7 +121,7 @@ jobs:
           retention-days: 14
 
   publish-assets:
-    if: github.event_name == 'release' && github.event.release.prerelease == false
+    if: (github.event_name == 'release' && github.event.release.prerelease == false) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -130,5 +136,5 @@ jobs:
       - name: Attach installer and Squirrel update files to the release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$RELEASE_TAG" release-assets/* --clobber
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
+        run: gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"
