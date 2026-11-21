@@ -59,7 +59,7 @@ function captureApiError(args) {
 const originalConsoleError = console.error.bind(console);
 console.error = (...args) => {
   captureApiError(args);
-  originalConsoleError(...args);
+  originalConsoleError('[Anivexa runtime] Error details suppressed.');
 };
 
 async function loadApi() {
