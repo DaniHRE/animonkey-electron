@@ -57,6 +57,7 @@ Aplicativo desktop do Animonkey. A migração funcional da experiência para Ele
 - Manter a identidade alinhada entre `package.json` (`productName`, `author`, `description`), `packagerConfig.win32metadata`, as opções do Squirrel Maker e `app.setAppUserModelId`; o `name` do Squirrel e o App User Model ID precisam permanecer compatíveis para preservar atalhos e notificações.
 - Manter o SVG de origem e os ícones gerados em `src/assets/brand`; alinhar o ícone do executável, o `BrowserWindow.icon` e o `setupIcon` do instalador. Não inventar entidade publicadora: assinatura Authenticode só pode ser declarada quando o pacote tiver sido assinado com identidade verificada.
 - Na auditoria Windows, considere que `@electron/packager` pode inferir `CompanyName` de `package.json.author`; isso é metadado do arquivo, não identidade verificada nem prova de assinatura. Confira também licenças/notices no artefato efetivamente distribuído (como o `.nupkg` do Squirrel), não só na pasta intermediária do app.
+- Audite o fuse wire do executável empacotado (`electron-fuses read --app`), registre as versões de Electron e `@electron/fuses` e correlacione bits sem nome com o schema upstream antes de concluir o gate; a configuração do Forge, isoladamente, não prova o estado final.
 - Apresentar conceitos de logo/ícone junto da marca atual do navbar e obter aprovação do usuário antes de integrar assets ou alterar referências/configuração. Para a 1.0, preservar a essência aprovada da wordmark do navbar durante o alinhamento com o ícone do app.
 
 ## Etapas e commits da migração
