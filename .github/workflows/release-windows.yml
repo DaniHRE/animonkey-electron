@@ -41,6 +41,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate release notes
+        run: pnpm validate:release-notes
+
       - name: Validate stable release source
         if: github.event_name == 'release'
         shell: pwsh

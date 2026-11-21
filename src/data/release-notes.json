@@ -1,0 +1,29 @@
+{
+  "1.0.0": {
+    "eyebrow": "PRIMEIRO LANÇAMENTO",
+    "title": "Anime para descobrir e acompanhar.",
+    "summary": "O Animonkey chega ao desktop com uma experiência feita para explorar animes, organizar sua biblioteca e continuar de onde parou.",
+    "highlights": [
+      {
+        "icon": "discover",
+        "title": "Explore o catálogo",
+        "description": "Encontre títulos, veja detalhes e acompanhe a agenda com dados do AniList."
+      },
+      {
+        "icon": "library",
+        "title": "Sua biblioteca, no seu dispositivo",
+        "description": "Salve progresso, avaliações e listas localmente. Os dados continuam disponíveis offline."
+      },
+      {
+        "icon": "sync",
+        "title": "Sincronização opcional",
+        "description": "Entre na sua conta quando quiser sincronizar os dados compatíveis entre dispositivos."
+      },
+      {
+        "icon": "play",
+        "title": "Assista a episódios disponíveis",
+        "description": "Consulte fontes da Anivexa e reproduza os streams compatíveis com o player."
+      }
+    ]
+  }
+}

@@ -2,7 +2,6 @@ import {
   app,
   autoUpdater,
   BrowserWindow,
-  dialog,
   ipcMain,
   shell,
   type IpcMainInvokeEvent,
@@ -21,6 +20,7 @@ import type {
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeRating } from './types/anime';
+import type { AppUpdateSnapshot, AppUpdateStatus } from './types/updates';
 
 registerMediaScheme();
 
@@ -62,54 +62,54 @@ const AUTO_UPDATE_START_DELAY_MS = 10_000;
 const AUTO_UPDATE_INTERVAL_MS = 60 * 60 * 1000;
 const UPDATE_FEED_BASE_URL =
   'https://update.electronjs.org/DaniHRE/animonkey-electron';
-let updateDialogOpen = false;
+const supportsAutoUpdates =
+  app.isPackaged && process.platform === 'win32' && process.arch === 'x64';
+let updateSnapshot: AppUpdateSnapshot = {
+  revision: 0,
+  status: supportsAutoUpdates ? 'idle' : 'unsupported',
+  currentVersion: app.getVersion(),
+};
 
-function configureAutoUpdates(): void {
+function publishUpdateStatus(status: AppUpdateStatus): void {
+  updateSnapshot = {
+    revision: updateSnapshot.revision + 1,
+    status,
+    currentVersion: app.getVersion(),
+  };
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('updates:state', updateSnapshot);
+  }
+}
+
+function checkForUpdates(): void {
   if (
-    !app.isPackaged ||
-    process.platform !== 'win32' ||
-    process.arch !== 'x64'
+    !supportsAutoUpdates ||
+    ['checking', 'downloading', 'ready'].includes(updateSnapshot.status)
   ) {
     return;
   }
+
+  publishUpdateStatus('checking');
+  try {
+    autoUpdater.checkForUpdates();
+  } catch {
+    publishUpdateStatus('error');
+  }
+}
+
+function configureAutoUpdates(): void {
+  if (!supportsAutoUpdates) return;
 
   autoUpdater.setFeedURL({
     url: `${UPDATE_FEED_BASE_URL}/win32-x64/${app.getVersion()}`,
   });
 
-  autoUpdater.on('error', () => {
-    process.stderr.write('Animonkey could not check for updates.\n');
-  });
-
-  autoUpdater.on('update-downloaded', () => {
-    if (updateDialogOpen) return;
-    updateDialogOpen = true;
-
-    void dialog
-      .showMessageBox({
-        type: 'info',
-        title: 'Atualização pronta',
-        message: 'Uma nova versão do Animonkey foi baixada.',
-        detail: 'Reinicie o aplicativo para concluir a instalação.',
-        buttons: ['Reiniciar agora', 'Mais tarde'],
-        defaultId: 0,
-        cancelId: 1,
-      })
-      .then(({ response }) => {
-        if (response === 0) autoUpdater.quitAndInstall();
-      })
-      .finally(() => {
-        updateDialogOpen = false;
-      });
-  });
-
-  const checkForUpdates = (): void => {
-    try {
-      autoUpdater.checkForUpdates();
-    } catch {
-      process.stderr.write('Animonkey could not check for updates.\n');
-    }
-  };
+  autoUpdater.on('checking-for-update', () => publishUpdateStatus('checking'));
+  autoUpdater.on('update-available', () => publishUpdateStatus('downloading'));
+  autoUpdater.on('update-not-available', () => publishUpdateStatus('current'));
+  autoUpdater.on('update-downloaded', () => publishUpdateStatus('ready'));
+  autoUpdater.on('error', () => publishUpdateStatus('error'));
 
   // Squirrel holds a file lock briefly after first run, so defer the first check.
   setTimeout(checkForUpdates, AUTO_UPDATE_START_DELAY_MS);
@@ -182,6 +182,21 @@ function asObject(value: unknown): Record<string, unknown> {
     throw new Error('Dados da conta inválidos.');
   }
   return value as Record<string, unknown>;
+}
+
+function registerUpdateIpc(): void {
+  ipcMain.handle('updates:get-state', (event) => {
+    assertTrustedIpcSender(event);
+    return updateSnapshot;
+  });
+  ipcMain.handle('updates:check', (event) => {
+    assertTrustedIpcSender(event);
+    checkForUpdates();
+  });
+  ipcMain.handle('updates:install', (event) => {
+    assertTrustedIpcSender(event);
+    if (updateSnapshot.status === 'ready') autoUpdater.quitAndInstall();
+  });
 }
 
 function parseCredentials(value: unknown): AccountCredentials {
@@ -457,6 +472,7 @@ const createWindow = () => {
   }
 };
 
+registerUpdateIpc();
 registerAccountIpc();
 registerAnimeArtworkIpc();
 registerAnivexaIpc(assertTrustedIpcSender);

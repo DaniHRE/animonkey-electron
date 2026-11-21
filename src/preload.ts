@@ -12,6 +12,7 @@ import {
   isAnivexaDiagnosticsSnapshot,
   type AnivexaBridge,
 } from './types/anivexa';
+import { isAppUpdateSnapshot, type AppUpdateBridge } from './types/updates';
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -98,4 +99,16 @@ contextBridge.exposeInMainWorld('animonkey', {
         ipcRenderer.removeListener('anivexa:diagnostics:updated', listener);
     },
   } satisfies AnivexaBridge,
+  updates: {
+    getState: () => ipcRenderer.invoke('updates:get-state'),
+    checkNow: () => ipcRenderer.invoke('updates:check'),
+    install: () => ipcRenderer.invoke('updates:install'),
+    onStateChanged: (callback) => {
+      const listener = (_event: IpcRendererEvent, value: unknown) => {
+        if (isAppUpdateSnapshot(value)) callback(value);
+      };
+      ipcRenderer.on('updates:state', listener);
+      return () => ipcRenderer.removeListener('updates:state', listener);
+    },
+  } satisfies AppUpdateBridge,
 });

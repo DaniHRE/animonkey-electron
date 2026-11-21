@@ -26,6 +26,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { useAccount } from '@/context/account-state';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import './app-shell.css';
@@ -322,6 +323,7 @@ export function AppShell() {
           )}
 
           <div className="app-header__actions flex items-center gap-4">
+            <AppUpdateCenter />
             <button
               type="button"
               className="app-header__language"
