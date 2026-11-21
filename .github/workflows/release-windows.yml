@@ -1,0 +1,130 @@
+name: Windows stable build
+
+on:
+  push:
+    branches:
+      - main
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-stable-${{ github.event.release.tag_name || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name != 'release' || github.event.release.prerelease == false
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository and pinned API
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26.13.1
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate stable release source
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          if ($env:RELEASE_TAG -ne "v$($package.version)") {
+            throw "Release tag must match package version v$($package.version)."
+          }
+
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+$') {
+            throw 'Stable releases must use a vMAJOR.MINOR.PATCH tag.'
+          }
+
+          git fetch origin main --no-tags
+          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch main for validation.' }
+
+          $releaseCommit = git rev-list -n 1 "refs/tags/$($env:RELEASE_TAG)"
+          if ($LASTEXITCODE -ne 0 -or -not $releaseCommit) {
+            throw 'Could not resolve the stable release tag.'
+          }
+
+          git merge-base --is-ancestor $releaseCommit origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Stable releases must point to a commit reachable from main.'
+          }
+
+      - name: Check lint
+        run: pnpm lint
+
+      - name: Check TypeScript
+        run: pnpm typecheck
+
+      - name: Build Windows x64 package
+        run: pnpm make --platform=win32 --arch=x64
+
+      - name: Stage installer and Squirrel update files
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $makerDirectory = Join-Path $env:GITHUB_WORKSPACE 'out/make/squirrel.windows/x64'
+          $setupFiles = @(Get-ChildItem $makerDirectory -File -Filter '* Setup.exe')
+          $packageFiles = @(Get-ChildItem $makerDirectory -File -Filter '*-full.nupkg')
+          $releasesFile = Join-Path $makerDirectory 'RELEASES'
+
+          if ($setupFiles.Count -ne 1 -or $packageFiles.Count -ne 1 -or -not (Test-Path $releasesFile)) {
+            throw 'Forge did not produce the expected Setup.exe, full .nupkg, and RELEASES files.'
+          }
+
+          $releaseManifest = Get-Content $releasesFile -Raw
+          if ($releaseManifest -notmatch [regex]::Escape($packageFiles[0].Name)) {
+            throw 'The RELEASES manifest does not reference the generated full .nupkg.'
+          }
+
+          $artifactDirectory = Join-Path $env:RUNNER_TEMP 'animonkey-windows-x64'
+          New-Item -ItemType Directory -Path $artifactDirectory -Force | Out-Null
+          Copy-Item $setupFiles[0].FullName (Join-Path $artifactDirectory "Animonkey-$($package.version)-win32-x64.exe")
+          Copy-Item $packageFiles[0].FullName $artifactDirectory
+          Copy-Item $releasesFile $artifactDirectory
+
+      - name: Upload CI or release assets
+        uses: actions/upload-artifact@v6
+        with:
+          name: animonkey-windows-x64
+          path: ${{ runner.temp }}/animonkey-windows-x64/*
+          if-no-files-found: error
+          retention-days: 14
+
+  publish-assets:
+    if: github.event_name == 'release' && github.event.release.prerelease == false
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows release assets
+        uses: actions/download-artifact@v7
+        with:
+          name: animonkey-windows-x64
+          path: release-assets
+
+      - name: Attach installer and Squirrel update files to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" release-assets/* --clobber

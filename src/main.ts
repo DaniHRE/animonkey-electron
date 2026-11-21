@@ -1,6 +1,8 @@
 import {
   app,
+  autoUpdater,
   BrowserWindow,
+  dialog,
   ipcMain,
   shell,
   type IpcMainInvokeEvent,
@@ -55,6 +57,64 @@ const ANIME_DEEP_LINK = /^app:run:\/\/anime\/(\d+)\/?$/i;
 let mainWindow: BrowserWindow | null = null;
 let pendingAnimeId: string | null = null;
 let rendererReady = false;
+
+const AUTO_UPDATE_START_DELAY_MS = 10_000;
+const AUTO_UPDATE_INTERVAL_MS = 60 * 60 * 1000;
+const UPDATE_FEED_BASE_URL =
+  'https://update.electronjs.org/DaniHRE/animonkey-electron';
+let updateDialogOpen = false;
+
+function configureAutoUpdates(): void {
+  if (
+    !app.isPackaged ||
+    process.platform !== 'win32' ||
+    process.arch !== 'x64'
+  ) {
+    return;
+  }
+
+  autoUpdater.setFeedURL({
+    url: `${UPDATE_FEED_BASE_URL}/win32-x64/${app.getVersion()}`,
+  });
+
+  autoUpdater.on('error', () => {
+    process.stderr.write('Animonkey could not check for updates.\n');
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    if (updateDialogOpen) return;
+    updateDialogOpen = true;
+
+    void dialog
+      .showMessageBox({
+        type: 'info',
+        title: 'Atualização pronta',
+        message: 'Uma nova versão do Animonkey foi baixada.',
+        detail: 'Reinicie o aplicativo para concluir a instalação.',
+        buttons: ['Reiniciar agora', 'Mais tarde'],
+        defaultId: 0,
+        cancelId: 1,
+      })
+      .then(({ response }) => {
+        if (response === 0) autoUpdater.quitAndInstall();
+      })
+      .finally(() => {
+        updateDialogOpen = false;
+      });
+  });
+
+  const checkForUpdates = (): void => {
+    try {
+      autoUpdater.checkForUpdates();
+    } catch {
+      process.stderr.write('Animonkey could not check for updates.\n');
+    }
+  };
+
+  // Squirrel holds a file lock briefly after first run, so defer the first check.
+  setTimeout(checkForUpdates, AUTO_UPDATE_START_DELAY_MS);
+  setInterval(checkForUpdates, AUTO_UPDATE_INTERVAL_MS);
+}
 
 function animeIdFromDeepLink(value: string): string | null {
   const match = ANIME_DEEP_LINK.exec(value);
@@ -433,6 +493,7 @@ app.on('ready', () => {
   installMediaProxy();
   void anivexaRuntime.start().catch(() => {});
   createWindow();
+  configureAutoUpdates();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
