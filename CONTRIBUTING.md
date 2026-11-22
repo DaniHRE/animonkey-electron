@@ -50,7 +50,7 @@ For user-facing UI changes, include a screenshot or a concise description of the
 
 ## Release notes
 
-Add a complete entry to `src/data/release-notes.json` whenever `package.json` changes version. This structured file is the source for the in-app “What’s New” screen and the GitHub draft release description. Keep user-facing copy in Brazilian Portuguese and use one of the icon identifiers already rendered by the app. Run `pnpm validate:release-notes` to check every entry and `pnpm render:release-notes <version>` to preview the current version’s GitHub description. Do not maintain a separate hand-written draft description.
+Add a complete entry to `src/data/release-notes.json` whenever `package.json` changes version. This structured file is the source for both the in-app “What’s New” screen and the GitHub draft description: keep app-facing fields concise and in Brazilian Portuguese, and write technical detail in the English `githubRelease` section. Use one of the icon identifiers already rendered by the app. Run `pnpm validate:release-notes` to check every entry and `pnpm render:release-notes <version>` to preview the GitHub description. Do not maintain a separate hand-written draft description.
 
 ## Project-specific notes
 
