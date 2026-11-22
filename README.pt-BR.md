@@ -65,8 +65,8 @@ O pacote prepara o submódulo fixado [`vendor/anivexa-api`](vendor/anivexa-api) 
 ## Documentação
 
 - [Índice da documentação](docs/README.md)
-- [Roadmap do release 1.0](docs/releases/1.0-roadmap.md)
-- [Checklist ativo do release 1.0](docs/releases/1.0-checklist.md)
+- [Fechamento do release 1.0 — v1.0.2 publicada](docs/releases/1.0-checklist.md)
+- [Roadmap original arquivado do release 1.0](docs/archive/1.0-roadmap.md)
 - [Plano de migração arquivado](docs/archive/MIGRATION_PLAN.md)
 - [Guia de contribuição](CONTRIBUTING.md)
 

@@ -303,6 +303,6 @@ A migração permanece encerrada e não é reaberta por validações de release.
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) — fluxo de branches, revisão e contribuição.
 - [README.md](../../README.md) e [README.pt-BR.md](../../README.pt-BR.md) — apresentação do projeto em inglês e português.
 - [Índice da documentação](../README.md) — localização dos documentos ativos e históricos.
-- [Roadmap 1.0](../releases/1.0-roadmap.md) e [checklist 1.0](../releases/1.0-checklist.md) — escopo e evidências atuais da preparação do release.
+- [Roadmap 1.0](./1.0-roadmap.md) e [checklist 1.0](../releases/1.0-checklist.md) — escopo e evidências atuais da preparação do release.
 - [MIGRATION_PROGRESS.md](./MIGRATION_PROGRESS.md) — tracker histórico preservado.
 - [Índice de débitos técnicos](../technical-debt/README.md) — itens adiados com critérios e evidências.
