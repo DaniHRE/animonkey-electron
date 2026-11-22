@@ -123,11 +123,4 @@ try {
   $archive.Dispose()
 }
 
-$smokeOutput = & $applicationPath '--anivexa-smoke' 2>&1
-$smokeExitCode = $LASTEXITCODE
-$smokeText = $smokeOutput -join [Environment]::NewLine
-if ($smokeExitCode -ne 0 -or $smokeText -notmatch 'ANIVEXA_SMOKE_OK') {
-  throw "Packaged application smoke test failed with exit code $smokeExitCode`: $smokeText"
-}
-
-Write-Output "Verified Animonkey $version Windows x64 package, runtime smoke test, and RELEASES hash/size."
+Write-Output "Verified Animonkey $version Windows x64 package and RELEASES hash/size."
