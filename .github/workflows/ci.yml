@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - dev
+      - main
 
 permissions:
   contents: read
@@ -16,34 +17,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-release-notes:
-    name: Validate release notes
+  linux-checks:
+    name: Linux checks
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v7.0.1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6.1.1
-        with:
-          version: 10.33.3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7.1.0
-        with:
-          node-version: 26.13.1
-
-      - name: Validate release notes
-        run: pnpm validate:release-notes
-
-  quality:
-    name: Lint and format
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
+      - name: Check out repository and pinned API
         uses: actions/checkout@v7.0.1
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6.1.1
@@ -58,6 +40,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Validate release notes
+        run: pnpm validate:release-notes
 
       - name: Check lint
         run: pnpm lint
@@ -65,53 +50,21 @@ jobs:
       - name: Check formatting
         run: pnpm format:check
 
-  typecheck:
-    name: TypeScript
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7.0.1
-        with:
-          submodules: recursive
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v6.1.1
-        with:
-          version: 10.33.3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7.1.0
-        with:
-          node-version: 26.13.1
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Check TypeScript
         run: pnpm typecheck
 
-  pre-build-gate:
-    name: Pre-build checks passed
-    runs-on: ubuntu-latest
-    needs:
-      - validate-release-notes
-      - quality
-      - typecheck
-    steps:
-      - name: Confirm pre-build checks passed
-        run: echo "All pre-build checks passed."
-
   windows-prebuild:
     name: Windows x64 package pre-build
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev'
+    needs: linux-checks
     runs-on: windows-latest
-    needs: pre-build-gate
     timeout-minutes: 60
     steps:
       - name: Check out repository and pinned API
         uses: actions/checkout@v7.0.1
         with:
           submodules: recursive
+          persist-credentials: false
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v6.1.1

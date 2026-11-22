@@ -3,7 +3,7 @@
   "productName": "Animonkey",
   "description": "Desktop anime discovery and personal library with offline tracking, optional account sync, and playback from available Anivexa sources",
   "author": "DaniHRE",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": ".vite/build/main.js",
   "private": true,
   "engines": {
@@ -16,6 +16,7 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "validate:release-notes": "node scripts/validate-release-notes.mjs",
+    "render:release-notes": "node scripts/render-release-notes.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit -p .",
