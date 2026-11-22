@@ -10,6 +10,52 @@ function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+function validateGithubReleaseNotes(release, version, errors) {
+  if (!isRecord(release)) {
+    errors.push(
+      `Release notes for ${version} require a 'githubRelease' object.`,
+    );
+    return;
+  }
+
+  if (!isNonEmptyString(release.summary)) {
+    errors.push(
+      `GitHub release notes for ${version} require a non-empty 'summary'.`,
+    );
+  }
+
+  if (!Array.isArray(release.sections) || release.sections.length === 0) {
+    errors.push(
+      `GitHub release notes for ${version} require at least one section.`,
+    );
+    return;
+  }
+
+  for (const [index, section] of release.sections.entries()) {
+    const label = `GitHub release notes for ${version}, section ${index + 1}`;
+    if (!isRecord(section)) {
+      errors.push(`${label} must be a JSON object.`);
+      continue;
+    }
+
+    if (!isNonEmptyString(section.title)) {
+      errors.push(`${label} requires a non-empty 'title'.`);
+    }
+    if (!Array.isArray(section.details) || section.details.length === 0) {
+      errors.push(`${label} requires at least one detail.`);
+      continue;
+    }
+
+    for (const [detailIndex, detail] of section.details.entries()) {
+      if (!isNonEmptyString(detail)) {
+        errors.push(
+          `${label}, detail ${detailIndex + 1} must be non-empty text.`,
+        );
+      }
+    }
+  }
+}
+
 export function validateReleaseNotes(releaseNotes, requiredVersion) {
   const errors = [];
 
@@ -70,6 +116,10 @@ export function validateReleaseNotes(releaseNotes, requiredVersion) {
         errors.push(`${label} requires a non-empty 'description'.`);
       }
     }
+
+    if (version === requiredVersion || entry.githubRelease !== undefined) {
+      validateGithubReleaseNotes(entry.githubRelease, version, errors);
+    }
   }
 
   if (!Object.hasOwn(releaseNotes, requiredVersion)) {
@@ -79,24 +129,13 @@ export function validateReleaseNotes(releaseNotes, requiredVersion) {
   return errors;
 }
 
-export function renderReleaseNotesMarkdown(entry) {
-  const highlights = entry.highlights
-    .map(
-      ({ title, description }) =>
-        `- **${title.trim()}** — ${description.trim()}`,
-    )
-    .join('\n');
+export function renderReleaseNotesMarkdown(githubRelease) {
+  const sections = githubRelease.sections
+    .map(({ title, details }) => {
+      const bulletPoints = details.map((detail) => `- ${detail.trim()}`);
+      return [`## ${title.trim()}`, '', ...bulletPoints].join('\n');
+    })
+    .join('\n\n');
 
-  return [
-    `**${entry.eyebrow.trim()}**`,
-    '',
-    `# ${entry.title.trim()}`,
-    '',
-    entry.summary.trim(),
-    '',
-    '## Destaques',
-    '',
-    highlights,
-    '',
-  ].join('\n');
+  return [githubRelease.summary.trim(), '', sections, ''].join('\n');
 }

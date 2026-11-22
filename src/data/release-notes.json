@@ -1,20 +1,46 @@
 {
   "1.0.2": {
     "eyebrow": "ATUALIZAÇÃO 1.0.2",
-    "title": "Mais segurança para sincronizar e diagnosticar.",
-    "summary": "Esta versão reforça a verificação dos dados enviados à sua conta e cuida melhor das mensagens técnicas usadas para diagnosticar o runtime Anivexa.",
+    "title": "Aprimoramentos de diagnóstico e confiabilidade.",
+    "summary": "Esta atualização reúne melhorias no tratamento das mensagens de diagnóstico do runtime da API Anivexa e ajustes técnicos nos fluxos internos da aplicação.",
     "highlights": [
       {
-        "icon": "sync",
-        "title": "Dados de sincronização mais bem verificados",
-        "description": "O Animonkey valida listas e progresso antes de enviar as atualizações para a sua conta."
+        "icon": "play",
+        "title": "Diagnósticos do runtime Anivexa",
+        "description": "Mensagens técnicas passaram a ser tratadas de forma mais controlada e concisa."
       },
       {
-        "icon": "play",
-        "title": "Registros técnicos mais privados",
-        "description": "As mensagens do runtime Anivexa são resumidas para reduzir a exposição de detalhes brutos de erro."
+        "icon": "sync",
+        "title": "Aprimoramentos internos",
+        "description": "A versão inclui ajustes técnicos nos fluxos internos relacionados à conta."
       }
-    ]
+    ],
+    "githubRelease": {
+      "summary": "Patch release focused on Anivexa runtime diagnostics, account-sync IPC validation, and a more verifiable Windows release process.",
+      "sections": [
+        {
+          "title": "Anivexa runtime diagnostics",
+          "details": [
+            "Sanitized API error summaries continue through the diagnostics channel, while stderr receives a fixed redacted message instead of the original `console.error` arguments."
+          ]
+        },
+        {
+          "title": "Account synchronization IPC",
+          "details": [
+            "Watch-later upserts validate anime IDs, title shape, optional fields, episode counts, release dates, genres, and timestamps before reaching the account service.",
+            "Episode-progress upserts validate identifiers, non-negative episode numbers, finite time values, positive durations, and that current playback time does not exceed duration."
+          ]
+        },
+        {
+          "title": "Windows packaging and release workflow",
+          "details": [
+            "The application root MIT license is included as a packaged resource.",
+            "The package verifier checks the Setup installer, full Squirrel `.nupkg`, executable identity, required Anivexa runtime files and revision, package manifest, and `RELEASES` hash and size.",
+            "Development CI runs Linux quality checks in one job and builds the Windows package only for a `dev`-to-`main` promotion pull request. The manual stable-release workflow builds the exact tag and creates a draft with the installer, full `.nupkg`, and `RELEASES` already attached."
+          ]
+        }
+      ]
+    }
   },
   "1.0.1": {
     "eyebrow": "ATUALIZAÇÃO 1.0.1",

@@ -39,5 +39,5 @@ if (errors.length > 0) {
 }
 
 process.stdout.write(
-  renderReleaseNotesMarkdown(releaseNotes[requestedVersion]),
+  renderReleaseNotesMarkdown(releaseNotes[requestedVersion].githubRelease),
 );
