@@ -34,6 +34,7 @@ const config: ForgeConfig = {
     icon: path.resolve('src/assets/brand/animonkey-app-icon'),
     extraResource: [
       'anivexa-runtime',
+      path.resolve('LICENSE'),
       'src/assets/brand/animonkey-app-icon.png',
     ],
     win32metadata: {
