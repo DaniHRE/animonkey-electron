@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateReleaseNotes } from './release-notes-utils.mjs';
 
 const projectRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -12,29 +13,11 @@ const packageJson = JSON.parse(
 const releaseNotes = JSON.parse(
   await readFile(path.join(projectRoot, 'src/data/release-notes.json'), 'utf8'),
 );
-const currentNotes = releaseNotes[packageJson.version];
-const supportedIcons = new Set(['discover', 'library', 'sync', 'play']);
+const errors = validateReleaseNotes(releaseNotes, packageJson.version);
 
-if (
-  !currentNotes ||
-  typeof currentNotes.title !== 'string' ||
-  !currentNotes.title.trim() ||
-  typeof currentNotes.summary !== 'string' ||
-  !currentNotes.summary.trim() ||
-  !Array.isArray(currentNotes.highlights) ||
-  currentNotes.highlights.length === 0 ||
-  currentNotes.highlights.some(
-    (item) =>
-      !item ||
-      !supportedIcons.has(item.icon) ||
-      typeof item.title !== 'string' ||
-      !item.title.trim() ||
-      typeof item.description !== 'string' ||
-      !item.description.trim(),
-  )
-) {
+if (errors.length > 0) {
   process.stderr.write(
-    `Add complete release notes for package version ${packageJson.version}.\n`,
+    `Invalid release notes:\n${errors.map((error) => `- ${error}`).join('\n')}\n`,
   );
   process.exit(1);
 }

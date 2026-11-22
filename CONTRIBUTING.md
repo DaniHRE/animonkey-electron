@@ -48,6 +48,10 @@ For release-note or release-workflow changes, also run `pnpm validate:release-no
 
 For user-facing UI changes, include a screenshot or a concise description of the affected screen and states when practical. Do not claim a packaged or audiovisual behavior is verified unless it was checked in the packaged app.
 
+## Release notes
+
+Add a complete entry to `src/data/release-notes.json` whenever `package.json` changes version. This structured file is the source for the in-app “What’s New” screen and the GitHub draft release description. Keep user-facing copy in Brazilian Portuguese and use one of the icon identifiers already rendered by the app. Run `pnpm validate:release-notes` to check every entry and `pnpm render:release-notes <version>` to preview the current version’s GitHub description. Do not maintain a separate hand-written draft description.
+
 ## Project-specific notes
 
 - Keep `pnpm-lock.yaml` in sync when changing dependencies; do not add another package manager lockfile.
