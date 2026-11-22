@@ -21,22 +21,22 @@
         {
           "title": "Anivexa runtime diagnostics",
           "details": [
-            "Sanitized API error summaries continue through the diagnostics channel, while stderr receives a fixed redacted message instead of the original `console.error` arguments."
+            "Sanitized API error summaries continue through the diagnostics channel, while stderr receives a fixed redacted message instead of the original `console.error` arguments ([commit `13702a0`](https://github.com/DaniHRE/animonkey-electron/commit/13702a0))."
           ]
         },
         {
           "title": "Account synchronization IPC",
           "details": [
             "Watch-later upserts validate anime IDs, title shape, optional fields, episode counts, release dates, genres, and timestamps before reaching the account service.",
-            "Episode-progress upserts validate identifiers, non-negative episode numbers, finite time values, positive durations, and that current playback time does not exceed duration."
+            "Episode-progress upserts validate identifiers, non-negative episode numbers, finite time values, positive durations, and that current playback time does not exceed duration. Both validation paths were added in [commit `c5bf1de`](https://github.com/DaniHRE/animonkey-electron/commit/c5bf1de)."
           ]
         },
         {
           "title": "Windows packaging and release workflow",
           "details": [
-            "The application root MIT license is included as a packaged resource.",
-            "The package verifier checks the Setup installer, full Squirrel `.nupkg`, executable identity, required Anivexa runtime files and revision, package manifest, and `RELEASES` hash and size.",
-            "Development CI runs Linux quality checks in one job and builds the Windows package only for a `dev`-to-`main` promotion pull request. The manual stable-release workflow builds the exact tag and creates a draft with the installer, full `.nupkg`, and `RELEASES` already attached."
+            "The application root MIT license is included as a packaged resource ([commit `502665a`](https://github.com/DaniHRE/animonkey-electron/commit/502665a)).",
+            "The Windows package verifier checks the Setup installer, full Squirrel `.nupkg`, executable identity, required Anivexa runtime files and revision, package manifest, and `RELEASES` hash and size ([commit `591c1f4`](https://github.com/DaniHRE/animonkey-electron/commit/591c1f4)).",
+            "Development CI runs Linux quality checks in one job and builds the Windows package only for a `dev`-to-`main` promotion pull request. The manual stable-release workflow builds the exact tag and creates a draft with the installer, full `.nupkg`, and `RELEASES` already attached. The release-pipeline redesign was integrated by [PR #1](https://github.com/DaniHRE/animonkey-electron/pull/1) and promoted with [PR #2](https://github.com/DaniHRE/animonkey-electron/pull/2). The split between concise app notes and detailed GitHub notes is tracked by [PR #3](https://github.com/DaniHRE/animonkey-electron/pull/3) and its promotion in [PR #4](https://github.com/DaniHRE/animonkey-electron/pull/4)."
           ]
         }
       ]
