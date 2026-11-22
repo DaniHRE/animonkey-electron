@@ -1,46 +1,108 @@
-name: Windows stable build
+name: Prepare Windows stable release draft
 
 on:
-  push:
-    branches:
-      - main
-      - 'release/**'
-  release:
-    types:
-      - published
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Published stable tag to receive the freshly built assets
+        description: Existing vMAJOR.MINOR.PATCH tag that points to main
         type: string
-        required: false
-        default: ''
+        required: true
 
 permissions:
   contents: read
 
 concurrency:
-  group: windows-stable-${{ github.event.release.tag_name || inputs.release_tag || github.ref }}
+  group: windows-release-draft-${{ inputs.release_tag }}
   cancel-in-progress: false
 
 jobs:
-  build:
-    if: github.event_name != 'release' || github.event.release.prerelease == false
-    runs-on: windows-latest
+  validate-tag:
+    name: Validate existing stable tag
+    runs-on: ubuntu-latest
+    outputs:
+      release_sha: ${{ steps.validate-release.outputs.release_sha }}
+      version: ${{ steps.validate-release.outputs.version }}
     steps:
-      - name: Check out repository and pinned API
-        uses: actions/checkout@v7
+      - name: Check out main for tag validation
+        uses: actions/checkout@v7.0.1
         with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate tag, version, and main ancestry
+        id: validate-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo 'Dispatch this workflow from main.' >&2
+            exit 1
+          fi
+
+          if [[ ! "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo 'Stable releases must use a vMAJOR.MINOR.PATCH tag.' >&2
+            exit 1
+          fi
+
+          git fetch origin main:refs/remotes/origin/main --no-tags
+          git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG" --no-tags
+
+          release_sha=$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")
+          if ! git merge-base --is-ancestor "$release_sha" origin/main; then
+            echo 'The release tag must point to a commit reachable from main.' >&2
+            exit 1
+          fi
+
+          version=$(git show "$RELEASE_TAG:package.json" | node -p "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")
+          if [[ "v$version" != "$RELEASE_TAG" ]]; then
+            echo "Tag $RELEASE_TAG does not match package version $version." >&2
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "A GitHub release already exists for $RELEASE_TAG." >&2
+            exit 1
+          fi
+
+          printf 'release_sha=%s\n' "$release_sha" >> "$GITHUB_OUTPUT"
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+
+  build-package:
+    name: Build tagged Windows x64 package
+    needs: validate-tag
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out the validated tag and pinned API
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ inputs.release_tag }}
           fetch-depth: 0
           submodules: recursive
+          persist-credentials: false
+
+      - name: Verify checked-out commit
+        env:
+          EXPECTED_RELEASE_SHA: ${{ needs.validate-tag.outputs.release_sha }}
+        shell: pwsh
+        run: |
+          $actualCommit = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actualCommit -ne $env:EXPECTED_RELEASE_SHA) {
+            throw 'The release tag changed after validation.'
+          }
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v6.1.1
         with:
           version: 10.33.3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 26.13.1
           cache: pnpm
@@ -51,90 +113,132 @@ jobs:
       - name: Validate release notes
         run: pnpm validate:release-notes
 
-      - name: Validate stable release source
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
-        shell: pwsh
-        env:
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
-        run: |
-          $package = Get-Content package.json -Raw | ConvertFrom-Json
-          if ($env:RELEASE_TAG -ne "v$($package.version)") {
-            throw "Release tag must match package version v$($package.version)."
-          }
-
-          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+$') {
-            throw 'Stable releases must use a vMAJOR.MINOR.PATCH tag.'
-          }
-
-          git fetch origin main --no-tags
-          if ($LASTEXITCODE -ne 0) { throw 'Could not fetch main for validation.' }
-
-          $releaseCommit = git rev-list -n 1 "refs/tags/$($env:RELEASE_TAG)"
-          if ($LASTEXITCODE -ne 0 -or -not $releaseCommit) {
-            throw 'Could not resolve the stable release tag.'
-          }
-
-          git merge-base --is-ancestor $releaseCommit origin/main
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Stable releases must point to a commit reachable from main.'
-          }
-
       - name: Check lint
         run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
 
       - name: Check TypeScript
         run: pnpm typecheck
 
-      - name: Build Windows x64 package
+      - name: Build Windows x64 Squirrel package
         run: pnpm make --platform=win32 --arch=x64
 
-      - name: Stage installer and Squirrel update files
+      - name: Verify packaged application and Squirrel metadata
+        shell: pwsh
+        run: ./scripts/verify-windows-package.ps1
+
+      - name: Stage the three stable release assets
         shell: pwsh
         run: |
           $package = Get-Content package.json -Raw | ConvertFrom-Json
           $makerDirectory = Join-Path $env:GITHUB_WORKSPACE 'out/make/squirrel.windows/x64'
-          $setupFiles = @(Get-ChildItem $makerDirectory -File -Filter '* Setup.exe')
-          $packageFiles = @(Get-ChildItem $makerDirectory -File -Filter '*-full.nupkg')
-          $releasesFile = Join-Path $makerDirectory 'RELEASES'
+          $assetDirectory = Join-Path $env:GITHUB_WORKSPACE 'release-assets'
+          New-Item -ItemType Directory -Path $assetDirectory | Out-Null
 
-          if ($setupFiles.Count -ne 1 -or $packageFiles.Count -ne 1 -or -not (Test-Path $releasesFile)) {
-            throw 'Forge did not produce the expected Setup.exe, full .nupkg, and RELEASES files.'
+          $assets = @(
+            @{
+              Source = Join-Path $makerDirectory "Animonkey-$($package.version) Setup.exe"
+              Name = "Animonkey-$($package.version)-win32-x64.exe"
+            },
+            @{
+              Source = Join-Path $makerDirectory "animonkey_electron-$($package.version)-full.nupkg"
+              Name = "animonkey_electron-$($package.version)-full.nupkg"
+            },
+            @{
+              Source = Join-Path $makerDirectory 'RELEASES'
+              Name = 'RELEASES'
+            }
+          )
+
+          foreach ($asset in $assets) {
+            if (-not (Test-Path -LiteralPath $asset.Source -PathType Leaf)) {
+              throw "Required release asset is missing: $($asset.Source)"
+            }
+            Copy-Item -LiteralPath $asset.Source -Destination (Join-Path $assetDirectory $asset.Name)
           }
 
-          $releaseManifest = Get-Content $releasesFile -Raw
-          if ($releaseManifest -notmatch [regex]::Escape($packageFiles[0].Name)) {
-            throw 'The RELEASES manifest does not reference the generated full .nupkg.'
+          if (@(Get-ChildItem -LiteralPath $assetDirectory -File).Count -ne 3) {
+            throw 'The release staging directory must contain exactly three files.'
           }
 
-          $artifactDirectory = Join-Path $env:RUNNER_TEMP 'animonkey-windows-x64'
-          New-Item -ItemType Directory -Path $artifactDirectory -Force | Out-Null
-          Copy-Item $setupFiles[0].FullName (Join-Path $artifactDirectory "Animonkey-$($package.version)-win32-x64.exe")
-          Copy-Item $packageFiles[0].FullName $artifactDirectory
-          Copy-Item $releasesFile $artifactDirectory
-
-      - name: Upload CI or release assets
-        uses: actions/upload-artifact@v6
+      - name: Upload temporary release assets
+        uses: actions/upload-artifact@v6.0.0
         with:
-          name: animonkey-windows-x64
-          path: ${{ runner.temp }}/animonkey-windows-x64/*
+          name: windows-release-assets-${{ inputs.release_tag }}
+          path: release-assets/
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
-  publish-assets:
-    if: (github.event_name == 'release' && github.event.release.prerelease == false) || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
-    needs: build
+  create-draft:
+    name: Create draft with the verified assets
+    needs:
+      - validate-tag
+      - build-package
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Download Windows release assets
-        uses: actions/download-artifact@v7
+      - name: Check out the release tag again
+        uses: actions/checkout@v7.0.1
         with:
-          name: animonkey-windows-x64
+          ref: ${{ inputs.release_tag }}
+          persist-credentials: false
+
+      - name: Confirm tag still matches the built package
+        env:
+          EXPECTED_RELEASE_SHA: ${{ needs.validate-tag.outputs.release_sha }}
+        shell: bash
+        run: |
+          actual_commit=$(git rev-parse HEAD)
+          if [[ "$actual_commit" != "$EXPECTED_RELEASE_SHA" ]]; then
+            echo 'The release tag changed after the package was built.' >&2
+            exit 1
+          fi
+
+      - name: Set up Node.js for release-note generation
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.13.1
+
+      - name: Generate GitHub release description from app notes
+        env:
+          RELEASE_VERSION: ${{ needs.validate-tag.outputs.version }}
+        shell: bash
+        run: |
+          node scripts/render-release-notes.mjs "$RELEASE_VERSION" \
+            > "$RUNNER_TEMP/release-notes.md"
+
+      - name: Download the three staged assets
+        uses: actions/download-artifact@v7.0.0
+        with:
+          name: windows-release-assets-${{ inputs.release_tag }}
           path: release-assets
 
-      - name: Attach installer and Squirrel update files to the release
+      - name: Create and verify the draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
-        run: gh release upload "$RELEASE_TAG" release-assets/* --clobber --repo "$GITHUB_REPOSITORY"
+          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_VERSION: ${{ needs.validate-tag.outputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh release create "$RELEASE_TAG" release-assets/* \
+            --draft \
+            --verify-tag \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --title "Animonkey $RELEASE_VERSION" \
+            --repo "$GITHUB_REPOSITORY"
+
+          draft_url=$(gh release view "$RELEASE_TAG" \
+            --json isDraft,url \
+            --jq 'select(.isDraft == true) | .url' \
+            --repo "$GITHUB_REPOSITORY")
+          if [[ -z "$draft_url" ]]; then
+            echo 'GitHub did not return the newly created release as a draft.' >&2
+            exit 1
+          fi
+
+          echo "Draft release created: $draft_url"

@@ -1,4 +1,21 @@
 {
+  "1.0.2": {
+    "eyebrow": "ATUALIZAÇÃO 1.0.2",
+    "title": "Mais segurança para sincronizar e diagnosticar.",
+    "summary": "Esta versão reforça a verificação dos dados enviados à sua conta e cuida melhor das mensagens técnicas usadas para diagnosticar o runtime Anivexa.",
+    "highlights": [
+      {
+        "icon": "sync",
+        "title": "Dados de sincronização mais bem verificados",
+        "description": "O Animonkey valida listas e progresso antes de enviar as atualizações para a sua conta."
+      },
+      {
+        "icon": "play",
+        "title": "Registros técnicos mais privados",
+        "description": "As mensagens do runtime Anivexa são resumidas para reduzir a exposição de detalhes brutos de erro."
+      }
+    ]
+  },
   "1.0.1": {
     "eyebrow": "ATUALIZAÇÃO 1.0.1",
     "title": "O Animonkey recebe atualizações pelo próprio app.",

@@ -19,7 +19,7 @@ import type {
   EpisodeProgressInput,
   WatchLaterRemoteItem,
 } from './types/account';
-import type { AnimeRating } from './types/anime';
+import type { AnimeRating, AnimeTitle } from './types/anime';
 import type { AppUpdateSnapshot, AppUpdateStatus } from './types/updates';
 
 registerMediaScheme();
@@ -184,6 +184,62 @@ function asObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function isAnimeTitle(value: unknown): value is AnimeTitle {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const title = value as Record<string, unknown>;
+  return ['english', 'romaji', 'native'].every(
+    (key) =>
+      title[key] === undefined ||
+      title[key] === null ||
+      typeof title[key] === 'string',
+  );
+}
+
+function isWatchLaterRemoteItem(value: unknown): value is WatchLaterRemoteItem {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const item = value as Record<string, unknown>;
+  return (
+    typeof item.animeId === 'string' &&
+    /^\d+$/.test(item.animeId) &&
+    isAnimeTitle(item.title) &&
+    ['image', 'type'].every(
+      (key) => item[key] === undefined || typeof item[key] === 'string',
+    ) &&
+    (item.totalEpisodes === undefined ||
+      (typeof item.totalEpisodes === 'number' &&
+        Number.isSafeInteger(item.totalEpisodes) &&
+        item.totalEpisodes >= 0)) &&
+    (item.releaseDate === undefined ||
+      (typeof item.releaseDate === 'number' &&
+        Number.isFinite(item.releaseDate))) &&
+    Array.isArray(item.genres) &&
+    item.genres.every((genre) => typeof genre === 'string') &&
+    typeof item.addedAt === 'number' &&
+    Number.isFinite(item.addedAt)
+  );
+}
+
+function isEpisodeProgressInput(value: unknown): value is EpisodeProgressInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    typeof input.animeId === 'string' &&
+    /^\d+$/.test(input.animeId) &&
+    typeof input.episodeId === 'string' &&
+    input.episodeId.length > 0 &&
+    typeof input.episodeNumber === 'number' &&
+    Number.isSafeInteger(input.episodeNumber) &&
+    input.episodeNumber >= 0 &&
+    typeof input.currentTime === 'number' &&
+    Number.isFinite(input.currentTime) &&
+    input.currentTime >= 0 &&
+    typeof input.duration === 'number' &&
+    Number.isFinite(input.duration) &&
+    input.duration > 0 &&
+    input.currentTime <= input.duration
+  );
+}
+
 function registerUpdateIpc(): void {
   ipcMain.handle('updates:get-state', (event) => {
     assertTrustedIpcSender(event);
@@ -239,9 +295,8 @@ function registerAccountIpc(): void {
   });
   ipcMain.handle('account:watch-later:upsert', (event, value: unknown) => {
     assertTrustedIpcSender(event);
-    return accountService.upsertWatchLater(
-      asObject(value) as unknown as WatchLaterRemoteItem,
-    );
+    if (!isWatchLaterRemoteItem(value)) throw new Error('Anime inválido.');
+    return accountService.upsertWatchLater(value);
   });
   ipcMain.handle('account:watch-later:remove', (event, animeId: unknown) => {
     assertTrustedIpcSender(event);
@@ -260,9 +315,10 @@ function registerAccountIpc(): void {
   });
   ipcMain.handle('account:episode-progress:upsert', (event, value: unknown) => {
     assertTrustedIpcSender(event);
-    return accountService.upsertEpisodeProgress(
-      asObject(value) as EpisodeProgressInput,
-    );
+    if (!isEpisodeProgressInput(value)) {
+      throw new Error('Dados de progresso inválidos.');
+    }
+    return accountService.upsertEpisodeProgress(value);
   });
   ipcMain.handle(
     'account:episode-progress:remove-anime',

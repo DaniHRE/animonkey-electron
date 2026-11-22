@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-checks:
+    name: Linux checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository and pinned API
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.1
+        with:
+          version: 10.33.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.13.1
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release notes
+        run: pnpm validate:release-notes
+
+      - name: Check lint
+        run: pnpm lint
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Check TypeScript
+        run: pnpm typecheck
+
+  windows-prebuild:
+    name: Windows x64 package pre-build
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.head_ref == 'dev'
+    needs: linux-checks
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository and pinned API
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6.1.1
+        with:
+          version: 10.33.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.13.1
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Windows x64 Squirrel package
+        run: pnpm make --platform=win32 --arch=x64
+
+      - name: Verify packaged application and Squirrel metadata
+        shell: pwsh
+        run: ./scripts/verify-windows-package.ps1
