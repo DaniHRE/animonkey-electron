@@ -13,15 +13,26 @@ import {
 } from '@/lib/sidebar-route-order';
 import { isWatchHistoryPreference } from '@/lib/watch-history-preferences';
 import { isAiringNotificationPreference } from '@/lib/airing-notifications';
+import {
+  APP_NOTIFICATION_LIMIT,
+  APP_NOTIFICATION_RETENTION_MS,
+  APP_NOTIFICATIONS_CHANGED_EVENT,
+  isAppNotification,
+} from '@/lib/app-notifications';
+import type {
+  AppNotification,
+  NewAppNotification,
+} from '@/lib/app-notifications';
 
 const DATABASE_NAME = 'animonkey-desktop';
-const DATABASE_VERSION = 6;
+const DATABASE_VERSION = 7;
 const WATCH_LATER_STORE = 'watch-later';
 const CATALOG_CACHE_STORE = 'catalog-cache';
 const EPISODE_PROGRESS_STORE = 'episode-progress';
 const PREFERENCES_STORE = 'preferences';
 const SYNC_TOMBSTONE_STORE = 'sync-tombstones';
 const ANIME_RATING_STORE = 'anime-ratings';
+const APP_NOTIFICATION_STORE = 'app-notifications';
 const CATALOG_CACHE_STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const GUEST_SCOPE_ID = 'guest';
 
@@ -185,6 +196,9 @@ function openDatabase(): Promise<IDBDatabase> {
           keyPath: ['scopeId', 'animeId'],
         });
         ratings.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+      if (!database.objectStoreNames.contains(APP_NOTIFICATION_STORE)) {
+        database.createObjectStore(APP_NOTIFICATION_STORE, { keyPath: 'id' });
       }
     };
   });
@@ -372,6 +386,215 @@ export async function putPreference<T>(key: string, value: T): Promise<void> {
       updatedAt: Date.now(),
     } satisfies LocalPreference<T>);
     transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function getAppNotifications(): Promise<AppNotification[]> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.getAll();
+    let visibleNotifications: AppNotification[] = [];
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const cutoff = Date.now() - APP_NOTIFICATION_RETENTION_MS;
+      const records = request.result as unknown[];
+      const retained = records.filter(
+        (value): value is AppNotification =>
+          isAppNotification(value) && value.createdAt >= cutoff,
+      );
+      retained.sort((first, second) => second.createdAt - first.createdAt);
+      const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+      const retainedIds = new Set(
+        limited.map((notification) => notification.id),
+      );
+      for (const candidate of records) {
+        if (
+          typeof candidate === 'object' &&
+          candidate !== null &&
+          !Array.isArray(candidate)
+        ) {
+          const id = (candidate as Record<string, unknown>).id;
+          if (typeof id === 'string' && !retainedIds.has(id)) store.delete(id);
+        }
+      }
+      visibleNotifications = limited.filter(
+        (notification) => notification.dismissedAt === null,
+      );
+    };
+    transaction.oncomplete = () => resolve(visibleNotifications);
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function addAppNotification(
+  value: NewAppNotification,
+): Promise<void> {
+  const notification: AppNotification = {
+    ...value,
+    createdAt: Date.now(),
+    readAt: null,
+    dismissedAt: null,
+  };
+  if (!isAppNotification(notification)) {
+    throw new Error('The notification record is invalid.');
+  }
+
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.getAll();
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const records = request.result as unknown[];
+      const cutoff = notification.createdAt - APP_NOTIFICATION_RETENTION_MS;
+      const validRecords = records.filter(isAppNotification);
+      const existing = validRecords.find(
+        (record) => record.id === notification.id && record.createdAt >= cutoff,
+      );
+      const candidates = validRecords.filter(
+        (record) => record.createdAt >= cutoff,
+      );
+      if (!existing) candidates.push(notification);
+      candidates.sort((first, second) => second.createdAt - first.createdAt);
+      const retained = candidates.slice(0, APP_NOTIFICATION_LIMIT);
+      const retainedIds = new Set(retained.map((record) => record.id));
+
+      for (const candidate of records) {
+        if (
+          typeof candidate === 'object' &&
+          candidate !== null &&
+          !Array.isArray(candidate)
+        ) {
+          const id = (candidate as Record<string, unknown>).id;
+          if (typeof id === 'string' && !retainedIds.has(id)) {
+            store.delete(id);
+            changed = true;
+          }
+        }
+      }
+
+      if (!existing && retainedIds.has(notification.id)) {
+        store.put(notification);
+        changed = true;
+      }
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function markAppNotificationRead(id: string): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.get(id);
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const notification = request.result as unknown;
+      if (
+        !isAppNotification(notification) ||
+        notification.readAt !== null ||
+        notification.dismissedAt !== null
+      )
+        return;
+      store.put({
+        ...notification,
+        readAt: Date.now(),
+      } satisfies AppNotification);
+      changed = true;
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function markAllAppNotificationsRead(): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.getAll();
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      for (const value of request.result as unknown[]) {
+        if (
+          !isAppNotification(value) ||
+          value.readAt !== null ||
+          value.dismissedAt !== null
+        )
+          continue;
+        store.put({ ...value, readAt: Date.now() } satisfies AppNotification);
+        changed = true;
+      }
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function dismissAppNotification(id: string): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.get(id);
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const notification = request.result as unknown;
+      if (!isAppNotification(notification) || notification.dismissedAt !== null)
+        return;
+      store.put({
+        ...notification,
+        dismissedAt: Date.now(),
+      } satisfies AppNotification);
+      changed = true;
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });

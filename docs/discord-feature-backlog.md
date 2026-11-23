@@ -89,14 +89,14 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-13 — Follow airing anime and notify on new episodes
 
 - Difficulty: High.
-- Current state: Anime pages can add or remove a separate local “Acompanhar” entry, independent of Assistir Depois. Up to 50 followed anime are stored in local preferences and included in local backups; they do not sync with the account. Native new-episode notifications are opt-in and off by default. While the app is open and online, AniList airing data is checked every 15 minutes; successful alerts are deduplicated by episode, and a catch-up alert can cover the latest missed episode. Settings explains that the notification exposes the title and episode to the operating system.
+- Current state: Anime pages can add or remove a separate local “Acompanhar” entry, independent of Assistir Depois. Up to 50 followed anime are stored in local preferences and included in local backups; they do not sync with the account. Native new-episode notifications are opt-in and off by default; successfully shown alerts also appear in the local notification center. While the app is open and online, AniList airing data is checked every 15 minutes; successful alerts are deduplicated by episode, and a catch-up alert can cover the latest missed episode. Settings explains that the notification exposes the title and episode to the operating system.
 - Technical analysis: Keep following separate from Watch Later and local-only until account sync is explicitly designed. Require an opt-in for system notifications, avoid polling while offline or disabled, use AniList airing data with a bounded cadence, and deduplicate alerts. On reconnect, report at most the latest missed episode rather than generating a notification burst.
 
 ### DISC-14 — General notification center
 
 - Difficulty: High.
-- Current state: The app has an update center for application updates, but no general inbox for anime, maintenance, provider, or moderation messages.
-- Technical analysis: Separate notification sources and define retention, read/dismiss state, delivery timing, and offline behavior. Moderation messaging and live service status require an agreed backend contract; they are not supplied by the current desktop application. Keep update notifications working independently.
+- Current state: The header has a local notification center for followed-anime episode alerts and application update-ready/installed events. Entries work offline, are retained for up to 30 days with a 100-item limit, and support mark-all-read and per-item dismissal. Episode notices open the anime page; update notices open the existing update center. The desktop app still has no source contract for remote maintenance, provider-health, moderation, spotlight, or trending messages.
+- Technical analysis: Keep local notification sources independent from remote feeds, use stable event IDs, and bound local retention. Preserve offline access, read/dismiss state, and the existing update flow. Add maintenance, provider-health, moderation, and editorial messages only after their backend source and delivery contract are agreed; do not imply those messages are available from the current client.
 
 ### DISC-15 — Report unavailable providers automatically
 

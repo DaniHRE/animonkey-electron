@@ -36,6 +36,7 @@ import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
 import { resolveAnimeTitle } from '@/lib/anime';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { AppNotificationCenter } from '@/components/shared/app-notification-center';
 import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { ScreenshotSearchPanel } from '@/components/features/search/screenshot-search-panel';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
@@ -834,6 +835,7 @@ export function AppShell() {
 
           <div className="app-header__actions flex items-center gap-4">
             <ScreenshotSearchPanel />
+            <AppNotificationCenter />
             <AppUpdateCenter />
             <Link
               to="/settings"

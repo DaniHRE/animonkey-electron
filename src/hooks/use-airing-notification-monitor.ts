@@ -4,6 +4,7 @@ import { useAdultContentPreference } from '@/hooks/use-adult-content-preference'
 import { useAiringNotificationPreferences } from '@/hooks/use-airing-notification-preferences';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { resolveAnimeTitle } from '@/lib/anime';
+import { addAppNotification } from '@/services/cache/local-db';
 import { animeQueries } from '@/services/anime-queries';
 
 const AIRING_CHECK_INTERVAL_MS = 15 * 60 * 1000;
@@ -75,6 +76,16 @@ export function useAiringNotificationMonitor(): void {
           });
           if (!active) return;
           if (!shown) continue;
+          void addAppNotification({
+            id: `episode-ready:${item.id}:${episode}`,
+            kind: 'episode-ready',
+            title:
+              resolveAnimeTitle(item.title, titleLanguage).slice(0, 120) ||
+              'Novo episódio',
+            message: `Episódio ${episode} já foi lançado.`,
+            animeId: item.id,
+            episode,
+          }).catch(() => undefined);
           const index = nextFollowed.findIndex(
             (current) => current.animeId === followed.animeId,
           );
