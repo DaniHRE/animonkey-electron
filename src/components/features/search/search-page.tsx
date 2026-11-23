@@ -338,7 +338,9 @@ export function SearchPage() {
   const query = params.q ?? '';
   const requestedPage = Number(params.page ?? 1);
   const page =
-    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
   const filters = useMemo(
     () => filtersFromParams(new URLSearchParams(searchString)),
     [searchString],
@@ -389,6 +391,18 @@ export function SearchPage() {
   const loading = debouncedQuery !== query || searchQuery.isPending;
   const result = loading ? null : searchQuery.data;
   const error = searchQuery.error?.message;
+
+  useEffect(() => {
+    if (!result || page <= 1 || result.results.length > 0) return;
+    void navigate({
+      search: (previous) => {
+        const next = { ...previous };
+        delete next.page;
+        return next;
+      },
+    });
+  }, [navigate, page, result]);
+
   const selected = (key: string) =>
     key === 'formatIn' || key === 'formatNotIn'
       ? formatListParam(params[key] ?? null)
@@ -717,7 +731,7 @@ export function SearchPage() {
       ) : result?.results.length ? (
         <>
           <div className="mb-4 text-xs text-white/35">
-            {result.totalResults.toLocaleString('pt-BR')} títulos
+            {result.results.length} títulos nesta página
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
             {result.results.map((anime: AnimeResult) => (
@@ -734,7 +748,7 @@ export function SearchPage() {
               <ArrowLeft size={14} /> Anterior
             </button>
             <span className="text-xs tabular-nums text-white/45">
-              Página {page} de {result.totalPages}
+              Página {page}
             </span>
             <button
               type="button"

@@ -50,10 +50,7 @@ export interface AnimeResult {
 }
 
 export interface AnimeSearchResponse {
-  currentPage: number;
   hasNextPage: boolean;
-  totalPages: number;
-  totalResults: number;
   results: AnimeResult[];
 }
 

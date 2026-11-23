@@ -125,8 +125,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-19 — Search reports too many pages
 
 - Difficulty: Medium.
-- Current state: The search UI displays totalPages returned by the catalog service. The service derives this from AniList pageInfo; it also merges adult and non-adult results in include mode.
-- Technical analysis: Reproduce the One Piece query and inspect raw, sanitized pageInfo values for both requests. Confirm how totals and lastPage relate to the merged page size before changing pagination. Add a regression case for the observed response and clamp navigation to valid pages.
+- Current state: A live `One Piece` query returned `total: 5000` and `lastPage: 500` on the first non-adult page, while page 10 was empty and reported `hasNextPage: false`. AniList's pagination guide says `total` and `lastPage` are not accurate and advises relying on `hasNextPage`. Search and catalog pagination now show the current page and use `hasNextPage` to enable the next action; displayed counts describe only results on that page.
+- Technical analysis: Treat AniList `total` and `lastPage` as unreliable. Use `hasNextPage` for forward navigation and avoid presenting an estimated total count or page count as exact, including when search results merge adult and non-adult requests.
 
 ### DISC-20 — Search jumps to the top when changing page
 
