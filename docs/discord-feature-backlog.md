@@ -137,8 +137,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-21 — Remove wasted space beside the Home schedule
 
 - Difficulty: Low to Medium.
-- Current state: Home uses a fixed-width schedule column at wide breakpoints and renders an empty-state message when no schedule entries are available.
-- Technical analysis: Inspect the attached screenshot and reproduce the affected viewport/data state before changing layout. Consider collapsing or reflowing the schedule column when empty while preserving responsive balance and a useful empty state.
+- Current state: The reviewed screenshot shows the fixed-width schedule column ending after five entries while later discovery rails remain confined to the left column. The Home layout now keeps Continue Watching and Watch Later beside the schedule on wide screens, then lets discovery rails span the full content width. On small screens, the schedule remains after those rails.
+- Technical analysis: Reflow the fixed-width schedule alongside only the initial Home content and allow later discovery sections to use the full grid width. Preserve a useful schedule empty state and keep the existing single-column mobile order.
 
 ## Playback and offline use
 

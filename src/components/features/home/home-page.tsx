@@ -311,23 +311,11 @@ export function HomePage() {
       ) : home ? (
         <main className="mx-auto w-full max-w-[1440px] px-6 py-8 2xl:px-10">
           <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="min-w-0 space-y-10">
+            <div className="order-1 min-w-0 space-y-10 xl:order-none">
               <ContinueWatchingSection />
               <WatchLaterSection />
-              <AnimeRail
-                title="Atualizados Recentemente"
-                eyebrow="Temporada atual"
-                items={home.newReleases.slice(0, 6)}
-                link="/updates"
-                icon="new"
-              />
-              <HomeTabs
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                items={homeTabItems ?? []}
-              />
             </div>
-            <section>
+            <section className="order-3 xl:order-none xl:col-start-2 xl:row-start-1">
               <div className="mb-5 flex items-end justify-between">
                 <div>
                   <p className="mb-1.5 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
@@ -377,6 +365,20 @@ export function HomePage() {
                 </p>
               )}
             </section>
+            <div className="order-2 min-w-0 space-y-10 xl:order-none xl:col-span-2">
+              <AnimeRail
+                title="Atualizados Recentemente"
+                eyebrow="Temporada atual"
+                items={home.newReleases.slice(0, 6)}
+                link="/updates"
+                icon="new"
+              />
+              <HomeTabs
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                items={homeTabItems ?? []}
+              />
+            </div>
           </div>
         </main>
       ) : null}
