@@ -30,8 +30,10 @@ const formats: Array<[AnimeFormat, string]> = [
   ['SPECIAL', 'Especial'],
   ['OVA', 'OVA'],
   ['ONA', 'ONA'],
-  ['MUSIC', 'Música'],
 ];
+const supportedFormatValues = new Set<string>(
+  formats.map(([format]) => format),
+);
 const statuses: Array<[string, string]> = [
   ['RELEASING', 'Em exibição'],
   ['FINISHED', 'Finalizado'],
@@ -267,6 +269,12 @@ function listParam(value: string | null): string[] {
     .filter(Boolean);
 }
 
+function formatListParam(value: string | null): AnimeFormat[] {
+  return listParam(value).filter((format): format is AnimeFormat =>
+    supportedFormatValues.has(format),
+  );
+}
+
 function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
   const filters: AnimeSearchFilters = {};
   const numericMap: Record<string, keyof AnimeSearchFilters> = {
@@ -293,13 +301,16 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
       Object.assign(filters, { [key]: number });
   }
   for (const key of multiKeys) {
-    const value = listParam(params.get(key));
-    if (value.length)
+    const values =
+      key === 'formatIn' || key === 'formatNotIn'
+        ? formatListParam(params.get(key))
+        : listParam(params.get(key));
+    if (values.length)
       Object.assign(filters, {
         [key]:
           key.endsWith('IdIn') || key.startsWith('ids')
-            ? value.map(Number).filter(Number.isSafeInteger)
-            : value,
+            ? values.map(Number).filter(Number.isSafeInteger)
+            : values,
       });
   }
   const stringMap: Array<[keyof AnimeSearchFilters, string]> = [
@@ -378,7 +389,10 @@ export function SearchPage() {
   const loading = debouncedQuery !== query || searchQuery.isPending;
   const result = loading ? null : searchQuery.data;
   const error = searchQuery.error?.message;
-  const selected = (key: string) => listParam(params[key] ?? null);
+  const selected = (key: string) =>
+    key === 'formatIn' || key === 'formatNotIn'
+      ? formatListParam(params[key] ?? null)
+      : listParam(params[key] ?? null);
   const renderMulti = (
     title: string,
     key: string,
@@ -429,9 +443,12 @@ export function SearchPage() {
   const categories = [...new Set(options.tags.map((tag) => tag.category))]
     .sort()
     .map((category) => [category, category] as [string, string]);
-  const activeFilterCount = Object.keys(params).filter(
-    (key) => !['q', 'page', 'sort'].includes(key),
-  ).length;
+  const activeFilterCount = Object.keys(params).filter((key) => {
+    if (['q', 'page', 'sort'].includes(key)) return false;
+    if (key === 'formatIn' || key === 'formatNotIn')
+      return formatListParam(params[key] ?? null).length > 0;
+    return true;
+  }).length;
 
   return (
     <section>

@@ -176,8 +176,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23.
 - Difficulty: Medium.
-- Current state: Search exposes `MUSIC` in its format filters, while the AniList query is constrained to anime and the app has no music playback flow. The reported client error has not been independently reproduced.
-- Technical analysis: Reproduce the failure and trace whether it occurs in search results, anime details, or playback. Temporarily remove the unsupported `MUSIC` filter from the UI, then audit the other exposed format and source filters against the app's anime metadata and Anivexa playback contracts. Preserve AniList query behavior and do not claim the reported cause is confirmed until reproduced.
+- Current state: The `MUSIC` format is removed from both format pickers and ignored in legacy search URLs before filtering, display, and active-filter counts. Search remains constrained to AniList anime. Other exposed fields map to AniList anime filters; source options describe the work an anime was adapted from, not a streaming provider. The query requests MediaSource version 3 so the exposed v2/v3 source values are supported. Episode and provider availability remains an Anivexa lookup. The reported client error has not been reproduced.
+- Technical analysis: Keep the search query constrained to `ANIME`, make `MUSIC` unavailable as a selectable filter, and discard stale `MUSIC` format values from old URLs. Preserve `MUSIC` in the metadata type because AniList may still return that format. Keep exposed status, season, sort, and source values aligned with AniList's enums, request MediaSource version 3 for newer source values, and describe source filters as adaptation metadata rather than playback availability. Do not claim the reported cause is confirmed until reproduced.
 
 ## Discord integrations
 
