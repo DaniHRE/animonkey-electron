@@ -18,6 +18,7 @@ import {
   WatchLaterSection,
 } from '@/components/features/home/home-library-sections';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { animeQueries, mergeAnimeMetadata } from '@/services/anime-queries';
@@ -42,8 +43,11 @@ function getHeroFormatLabel(format: string | undefined): string | undefined {
 
 export function HomePage() {
   const queryClient = useQueryClient();
-  const homeQuery = useQuery(animeQueries.home());
-  const scheduleQuery = useQuery(animeQueries.schedule(new Date()));
+  const { includeAdult } = useAdultContentPreference();
+  const homeQuery = useQuery(animeQueries.home(includeAdult));
+  const scheduleQuery = useQuery(
+    animeQueries.schedule(new Date(), includeAdult),
+  );
   const home = homeQuery.data;
   const spotlightQuery = useQuery({
     ...animeQueries.spotlight(queryClient, home?.banner ?? []),

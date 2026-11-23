@@ -4,6 +4,7 @@ import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
 import type { AnimeResult } from '@/types/anime';
 
@@ -26,6 +27,7 @@ const collections = {
 type CollectionKey = keyof typeof collections;
 
 export function CatalogPage() {
+  const { includeAdult } = useAdultContentPreference();
   const { pathname, search } = useRouterState({
     select: (state) => state.location,
   });
@@ -44,6 +46,7 @@ export function CatalogPage() {
       [...config.sort],
       'status' in config ? config.status : undefined,
       page,
+      includeAdult,
     ),
   );
   const loading = query.isPending;

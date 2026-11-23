@@ -293,6 +293,121 @@ async function searchByAdultFlag(
   return response.data?.Page;
 }
 
+interface CatalogPageOptions {
+  page: number;
+  perPage: number;
+  sort: string[];
+  signal?: AbortSignal;
+  includeAdult: boolean;
+  statusIn?: string[];
+  season?: AnimeResult['season'];
+  seasonYear?: number;
+}
+
+async function requestCatalogPages({
+  page,
+  perPage,
+  sort,
+  signal,
+  includeAdult,
+  statusIn,
+  season,
+  seasonYear,
+}: CatalogPageOptions): Promise<Array<AniListPage | undefined>> {
+  const adultFlags = includeAdult ? [false, true] : [false];
+  const perAdultPage = includeAdult
+    ? Math.max(1, Math.ceil(perPage / 2))
+    : perPage;
+  return Promise.all(
+    adultFlags.map(async (isAdult) => {
+      const response = await request(
+        PAGE_QUERY,
+        {
+          page,
+          perPage: perAdultPage,
+          sort,
+          type: 'ANIME',
+          isAdult,
+          status_in: statusIn,
+          season,
+          seasonYear,
+        },
+        signal,
+      );
+      return response.data?.Page;
+    }),
+  );
+}
+
+function hasValidAnimeAdultFlag(media: AniListMedia): boolean {
+  return media.type === 'ANIME' && typeof media.isAdult === 'boolean';
+}
+
+function mapCatalogResults(
+  media: AniListMedia[],
+  includeAdult: boolean,
+): AnimeResult[] {
+  return media.flatMap((item) => {
+    if (!hasValidAnimeAdultFlag(item) || (!includeAdult && item.isAdult))
+      return [];
+    return [mapMedia(item)];
+  });
+}
+
+function mapSearchResults(
+  media: AniListMedia[],
+  adultMode: NonNullable<AnimeSearchFilters['adultMode']>,
+): AnimeResult[] {
+  return media.flatMap((item) => {
+    if (!hasValidAnimeAdultFlag(item)) return [];
+    if (adultMode === 'exclude' && item.isAdult) return [];
+    if (adultMode === 'only' && !item.isAdult) return [];
+    return [mapMedia(item)];
+  });
+}
+
+function valueForSort(media: AniListMedia, sort: string): number | string {
+  const field = sort.replace(/_DESC$/, '');
+  if (field === 'SCORE') return media.averageScore ?? 0;
+  if (field === 'POPULARITY') return media.popularity ?? 0;
+  if (field === 'TRENDING') return media.trending ?? 0;
+  if (field === 'FAVOURITES') return media.favourites ?? 0;
+  if (field === 'ID') return media.id;
+  if (field === 'EPISODES') return media.episodes ?? 0;
+  if (field === 'DURATION') return media.duration ?? 0;
+  if (field === 'TITLE_ENGLISH') return media.title?.english ?? '';
+  if (field === 'TITLE_NATIVE') return media.title?.native ?? '';
+  if (field === 'TITLE_ROMAJI') return media.title?.romaji ?? '';
+  if (field === 'START_DATE' || field === 'END_DATE') {
+    const date = field === 'START_DATE' ? media.startDate : media.endDate;
+    return (
+      (date?.year ?? 0) * 10000 + (date?.month ?? 0) * 100 + (date?.day ?? 0)
+    );
+  }
+  if (field === 'FORMAT') return media.format ?? '';
+  if (field === 'STATUS') return media.status ?? '';
+  if (field === 'TYPE') return media.type ?? '';
+  if (field === 'UPDATED_AT') return media.updatedAt ?? 0;
+  return media.id;
+}
+
+function sortMediaByFields(media: AniListMedia[], sorts: string[]): void {
+  media.sort((first, second) => {
+    for (const sort of sorts) {
+      if (sort === 'SEARCH_MATCH') continue;
+      const firstValue = valueForSort(first, sort);
+      const secondValue = valueForSort(second, sort);
+      const comparison =
+        typeof firstValue === 'string' && typeof secondValue === 'string'
+          ? firstValue.localeCompare(secondValue)
+          : Number(firstValue) - Number(secondValue);
+      if (comparison !== 0)
+        return sort.endsWith('_DESC') ? -comparison : comparison;
+    }
+    return first.id - second.id;
+  });
+}
+
 export const AniListCatalog = {
   async search(
     keyword: string,
@@ -303,7 +418,7 @@ export const AniListCatalog = {
     const normalizedKeyword = keyword.trim();
     const cacheKey = `search:${JSON.stringify([normalizedKeyword, page, filters])}`;
     return withCatalogCache(cacheKey, SIX_HOURS, signal, async () => {
-      const adultMode = filters?.adultMode ?? 'include';
+      const adultMode = filters?.adultMode ?? 'exclude';
       const requests =
         adultMode === 'include' ? [false, true] : [adultMode === 'only'];
       const pages = await Promise.all(
@@ -324,44 +439,7 @@ export const AniListCatalog = {
       combined.push(...regularResults, ...adultResults);
       const sort =
         filters?.sort ?? (normalizedKeyword ? 'SEARCH_MATCH' : 'TRENDING_DESC');
-      const sortField = sort.replace(/_DESC$/, '');
-      const descending = sort.endsWith('_DESC') || sort === 'SEARCH_MATCH';
-      const valueFor = (media: AniListMedia): number | string => {
-        if (sortField === 'SCORE') return media.averageScore ?? 0;
-        if (sortField === 'POPULARITY') return media.popularity ?? 0;
-        if (sortField === 'TRENDING') return media.trending ?? 0;
-        if (sortField === 'FAVOURITES') return media.favourites ?? 0;
-        if (sortField === 'ID') return media.id;
-        if (sortField === 'EPISODES') return media.episodes ?? 0;
-        if (sortField === 'DURATION') return media.duration ?? 0;
-        if (sortField === 'TITLE_ENGLISH') return media.title?.english ?? '';
-        if (sortField === 'TITLE_NATIVE') return media.title?.native ?? '';
-        if (sortField === 'TITLE_ROMAJI') return media.title?.romaji ?? '';
-        if (sortField === 'START_DATE' || sortField === 'END_DATE') {
-          const date =
-            sortField === 'START_DATE' ? media.startDate : media.endDate;
-          return (
-            (date?.year ?? 0) * 10000 +
-            (date?.month ?? 0) * 100 +
-            (date?.day ?? 0)
-          );
-        }
-        if (sortField === 'FORMAT') return media.format ?? '';
-        if (sortField === 'STATUS') return media.status ?? '';
-        if (sortField === 'TYPE') return media.type ?? '';
-        if (sortField === 'UPDATED_AT') return media.updatedAt ?? 0;
-        return media.id;
-      };
-      if (sort !== 'SEARCH_MATCH')
-        combined.sort((a, b) => {
-          const left = valueFor(a);
-          const right = valueFor(b);
-          const compare =
-            typeof left === 'string' && typeof right === 'string'
-              ? left.localeCompare(right)
-              : Number(left) - Number(right);
-          return descending ? -compare : compare;
-        });
+      if (sort !== 'SEARCH_MATCH') sortMediaByFields(combined, [sort]);
       else {
         const ranked: AniListMedia[] = [];
         for (
@@ -379,66 +457,74 @@ export const AniListCatalog = {
         hasNextPage:
           (regular?.pageInfo?.hasNextPage ?? false) ||
           (adult?.pageInfo?.hasNextPage ?? false),
-        results: combined.map(mapMedia),
+        results: mapSearchResults(combined, adultMode),
       };
     });
   },
 
-  async searchOptions(signal?: AbortSignal): Promise<AnimeSearchOptions> {
-    return withCatalogCache('search:options', ONE_DAY, signal, async () => {
-      const response = await request(
-        'query { GenreCollection MediaTagCollection { id name category isAdult } }',
-        {},
-        signal,
-      );
-      return {
-        genres: response.data?.GenreCollection ?? [],
-        tags: (response.data?.MediaTagCollection ?? []).filter(
-          (tag) => !tag.isAdult,
-        ),
-      };
-    });
-  },
-
-  async trending(signal?: AbortSignal): Promise<AnimeResult[]> {
-    return withCatalogCache('trending', SIX_HOURS, signal, async () => {
-      const response = await request(
-        PAGE_QUERY,
-        {
-          page: 1,
-          perPage: 24,
-          sort: ['TRENDING_DESC'],
-          type: 'ANIME',
-          isAdult: false,
-        },
-        signal,
-      );
-      return (response.data?.Page?.media ?? []).map(mapMedia);
-    });
-  },
-
-  async seasonalTrending(signal?: AbortSignal): Promise<AnimeResult[]> {
-    const { season, year } = getCurrentSeason();
+  async searchOptions(
+    signal?: AbortSignal,
+    includeAdult = false,
+  ): Promise<AnimeSearchOptions> {
     return withCatalogCache(
-      `seasonal-hero:v1:${year}:${season}`,
-      SEASONAL_HERO_TTL,
+      `search:options:${includeAdult}`,
+      ONE_DAY,
       signal,
       async () => {
         const response = await request(
-          PAGE_QUERY,
-          {
-            page: 1,
-            perPage: 6,
-            sort: ['TRENDING_DESC'],
-            type: 'ANIME',
-            isAdult: false,
-            season,
-            seasonYear: year,
-            status_in: ['RELEASING', 'NOT_YET_RELEASED'],
-          },
+          'query { GenreCollection MediaTagCollection { id name category isAdult } }',
+          {},
           signal,
         );
-        return (response.data?.Page?.media ?? []).map(mapMedia);
+        return {
+          genres: response.data?.GenreCollection ?? [],
+          tags: (response.data?.MediaTagCollection ?? []).filter((tag) =>
+            includeAdult
+              ? typeof tag.isAdult === 'boolean'
+              : tag.isAdult === false,
+          ),
+        };
+      },
+    );
+  },
+
+  async trending(
+    signal?: AbortSignal,
+    includeAdult = false,
+  ): Promise<AnimeResult[]> {
+    const results = await AniListCatalog.list(
+      ['TRENDING_DESC'],
+      undefined,
+      1,
+      signal,
+      includeAdult,
+    );
+    return results.results;
+  },
+
+  async seasonalTrending(
+    signal?: AbortSignal,
+    includeAdult = false,
+  ): Promise<AnimeResult[]> {
+    const { season, year } = getCurrentSeason();
+    return withCatalogCache(
+      `seasonal-hero:v2:${year}:${season}:${includeAdult}`,
+      SEASONAL_HERO_TTL,
+      signal,
+      async () => {
+        const pages = await requestCatalogPages({
+          page: 1,
+          perPage: 6,
+          sort: ['TRENDING_DESC'],
+          signal,
+          includeAdult,
+          season,
+          seasonYear: year,
+          statusIn: ['RELEASING', 'NOT_YET_RELEASED'],
+        });
+        const media = pages.flatMap((result) => result?.media ?? []);
+        sortMediaByFields(media, ['TRENDING_DESC']);
+        return mapCatalogResults(media, includeAdult);
       },
     );
   },
@@ -448,36 +534,32 @@ export const AniListCatalog = {
     status?: 'FINISHED' | 'RELEASING',
     page = 1,
     signal?: AbortSignal,
+    includeAdult = false,
   ): Promise<AnimeSearchResponse> {
     return withCatalogCache(
-      `list:${JSON.stringify([sort, status, page])}`,
+      `list:${JSON.stringify([sort, status, page, includeAdult])}`,
       SIX_HOURS,
       signal,
       async () => {
-        const response = await request(
-          PAGE_QUERY,
-          {
-            page,
-            perPage: 24,
-            sort,
-            status_in: status ? [status] : undefined,
-            type: 'ANIME',
-            isAdult: false,
-          },
+        const pages = await requestCatalogPages({
+          page,
+          perPage: 24,
+          sort,
           signal,
-        );
-        const data = response.data?.Page;
-        const info = data?.pageInfo;
-        const results = (data?.media ?? []).map(mapMedia);
+          includeAdult,
+          statusIn: status ? [status] : undefined,
+        });
+        const media = pages.flatMap((result) => result?.media ?? []);
+        sortMediaByFields(media, sort);
         return {
-          hasNextPage: info?.hasNextPage ?? false,
-          results,
+          hasNextPage: pages.some((result) => result?.pageInfo?.hasNextPage),
+          results: mapCatalogResults(media, includeAdult),
         };
       },
     );
   },
 
-  async home(signal?: AbortSignal) {
+  async home(signal?: AbortSignal, includeAdult = false) {
     const [
       seasonalTrending,
       trending,
@@ -486,22 +568,36 @@ export const AniListCatalog = {
       recentlyAdded,
       popular,
     ] = await Promise.all([
-      AniListCatalog.seasonalTrending(signal),
-      AniListCatalog.list(['TRENDING_DESC'], undefined, 1, signal),
+      AniListCatalog.seasonalTrending(signal, includeAdult),
+      AniListCatalog.list(
+        ['TRENDING_DESC'],
+        undefined,
+        1,
+        signal,
+        includeAdult,
+      ),
       AniListCatalog.list(
         ['END_DATE_DESC', 'POPULARITY_DESC'],
         'FINISHED',
         1,
         signal,
+        includeAdult,
       ),
       AniListCatalog.list(
         ['START_DATE_DESC', 'POPULARITY_DESC'],
         'RELEASING',
         1,
         signal,
+        includeAdult,
       ),
-      AniListCatalog.list(['ID_DESC'], undefined, 1, signal),
-      AniListCatalog.list(['POPULARITY_DESC'], undefined, 1, signal),
+      AniListCatalog.list(['ID_DESC'], undefined, 1, signal, includeAdult),
+      AniListCatalog.list(
+        ['POPULARITY_DESC'],
+        undefined,
+        1,
+        signal,
+        includeAdult,
+      ),
     ]);
     return {
       banner: seasonalTrending,
@@ -513,7 +609,11 @@ export const AniListCatalog = {
     };
   },
 
-  async schedule(date: Date, signal?: AbortSignal): Promise<AnimeResult[]> {
+  async schedule(
+    date: Date,
+    signal?: AbortSignal,
+    includeAdult = false,
+  ): Promise<AnimeResult[]> {
     const dateKey = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Sao_Paulo',
       year: 'numeric',
@@ -525,7 +625,7 @@ export const AniListCatalog = {
     const from = Math.floor(dayStart.getTime() / 1000) + 3 * 60 * 60;
     const to = from + 24 * 60 * 60;
     return withCatalogCache(
-      `schedule:${dateKey}`,
+      `schedule:${dateKey}:${includeAdult}`,
       5 * 60 * 1000,
       signal,
       async () => {
@@ -535,20 +635,31 @@ export const AniListCatalog = {
           { from, to, page: 1, perPage: 50 },
           signal,
         );
-        return (response.data?.Page?.airingSchedules ?? []).map((item) => ({
-          ...mapMedia(item.media),
-          airingAt: item.airingAt,
-          airingEpisode: item.episode,
-        }));
+        return (response.data?.Page?.airingSchedules ?? []).flatMap((item) => {
+          const [anime] = mapCatalogResults([item.media], includeAdult);
+          return anime
+            ? [
+                {
+                  ...anime,
+                  airingAt: item.airingAt,
+                  airingEpisode: item.episode,
+                },
+              ]
+            : [];
+        });
       },
     );
   },
 
-  async getAnime(id: string, signal?: AbortSignal): Promise<AnimeInfo | null> {
+  async getAnime(
+    id: string,
+    signal?: AbortSignal,
+    includeAdult = false,
+  ): Promise<AnimeInfo | null> {
     const numericId = Number(id);
     if (!Number.isSafeInteger(numericId) || numericId < 1) return null;
     return withCatalogCache(
-      `anime:v6:${numericId}`,
+      `anime:v7:${numericId}:${includeAdult}`,
       ONE_DAY,
       signal,
       async () => {
@@ -558,7 +669,7 @@ export const AniListCatalog = {
           signal,
         );
         const media = response.data?.Media;
-        if (!media) return null;
+        if (!media || !hasValidAnimeAdultFlag(media)) return null;
         return {
           ...mapMedia(media),
           trailer:
@@ -605,7 +716,9 @@ export const AniListCatalog = {
             ];
           }),
           relations: (media.relations?.edges ?? []).flatMap((edge) =>
-            edge.node?.type === 'ANIME'
+            edge.node &&
+            hasValidAnimeAdultFlag(edge.node) &&
+            (includeAdult || !edge.node.isAdult)
               ? [
                   {
                     ...mapMedia(edge.node),
@@ -615,10 +728,14 @@ export const AniListCatalog = {
               : [],
           ),
           recommendations: (media.recommendations?.nodes ?? []).flatMap(
-            (node) =>
-              node.mediaRecommendation?.type === 'ANIME'
-                ? [mapMedia(node.mediaRecommendation)]
-                : [],
+            (node) => {
+              const recommendation = node.mediaRecommendation;
+              return recommendation &&
+                hasValidAnimeAdultFlag(recommendation) &&
+                (includeAdult || !recommendation.isAdult)
+                ? [mapMedia(recommendation)]
+                : [];
+            },
           ),
         };
       },

@@ -17,6 +17,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import {
@@ -82,6 +83,11 @@ export function SettingsPage() {
     updateProfile,
   } = useAccount();
   const { titleLanguage, setTitleLanguage } = useTitleLanguage();
+  const {
+    includeAdult,
+    setIncludeAdult,
+    loaded: adultPreferenceLoaded,
+  } = useAdultContentPreference();
   const {
     value: storedShortcuts,
     update: updateStoredShortcuts,
@@ -973,6 +979,31 @@ export function SettingsPage() {
                   </label>
                 ))}
               </div>
+            </fieldset>
+            <fieldset className="mt-6 border-t border-white/[0.07] pt-5">
+              <legend className="text-base font-semibold">
+                Conteúdo adulto
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={includeAdult}
+                  disabled={!adultPreferenceLoaded}
+                  onChange={(event) => setIncludeAdult(event.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/90">
+                    Incluir conteúdo adulto na descoberta
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desativado por padrão. Quando ativado, títulos marcados como
+                    adultos podem aparecer na busca, nos catálogos, na agenda e
+                    nas recomendações. O filtro da busca pode substituir esta
+                    preferência para uma pesquisa específica.
+                  </span>
+                </span>
+              </label>
             </fieldset>
           </section>
         </section>

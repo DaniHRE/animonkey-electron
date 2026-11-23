@@ -37,6 +37,7 @@ import { usePlaybackSessionStore } from '@/stores/playback-session-store';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import type { AnimeEpisode } from '@/types/player';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { getPaginationItems } from '@/lib/pagination';
 import { EpisodeThumbnail } from '@/components/shared/episode-thumbnail';
 import { useWatchLater } from '@/hooks/use-watch-later';
@@ -103,12 +104,15 @@ export function WatchPage() {
 
 function WatchPageContent() {
   const { titleLanguage } = useTitleLanguage();
+  const { includeAdult } = useAdultContentPreference();
   const prefersReducedMotion = useReducedMotion() ?? false;
   const { id } = watchRoute.useParams();
   const { ep: requestedEpisodeId = '' } = watchRoute.useSearch();
   const navigate = useNavigate({ from: '/watch/$id' });
   const queryClient = useQueryClient();
-  const animeQuery = useQuery(animeQueries.detail(queryClient, id));
+  const animeQuery = useQuery(
+    animeQueries.detail(queryClient, id, includeAdult),
+  );
   const anime = animeQuery.data ?? null;
   const episodesQuery = useQuery({
     ...animeQueries.episodes(id, anime),

@@ -10,6 +10,7 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { getAnimeImage, resolveAnimeTitle } from '@/lib/anime';
 import { animeQueries } from '@/services/anime-queries';
 
@@ -39,6 +40,7 @@ function formatDate(date: Date, options: Intl.DateTimeFormatOptions): string {
 
 export function SchedulePage() {
   const { titleLanguage } = useTitleLanguage();
+  const { includeAdult } = useAdultContentPreference();
   const today = useMemo(() => getSãoPauloToday(), []);
   const startOfWeek = useMemo(() => {
     const mondayOffset = (today.getUTCDay() + 6) % 7;
@@ -55,7 +57,9 @@ export function SchedulePage() {
     [startOfWeek, weekOffset],
   );
   const [selectedDate, setSelectedDate] = useState(today);
-  const scheduleQuery = useQuery(animeQueries.schedule(selectedDate));
+  const scheduleQuery = useQuery(
+    animeQueries.schedule(selectedDate, includeAdult),
+  );
   const loading = scheduleQuery.isPending;
   const items = scheduleQuery.data ?? [];
   const error = scheduleQuery.error?.message ?? null;

@@ -28,6 +28,7 @@ import {
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
@@ -287,9 +288,10 @@ export function AppShell() {
   const canNavigateBack = canGoBack || pathname !== '/';
   const backLabel = canGoBack ? 'Voltar' : 'Ir para o início';
   const { session } = useAccount();
+  const { includeAdult } = useAdultContentPreference();
   const { titleLanguage } = useTitleLanguage();
   const searchPreviewQuery = useQuery({
-    ...animeQueries.search(debouncedSearch, 1, {}),
+    ...animeQueries.search(debouncedSearch, 1, {}, includeAdult),
     enabled:
       pathname !== '/search' &&
       searchPreviewOpen &&

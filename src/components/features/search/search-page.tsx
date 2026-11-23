@@ -12,6 +12,7 @@ import { getRouteApi, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
 import type {
   AnimeFormat,
@@ -318,13 +319,19 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
     ['startDateLike', 'startDateLike'],
     ['countryOfOrigin', 'countryOfOrigin'],
     ['source', 'source'],
-    ['adultMode', 'adultMode'],
     ['sort', 'sort'],
   ];
   for (const [key, param] of stringMap) {
     const value = params.get(param);
     if (value) Object.assign(filters, { [key]: value });
   }
+  const adultMode = params.get('adultMode');
+  if (
+    adultMode === 'include' ||
+    adultMode === 'exclude' ||
+    adultMode === 'only'
+  )
+    filters.adultMode = adultMode;
   const licensed = params.get('isLicensed');
   if (licensed === 'true' || licensed === 'false')
     filters.isLicensed = licensed === 'true';
@@ -332,6 +339,7 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
 }
 
 export function SearchPage() {
+  const { includeAdult } = useAdultContentPreference();
   const params = searchRoute.useSearch();
   const navigate = useNavigate({ from: '/search' });
   const searchString = new URLSearchParams(params).toString();
@@ -353,9 +361,9 @@ export function SearchPage() {
     );
     return () => window.clearTimeout(timeout);
   }, [query]);
-  const optionsQuery = useQuery(animeQueries.searchOptions());
+  const optionsQuery = useQuery(animeQueries.searchOptions(includeAdult));
   const searchQuery = useQuery({
-    ...animeQueries.search(debouncedQuery, page, filters),
+    ...animeQueries.search(debouncedQuery, page, filters, includeAdult),
     enabled: debouncedQuery === query,
   });
   const options = optionsQuery.data ?? {
@@ -547,7 +555,9 @@ export function SearchPage() {
               ['exclude', 'Sem adulto'],
               ['only', 'Adulto'],
             ].map(([value, label]) => {
-              const active = (params.adultMode ?? 'include') === value;
+              const active =
+                (filters.adultMode ??
+                  (includeAdult ? 'include' : 'exclude')) === value;
               return (
                 <button
                   key={value}

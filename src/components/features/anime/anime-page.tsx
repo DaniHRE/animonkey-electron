@@ -20,6 +20,7 @@ import { AnimeRelationsGrid } from '@/components/features/anime/anime-relations-
 import { animeQueries } from '@/services/anime-queries';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { useWatchLater } from '@/hooks/use-watch-later';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useAnimeRating } from '@/hooks/use-anime-rating';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 
@@ -30,7 +31,10 @@ export function AnimePage() {
   const { titleLanguage } = useTitleLanguage();
   const { id } = animeRoute.useParams();
   const queryClient = useQueryClient();
-  const animeQuery = useQuery(animeQueries.detail(queryClient, id));
+  const { includeAdult } = useAdultContentPreference();
+  const animeQuery = useQuery(
+    animeQueries.detail(queryClient, id, includeAdult),
+  );
   const anime = animeQuery.data ?? null;
   const episodesQuery = useQuery({
     ...animeQueries.episodes(id, anime),
