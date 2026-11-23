@@ -412,30 +412,24 @@
 .app-update-dialog__status-hero {
   position: relative;
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  align-items: center;
-  gap: 22px;
+  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 0;
   margin-top: 25px;
-  padding: 26px;
   overflow: hidden;
   border: 1px solid rgb(255 255 255 / 9%);
-  border-radius: 20px;
-  background: linear-gradient(
-    120deg,
-    rgb(73 215 122 / 8%),
-    rgb(255 255 255 / 3%) 48%,
-    rgb(0 0 0 / 10%)
-  );
+  border-radius: 22px;
+  background: #141619;
 }
 
 .app-update-dialog__status-hero::after {
   position: absolute;
   top: -100px;
   right: -30px;
-  width: 250px;
-  height: 250px;
+  width: 340px;
+  height: 340px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgb(73 215 122 / 11%), transparent 68%);
+  background: radial-gradient(circle, rgb(73 215 122 / 10%), transparent 70%);
   content: '';
   pointer-events: none;
 }
@@ -450,10 +444,68 @@
   );
 }
 
+.app-update-dialog__status-hero.is-error::after {
+  background: radial-gradient(circle, rgb(241 195 109 / 10%), transparent 70%);
+}
+
 .app-update-dialog__status-copy {
   position: relative;
   z-index: 1;
+  display: flex;
   min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  padding: 32px 34px;
+}
+
+.app-update-dialog__status-rail {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 270px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px;
+  border-right: 1px solid rgb(255 255 255 / 8%);
+  background: linear-gradient(
+    155deg,
+    rgb(73 215 122 / 12%),
+    rgb(73 215 122 / 5%) 48%,
+    rgb(255 255 255 / 2%)
+  );
+}
+
+.app-update-dialog__status-hero.is-error .app-update-dialog__status-rail {
+  background: linear-gradient(
+    155deg,
+    rgb(241 195 109 / 11%),
+    rgb(241 195 109 / 4%) 48%,
+    rgb(255 255 255 / 2%)
+  );
+}
+
+.app-update-dialog__status-rail-meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.app-update-dialog__version-label {
+  color: rgb(229 231 235 / 53%);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.app-update-dialog__version-number {
+  margin-top: 5px;
+  color: #f7f7f5;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 .app-update-dialog__status-copy .app-update-dialog__eyebrow {
@@ -461,17 +513,28 @@
 }
 
 .app-update-dialog__status-copy .app-update-dialog__summary {
-  margin-top: 9px;
+  margin-top: 12px;
+  max-width: 430px;
 }
 
 .app-update-dialog__status-line {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: 16px;
+  margin-top: 15px;
   color: rgb(229 231 235 / 78%);
   font-size: 13px;
   font-weight: 600;
+}
+
+.app-update-dialog__status-rail-meta .app-update-dialog__status-line {
+  margin-top: 16px;
+  padding: 8px 10px;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 999px;
+  background: rgb(0 0 0 / 14%);
+  color: rgb(245 245 245 / 82%);
+  font-size: 11px;
 }
 
 .app-update-dialog__actions {
@@ -491,9 +554,17 @@
 
   .app-update-dialog__status-hero {
     grid-template-columns: minmax(0, 1fr);
-    justify-items: start;
-    gap: 18px;
-    padding: 20px;
+  }
+
+  .app-update-dialog__status-rail {
+    min-height: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 18px;
+    border-right: 0;
+    border-bottom: 1px solid rgb(255 255 255 / 8%);
   }
 
   .app-update-dialog__status-icon {
@@ -501,6 +572,25 @@
     height: 56px;
     flex-basis: 56px;
     border-radius: 16px;
+  }
+
+  .app-update-dialog__status-rail-meta {
+    flex: 1 1 auto;
+  }
+
+  .app-update-dialog__version-number {
+    font-size: 18px;
+  }
+
+  .app-update-dialog__status-rail-meta .app-update-dialog__status-line {
+    margin-top: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .app-update-dialog__status-copy {
+    padding: 23px 20px 25px;
   }
 
   .app-update-dialog__highlights {

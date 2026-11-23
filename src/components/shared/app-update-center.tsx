@@ -6,6 +6,7 @@ import {
   CircleAlert,
   CircleCheck,
   Compass,
+  Download,
   History,
   LoaderCircle,
   Play,
@@ -114,7 +115,7 @@ function AppUpdateIcon({
     case 'error':
       return <CircleAlert {...iconProps} />;
     default:
-      return <RefreshCw {...iconProps} />;
+      return <Download {...iconProps} />;
   }
 }
 
@@ -282,7 +283,7 @@ export function AppUpdateCenter() {
         <div className="app-update-dialog__surface">
           <div className="app-update-dialog__topline">
             <div className="app-update-dialog__brand-mark" aria-hidden="true">
-              <RefreshCw size={20} strokeWidth={1.8} />
+              <Download size={20} strokeWidth={1.8} />
             </div>
             <span className="app-update-dialog__version">
               ANIMONKEY <span>·</span> v{currentVersion}
@@ -300,12 +301,34 @@ export function AppUpdateCenter() {
           {panel === 'update' ? (
             <section className="app-update-dialog__content">
               <div className={`app-update-dialog__status-hero is-${status}`}>
-                <div className={`app-update-dialog__status-icon is-${status}`}>
-                  <AppUpdateIcon
-                    status={status}
-                    size={28}
-                    className={isBusy ? 'app-update-center__spin' : undefined}
-                  />
+                <div className="app-update-dialog__status-rail">
+                  <div
+                    className={`app-update-dialog__status-icon is-${status}`}
+                  >
+                    <AppUpdateIcon
+                      status={status}
+                      size={28}
+                      className={isBusy ? 'app-update-center__spin' : undefined}
+                    />
+                  </div>
+                  <div className="app-update-dialog__status-rail-meta">
+                    <span className="app-update-dialog__version-label">
+                      VERSÃO INSTALADA
+                    </span>
+                    <strong className="app-update-dialog__version-number">
+                      v{currentVersion}
+                    </strong>
+                    <div
+                      className="app-update-dialog__status-line"
+                      role="status"
+                    >
+                      <span
+                        className={`app-update-center__indicator is-${status}`}
+                        aria-hidden="true"
+                      />
+                      {updateCopy[status].label}
+                    </div>
+                  </div>
                 </div>
                 <div className="app-update-dialog__status-copy">
                   <p className="app-update-dialog__eyebrow">ATUALIZAÇÃO</p>
@@ -313,13 +336,6 @@ export function AppUpdateCenter() {
                     {updateCopy[status].title}
                   </h2>
                   <p className="app-update-dialog__summary">{statusMessage}</p>
-                  <div className="app-update-dialog__status-line" role="status">
-                    <span
-                      className={`app-update-center__indicator is-${status}`}
-                      aria-hidden="true"
-                    />
-                    {updateCopy[status].label}
-                  </div>
                 </div>
               </div>
               <div className="app-update-dialog__actions">
