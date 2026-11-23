@@ -201,8 +201,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 00:48.
 - Difficulty: High; primarily a backend service task.
-- Current state: The desktop app has local Anivexa runtime diagnostics, but no scheduled provider health pipeline or shared Supabase status table was found. This is related to, but distinct from, client-side failure reports in DISC-15.
-- Technical analysis: Define which frequently used providers to probe, the check cadence, success criteria, retry policy, and freshness/expiry of stored results. Run probes in a trusted scheduled service and write sanitized status records through a restricted backend contract; do not expose provider credentials or probe secrets to Electron. Guard against transient network errors and false outage reports.
+- Current state: The pinned Anivexa API documentation describes `GET /` as returning API metadata and the active-provider list, not per-provider health. Electron starts Anivexa as a local utility process from its bundled API runtime, and Supabase has no configured `ANIVEXA_API_ROOT`; a scheduled backend cannot probe each desktop user's local process ([Anivexa API documentation](https://github.com/walterwhite-69/Anivexa-API)). No scheduled provider health pipeline or shared Supabase status table exists. This is related to, but distinct from, client-observed reports in DISC-15.
+- Technical analysis: Before implementing probes, provide a remotely reachable Anivexa API endpoint, the provider and episode/sample matrix to check, cadence, success criteria, retry threshold, and result freshness/expiry. Run probes only in a trusted scheduled service and write sanitized status records through a restricted backend contract; do not expose provider credentials or probe secrets to Electron. Guard against transient errors and false outage reports. Do not treat DISC-15 client reports as confirmed health checks.
 
 ## Runtime diagnostics
 
