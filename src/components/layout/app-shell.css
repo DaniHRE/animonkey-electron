@@ -329,6 +329,42 @@
   -webkit-app-region: drag;
 }
 
+.app-window-titlebar__navigation {
+  display: flex;
+  height: 24px;
+  flex: 0 0 auto;
+  align-self: center;
+  align-items: center;
+  gap: 0;
+  padding: 0 8px 0 10px;
+  -webkit-app-region: no-drag;
+}
+
+.app-window-titlebar__navigation-button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgb(245 245 245 / 62%);
+  cursor: pointer;
+  transition: color 140ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.app-window-titlebar__navigation-button:hover:not(:disabled),
+.app-window-titlebar__navigation-button:focus-visible {
+  color: #fff;
+}
+
+.app-window-titlebar__navigation-button:disabled {
+  cursor: default;
+  color: rgb(245 245 245 / 46%);
+}
+
 .app-window-controls {
   display: flex;
   height: var(--app-titlebar-height);
@@ -408,14 +444,59 @@
   background: linear-gradient(to left, rgb(0 0 0 / 80%), transparent);
 }
 
-.app-header__search {
+.app-header__navigation-actions {
   grid-column: 2;
   grid-row: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   justify-self: center;
   width: 100%;
   max-width: 800px;
   min-width: 0;
-  flex: none;
+}
+
+.app-header__history-button {
+  display: grid;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
+  color: rgb(220 224 230 / 76%);
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.app-header__history-button:hover:not(:disabled) {
+  border-color: rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+}
+
+.app-header__history-button:focus-visible {
+  outline: 2px solid #49d77a;
+  outline-offset: 2px;
+}
+
+.app-header__history-button:disabled {
+  cursor: default;
+  opacity: 0.36;
+}
+
+.app-header__search {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 800px;
+  min-width: 0;
 }
 
 .app-header__actions {
@@ -517,6 +598,10 @@
     gap: 8px;
   }
 
+  .app-header__navigation-actions {
+    gap: 4px;
+  }
+
   .app-header__language {
     width: 68px;
     flex-basis: 68px;
@@ -570,6 +655,8 @@
   .app-sidebar__show-handle,
   .app-sidebar [data-sidebar-link],
   .app-header__show-sidebar,
+  .app-header__history-button,
+  .app-window-titlebar__navigation-button,
   .app-header__search-input,
   .app-header__language-thumb,
   .app-header__language-option {

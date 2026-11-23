@@ -25,7 +25,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-03 — Application-level back button
 
 - Difficulty: Low to Medium.
-- Current state: Route history exists, but no general back control is present in the application shell. The player has previous-episode navigation, which is a different action.
+- Current state: Implemented locally on `feature/disc-03-application-back-button`. Back and forward controls sit in Windows' custom title bar beside the window controls; platforms with native title bars keep them in the app header. Back uses TanStack's in-app history index. Without a valid in-app entry it returns non-home routes to Início and is disabled on Início. Forward is enabled only for an in-app entry observed during the current session. Navigation preserves hash routes and query state, including the episode parameter.
 - Technical analysis: Add a shell control that uses TanStack Router history and handles an empty or external-entry history safely. Preserve hash routes, browser back/forward behavior, and the episode query parameter.
 
 ### DISC-04 — Common and configurable keyboard shortcuts

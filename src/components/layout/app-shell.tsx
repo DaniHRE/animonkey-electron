@@ -1,6 +1,8 @@
 import {
   Bookmark,
   Activity,
+  ArrowLeft,
+  ArrowRight,
   CalendarDays,
   ChevronDown,
   ChevronLeft,
@@ -20,6 +22,7 @@ import {
   Link,
   Outlet,
   useNavigate,
+  useRouter,
   useRouterState,
 } from '@tanstack/react-router';
 import { motion, useReducedMotion } from 'motion/react';
@@ -46,6 +49,110 @@ const moreItems = [
   { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
 ] as const;
 
+function hasInAppHistory(router: ReturnType<typeof useRouter>): boolean {
+  const historyIndex = router.history.location.state.__TSR_index;
+  return (
+    Number.isSafeInteger(historyIndex) &&
+    historyIndex > 0 &&
+    router.history.canGoBack()
+  );
+}
+
+interface NavigationHistoryButtonsProps {
+  variant: 'header' | 'titlebar';
+  canGoBack: boolean;
+  canGoForward: boolean;
+  backLabel: string;
+  onBack: () => void;
+  onForward: () => void;
+}
+
+function NavigationHistoryButtons({
+  variant,
+  canGoBack,
+  canGoForward,
+  backLabel,
+  onBack,
+  onForward,
+}: NavigationHistoryButtonsProps) {
+  const buttonClassName =
+    variant === 'titlebar'
+      ? 'app-window-titlebar__navigation-button'
+      : 'app-header__history-button';
+  const iconSize = variant === 'titlebar' ? 16 : 18;
+
+  return (
+    <>
+      <button
+        type="button"
+        className={buttonClassName}
+        aria-label={backLabel}
+        title={backLabel}
+        onClick={onBack}
+        disabled={!canGoBack}
+      >
+        <ArrowLeft size={iconSize} strokeWidth={1.7} aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className={buttonClassName}
+        aria-label="Avançar"
+        title="Avançar"
+        onClick={onForward}
+        disabled={!canGoForward}
+      >
+        <ArrowRight size={iconSize} strokeWidth={1.7} aria-hidden="true" />
+      </button>
+    </>
+  );
+}
+
+function getInAppHistoryIndex(
+  router: ReturnType<typeof useRouter>,
+): number | null {
+  const index = router.history.location.state.__TSR_index;
+  return Number.isSafeInteger(index) && index >= 0 ? index : null;
+}
+
+interface InAppHistoryChange {
+  action: { type: string };
+  location: { state: { __TSR_index: number } };
+}
+
+function useInAppHistory(router: ReturnType<typeof useRouter>) {
+  const [maxKnownIndex, setMaxKnownIndex] = useState(
+    () => getInAppHistoryIndex(router) ?? 0,
+  );
+  const [historyIndex, setHistoryIndex] = useState(() =>
+    getInAppHistoryIndex(router),
+  );
+
+  useEffect(
+    () =>
+      router.history.subscribe(({ action, location }: InAppHistoryChange) => {
+        const nextIndex = location.state.__TSR_index;
+        if (!Number.isSafeInteger(nextIndex) || nextIndex < 0) {
+          setHistoryIndex(null);
+          return;
+        }
+
+        setHistoryIndex(nextIndex);
+        setMaxKnownIndex((currentMax) =>
+          action.type === 'PUSH' ? nextIndex : Math.max(currentMax, nextIndex),
+        );
+      }),
+    [router],
+  );
+
+  const canGoBack =
+    historyIndex !== null && historyIndex > 0 && router.history.canGoBack();
+
+  return {
+    canGoBack,
+    canGoForward: historyIndex !== null && historyIndex < maxKnownIndex,
+  };
+}
+
 export function AppShell() {
   const hasCustomWindowChrome = window.animonkey.platform === 'win32';
   const [search, setSearch] = useState('');
@@ -63,7 +170,11 @@ export function AppShell() {
     ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
   );
   const showMoreItems = moreExpanded || moreRouteActive;
+  const router = useRouter();
   const navigate = useNavigate();
+  const { canGoBack, canGoForward } = useInAppHistory(router);
+  const canNavigateBack = canGoBack || pathname !== '/';
+  const backLabel = canGoBack ? 'Voltar' : 'Ir para o início';
   const { session } = useAccount();
   const { titleLanguage, toggleTitleLanguage } = useTitleLanguage();
   const useContentFrame =
@@ -120,6 +231,18 @@ export function AppShell() {
       to: '/search',
       search: query ? { q: query } : {},
     });
+  }
+
+  function goBack() {
+    if (hasInAppHistory(router)) {
+      router.history.back();
+      return;
+    }
+    if (pathname !== '/') void navigate({ to: '/', replace: true });
+  }
+
+  function goForward() {
+    if (canGoForward) router.history.forward();
   }
 
   return (
@@ -266,6 +389,20 @@ export function AppShell() {
         {hasCustomWindowChrome && (
           <div className="app-window-titlebar">
             <div
+              className="app-window-titlebar__navigation"
+              role="group"
+              aria-label="Navegação do histórico"
+            >
+              <NavigationHistoryButtons
+                variant="titlebar"
+                canGoBack={canNavigateBack}
+                canGoForward={canGoForward}
+                backLabel={backLabel}
+                onBack={goBack}
+                onForward={goForward}
+              />
+            </div>
+            <div
               className="app-window-titlebar__drag-region"
               aria-hidden="true"
             />
@@ -315,24 +452,33 @@ export function AppShell() {
             </motion.span>
           </Link>
 
-          {pathname !== '/search' && (
-            <form
-              onSubmit={submitSearch}
-              className="app-header__search relative"
-            >
-              <Search
-                size={20}
-                className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-gray-400"
+          <div className="app-header__navigation-actions">
+            {!hasCustomWindowChrome && (
+              <NavigationHistoryButtons
+                variant="header"
+                canGoBack={canNavigateBack}
+                canGoForward={canGoForward}
+                backLabel={backLabel}
+                onBack={goBack}
+                onForward={goForward}
               />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar anime..."
-                aria-label="Buscar anime"
-                className="app-header__search-input"
-              />
-            </form>
-          )}
+            )}
+            {pathname !== '/search' && (
+              <form onSubmit={submitSearch} className="app-header__search">
+                <Search
+                  size={20}
+                  className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-gray-400"
+                />
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Buscar anime..."
+                  aria-label="Buscar anime"
+                  className="app-header__search-input"
+                />
+              </form>
+            )}
+          </div>
 
           <div className="app-header__actions flex items-center gap-4">
             <AppUpdateCenter />
