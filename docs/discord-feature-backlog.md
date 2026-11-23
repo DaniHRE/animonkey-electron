@@ -101,8 +101,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-15 — Report unavailable providers automatically
 
 - Difficulty: High.
-- Current state: Local Anivexa runtime diagnostics exist, but no provider health reporting or outbound failure report was found.
-- Technical analysis: Distinguish a confirmed provider outage from a transient network error, unsupported stream, or user cancellation. Any report sent off-device needs an endpoint, consent and retention rules, rate limiting, and strict redaction of signed stream URLs, authorization headers, and personal data.
+- Current state: The desktop client can optionally report an authenticated provider lookup response with HTTP 502, 503, or 504. Reporting is off by default and available from Settings > Privacy. Reports contain an allowlisted provider ID, status, consent version/time, account association, and creation time; they exclude anime/episode identifiers, titles, URLs, headers, response bodies, raw errors, timeouts, cancellations, and 404 responses. The backend limits accepted reports to 10 per account per 24 hours, deduplicates by provider for one hour, and deletes reports after 30 days. Reports are included in the account data export. The migration and Edge Function changes are local and have not been deployed.
+- Technical analysis: Treat these as client-observed provider-route failures, not confirmed provider outages. Keep reporting opt-in, authenticated, allowlisted, rate-limited, deduplicated, and redacted. Confirm provider health separately through the trusted scheduled probes in DISC-29; do not infer a general outage from an individual client report.
 
 ### DISC-16 — Search preview with five results
 

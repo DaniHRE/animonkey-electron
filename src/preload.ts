@@ -10,6 +10,10 @@ import type {
 } from './types/account';
 import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
 import {
+  isProviderFailureReportInput,
+  type ProviderFailureReportInput,
+} from './types/anivexa';
+import {
   isAnivexaDiagnosticsExportResult,
   isAnivexaDiagnosticsSnapshot,
   type AnivexaBridge,
@@ -91,6 +95,12 @@ contextBridge.exposeInMainWorld('animonkey', {
       }),
     submitFeedback: (input: FeedbackSubmissionInput) =>
       ipcRenderer.invoke('account:feedback:submit', input),
+    reportProviderFailure: (input: ProviderFailureReportInput) => {
+      if (!isProviderFailureReportInput(input)) {
+        return Promise.reject(new Error('Relatório de provedor inválido.'));
+      }
+      return ipcRenderer.invoke('account:provider-failure:report', input);
+    },
   } satisfies AccountBridge,
   artwork: {
     getMetadata: (identities) =>

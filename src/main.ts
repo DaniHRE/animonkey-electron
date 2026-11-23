@@ -26,6 +26,7 @@ import type {
 import type { AnimeRating, AnimeTitle } from './types/anime';
 import type { WindowControlsState } from './types/window-controls';
 import type { AppUpdateSnapshot, AppUpdateStatus } from './types/updates';
+import { isProviderFailureReportInput } from './types/anivexa';
 
 registerMediaScheme();
 
@@ -376,6 +377,13 @@ function registerAccountIpc(): void {
       throw new Error('Feedback inválido.');
     }
     return accountService.submitFeedback(value);
+  });
+  ipcMain.handle('account:provider-failure:report', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    if (!isProviderFailureReportInput(value)) {
+      throw new Error('Relatório de provedor inválido.');
+    }
+    return accountService.reportProviderFailure(value);
   });
   ipcMain.handle('account:watch-later:list', (event) => {
     assertTrustedIpcSender(event);

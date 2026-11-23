@@ -12,6 +12,10 @@ import {
   SIDEBAR_ORDER_PREFERENCE_KEY,
 } from '@/lib/sidebar-route-order';
 import { isWatchHistoryPreference } from '@/lib/watch-history-preferences';
+import {
+  isProviderFailureReportingPreference,
+  PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY,
+} from '@/lib/provider-failure-reporting';
 import { isAiringNotificationPreference } from '@/lib/airing-notifications';
 import {
   APP_NOTIFICATION_LIMIT,
@@ -673,6 +677,8 @@ function isLocalPreference(value: unknown): value is LocalPreference {
     return value.value === 'en' || value.value === 'jp';
   if (value.key === 'adult-content-enabled-v1')
     return typeof value.value === 'boolean';
+  if (value.key === PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY)
+    return isProviderFailureReportingPreference(value.value);
   if (
     value.key === 'notifications.new-episodes-v1' ||
     value.key === 'notifications.followed-anime-v1'

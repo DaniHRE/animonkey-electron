@@ -36,6 +36,7 @@ import {
   normalizeSubtitleSize,
   SUBTITLE_SIZE_PREFERENCE_KEY,
 } from '@/lib/subtitle-appearance';
+import { PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY } from '@/lib/provider-failure-reporting';
 import {
   createShortcutBinding,
   DEFAULT_SHORTCUT_PREFERENCES,
@@ -106,6 +107,11 @@ export function SettingsPage() {
   const continueWatchingVisibility = useContinueWatchingVisibilityPreference();
   const syncWatchProgress = useSyncWatchProgressPreference();
   const airingNotifications = useAiringNotificationPreferences();
+  const {
+    value: providerFailureReportingEnabled,
+    update: setProviderFailureReportingEnabled,
+    loaded: providerFailureReportingLoaded,
+  } = useLocalPreference(PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY, false);
   const [notificationsSupported, setNotificationsSupported] = useState<
     boolean | null
   >(null);
@@ -1084,6 +1090,57 @@ export function SettingsPage() {
                   />
                   Compartilhar
                 </label>
+              </div>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Relatórios de falha de provedores
+              </legend>
+              <div className="mt-3 flex items-start gap-3">
+                <input
+                  id="provider-failure-reporting-enabled"
+                  type="checkbox"
+                  checked={providerFailureReportingEnabled}
+                  disabled={
+                    !providerFailureReportingLoaded ||
+                    (!session && !providerFailureReportingEnabled)
+                  }
+                  onChange={(event) =>
+                    setProviderFailureReportingEnabled(
+                      event.currentTarget.checked,
+                    )
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <div className="min-w-0">
+                  <label
+                    htmlFor="provider-failure-reporting-enabled"
+                    className="block text-sm font-semibold text-white/85"
+                  >
+                    Compartilhar falhas de provedores
+                  </label>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Com a opção ativa e sua conta conectada, enviaremos somente
+                    o identificador do provedor e respostas HTTP 502, 503 ou 504
+                    ao consultar uma transmissão. Não enviamos anime, episódio,
+                    URL, cabeçalhos, resposta, mensagem de erro, timeout,
+                    cancelamento ou resposta 404. Cada conta pode enviar até 10
+                    relatórios por dia; o mesmo provedor é registrado no máximo
+                    uma vez por hora e os dados são removidos após 30 dias. O
+                    relato indica uma falha observada, não confirma uma
+                    indisponibilidade geral.
+                  </span>
+                  {!session && !providerFailureReportingEnabled ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSettingsSection('account')}
+                      className="mt-2 text-xs font-semibold text-[#65e48e] hover:underline"
+                    >
+                      Entre na conta para ativar
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </fieldset>
           </section>
