@@ -17,7 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, FormEvent } from 'react';
+import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import {
   Link,
   Outlet,
@@ -26,12 +26,16 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 import { motion, useReducedMotion } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
+import { resolveAnimeTitle } from '@/lib/anime';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { WindowControls } from '@/components/layout/window-controls';
+import { animeQueries } from '@/services/anime-queries';
 import './app-shell.css';
 
 const navItems = [
@@ -155,6 +159,9 @@ function useInAppHistory(router: ReturnType<typeof useRouter>) {
 export function AppShell() {
   const hasCustomWindowChrome = window.animonkey.platform === 'win32';
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchPreviewOpen, setSearchPreviewOpen] = useState(false);
+  const [activeSearchPreviewIndex, setActiveSearchPreviewIndex] = useState(-1);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
   const shouldReduceMotion = useReducedMotion() ?? false;
@@ -175,10 +182,33 @@ export function AppShell() {
   const canNavigateBack = canGoBack || pathname !== '/';
   const backLabel = canGoBack ? 'Voltar' : 'Ir para o início';
   const { session } = useAccount();
+  const { titleLanguage } = useTitleLanguage();
+  const searchPreviewQuery = useQuery({
+    ...animeQueries.search(debouncedSearch, 1, {}),
+    enabled:
+      pathname !== '/search' &&
+      searchPreviewOpen &&
+      debouncedSearch.trim().length >= 2,
+    select: (response) => response.results.slice(0, 5),
+  });
+  const searchPreviewResults =
+    search.trim() === debouncedSearch ? (searchPreviewQuery.data ?? []) : [];
+  const isSearchPreviewVisible =
+    pathname !== '/search' && searchPreviewOpen && search.trim().length > 0;
+  const isSearchPreviewLoading =
+    search.trim() !== debouncedSearch || searchPreviewQuery.isFetching;
   const useContentFrame =
     pathname !== '/' &&
     !pathname.startsWith('/anime/') &&
     !pathname.startsWith('/watch/');
+
+  useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      300,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   useEffect(() => {
     let frame: number | undefined;
@@ -224,11 +254,48 @@ export function AppShell() {
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSearchPreviewOpen(false);
+    setActiveSearchPreviewIndex(-1);
     const query = search.trim();
     void navigate({
       to: '/search',
       search: query ? { q: query } : {},
     });
+  }
+
+  function openAnimePreviewResult(animeId: string) {
+    setSearchPreviewOpen(false);
+    setActiveSearchPreviewIndex(-1);
+    void navigate({ to: '/anime/$id', params: { id: animeId } });
+  }
+
+  function handleSearchPreviewKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setSearchPreviewOpen(false);
+      setActiveSearchPreviewIndex(-1);
+      return;
+    }
+
+    if (!isSearchPreviewVisible || searchPreviewResults.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveSearchPreviewIndex((index) =>
+        index >= searchPreviewResults.length - 1 ? 0 : index + 1,
+      );
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveSearchPreviewIndex((index) =>
+        index <= 0 ? searchPreviewResults.length - 1 : index - 1,
+      );
+    } else if (
+      event.key === 'Enter' &&
+      searchPreviewResults[activeSearchPreviewIndex]
+    ) {
+      event.preventDefault();
+      openAnimePreviewResult(searchPreviewResults[activeSearchPreviewIndex].id);
+    }
   }
 
   function goBack() {
@@ -462,18 +529,146 @@ export function AppShell() {
               />
             )}
             {pathname !== '/search' && (
-              <form onSubmit={submitSearch} className="app-header__search">
+              <form
+                onSubmit={submitSearch}
+                className="app-header__search"
+                autoComplete="off"
+              >
                 <Search
                   size={20}
                   className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-gray-400"
                 />
                 <input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setActiveSearchPreviewIndex(-1);
+                    setSearchPreviewOpen(event.target.value.trim().length > 0);
+                  }}
+                  onFocus={() => {
+                    if (search.trim()) setSearchPreviewOpen(true);
+                  }}
+                  onBlur={() => {
+                    setSearchPreviewOpen(false);
+                    setActiveSearchPreviewIndex(-1);
+                  }}
+                  onKeyDown={handleSearchPreviewKeyDown}
                   placeholder="Buscar anime..."
                   aria-label="Buscar anime"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-haspopup="listbox"
+                  aria-expanded={isSearchPreviewVisible}
+                  aria-controls={
+                    isSearchPreviewVisible ? 'header-search-preview' : undefined
+                  }
+                  aria-activedescendant={
+                    isSearchPreviewVisible &&
+                    activeSearchPreviewIndex >= 0 &&
+                    activeSearchPreviewIndex < searchPreviewResults.length
+                      ? `header-search-option-${activeSearchPreviewIndex}`
+                      : undefined
+                  }
                   className="app-header__search-input"
                 />
+                {isSearchPreviewVisible && (
+                  <div
+                    id="header-search-preview"
+                    aria-busy={isSearchPreviewLoading}
+                    className="absolute top-full right-0 left-0 z-50 mt-2 max-h-[min(60vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#101113] py-2 shadow-[0_18px_48px_rgba(0,0,0,0.55)]"
+                  >
+                    {search.trim().length < 2 ? (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Digite pelo menos 2 caracteres para ver sugestões.
+                      </p>
+                    ) : isSearchPreviewLoading ? (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Buscando animes…
+                      </p>
+                    ) : searchPreviewQuery.error ? (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Não foi possível carregar as sugestões.
+                      </p>
+                    ) : searchPreviewResults.length > 0 ? (
+                      <>
+                        <div
+                          role="listbox"
+                          aria-label="Sugestões de anime"
+                          className="space-y-1 px-2"
+                        >
+                          {searchPreviewResults.map((anime, index) => (
+                            <button
+                              key={anime.id}
+                              id={`header-search-option-${index}`}
+                              type="button"
+                              role="option"
+                              aria-selected={activeSearchPreviewIndex === index}
+                              tabIndex={-1}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onMouseEnter={() =>
+                                setActiveSearchPreviewIndex(index)
+                              }
+                              onClick={() => openAnimePreviewResult(anime.id)}
+                              className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${activeSearchPreviewIndex === index ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}
+                            >
+                              {anime.image ? (
+                                <img
+                                  src={anime.image}
+                                  alt=""
+                                  loading="lazy"
+                                  className="size-11 shrink-0 rounded-md object-cover"
+                                />
+                              ) : (
+                                <span className="grid size-11 shrink-0 place-items-center rounded-md bg-white/[0.05] text-white/30">
+                                  <Search size={16} aria-hidden="true" />
+                                </span>
+                              )}
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-white/85">
+                                  {resolveAnimeTitle(
+                                    anime.title,
+                                    titleLanguage,
+                                  )}
+                                </span>
+                                <span className="mt-1 block text-xs text-white/40">
+                                  {anime.type ?? 'Anime'}
+                                </span>
+                              </span>
+                              {anime.isAdult && (
+                                <span className="shrink-0 rounded bg-red-400/10 px-1.5 py-1 text-[10px] font-bold text-red-200/75">
+                                  18+
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="submit"
+                          onMouseDown={(event) => event.preventDefault()}
+                          className="mt-2 w-full border-t border-white/[0.07] px-4 pt-3 text-left text-xs font-semibold text-[#77e898] hover:text-white"
+                        >
+                          Ver todos os resultados
+                        </button>
+                      </>
+                    ) : (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Nenhum anime encontrado.
+                      </p>
+                    )}
+                  </div>
+                )}
               </form>
             )}
           </div>

@@ -107,8 +107,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-16 — Search preview with five results
 
 - Difficulty: Medium.
-- Current state: The header search submits a query; it does not show a result preview while typing.
-- Technical analysis: Reuse the AniList search query and cache, debounce input, limit the preview to five results, and provide a “view more” route. Implement accessible combobox keyboard behavior, loading/empty/error states, request cancellation, and protection from stale results.
+- Current state: The header search now shows up to five debounced AniList results with poster, title, type, and an adult-content indicator. Users can open a title, use arrow keys and Enter to select suggestions, or submit the query to the full search page. Loading, empty, and error states are exposed to assistive technology; the shared query cache and abort signal handle reuse and stale requests.
+- Technical analysis: Reuse the AniList search query and cache, debounce input, limit the preview to five results, and provide a “view more” action. Implement accessible combobox keyboard behavior, loading/empty/error states, request cancellation, and protection from stale results.
 
 ### DISC-17 — Search by screenshot using trace.moe
 
