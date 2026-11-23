@@ -165,6 +165,40 @@ export function normalizeShortcutPreferences(
   return normalized as ShortcutPreferences;
 }
 
+export function isShortcutPreferences(
+  value: unknown,
+): value is ShortcutPreferences {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    return false;
+  const stored = value as Record<string, unknown>;
+  const commandIds = SHORTCUT_COMMANDS.map(({ id }) => id);
+  if (
+    Object.keys(stored).length !== commandIds.length ||
+    Object.keys(stored).some(
+      (key) => !commandIds.includes(key as ShortcutCommandId),
+    )
+  )
+    return false;
+
+  const normalized: Partial<ShortcutPreferences> = {};
+  for (const { id } of SHORTCUT_COMMANDS) {
+    const rawBinding = stored[id];
+    const parsed = readStoredBinding(rawBinding);
+    if (parsed === undefined) return false;
+    if (parsed && findStoredCollision(parsed, normalized)) return false;
+    if (
+      parsed &&
+      typeof rawBinding === 'object' &&
+      rawBinding !== null &&
+      !Array.isArray(rawBinding) &&
+      Object.keys(rawBinding).length !== 3
+    )
+      return false;
+    normalized[id] = parsed;
+  }
+  return true;
+}
+
 export function createShortcutBinding(
   event: globalThis.KeyboardEvent,
   platform: string,

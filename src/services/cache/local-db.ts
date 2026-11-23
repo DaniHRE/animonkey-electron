@@ -3,6 +3,15 @@ import {
   isSubtitleSize,
   SUBTITLE_SIZE_PREFERENCE_KEY,
 } from '@/lib/subtitle-appearance';
+import {
+  isShortcutPreferences,
+  SHORTCUT_PREFERENCE_KEY,
+} from '@/lib/keyboard-shortcuts';
+import {
+  isSidebarRouteOrder,
+  SIDEBAR_ORDER_PREFERENCE_KEY,
+} from '@/lib/sidebar-route-order';
+import { isWatchHistoryPreference } from '@/lib/watch-history-preferences';
 
 const DATABASE_NAME = 'animonkey-desktop';
 const DATABASE_VERSION = 6;
@@ -414,6 +423,35 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+function isLocalPreference(value: unknown): value is LocalPreference {
+  if (
+    !isRecord(value) ||
+    typeof value.key !== 'string' ||
+    typeof value.updatedAt !== 'number' ||
+    !Number.isFinite(value.updatedAt)
+  )
+    return false;
+
+  if (value.key === SUBTITLE_SIZE_PREFERENCE_KEY)
+    return isSubtitleSize(value.value);
+  if (value.key === SHORTCUT_PREFERENCE_KEY)
+    return isShortcutPreferences(value.value);
+  if (value.key === SIDEBAR_ORDER_PREFERENCE_KEY)
+    return isSidebarRouteOrder(value.value);
+  if (value.key === 'player.volume')
+    return (
+      typeof value.value === 'number' &&
+      Number.isFinite(value.value) &&
+      value.value >= 0 &&
+      value.value <= 1
+    );
+  if (value.key === 'ui.title-language')
+    return value.value === 'en' || value.value === 'jp';
+  if (value.key === 'adult-content-enabled-v1')
+    return typeof value.value === 'boolean';
+  return isWatchHistoryPreference(value.key, value.value);
+}
+
 function isAnimeTitle(value: unknown): value is AnimeTitle {
   return (
     isRecord(value) &&
@@ -525,14 +563,7 @@ export async function importLocalBackup(text: string): Promise<number> {
     !Array.isArray(ratings) ||
     !ratings.every(isAnimeRating) ||
     !Array.isArray(preferences) ||
-    !preferences.every(
-      (item) =>
-        isRecord(item) &&
-        item.key === SUBTITLE_SIZE_PREFERENCE_KEY &&
-        isSubtitleSize(item.value) &&
-        typeof item.updatedAt === 'number' &&
-        Number.isFinite(item.updatedAt),
-    )
+    !preferences.every(isLocalPreference)
   ) {
     throw new Error(
       'O backup contém registros inválidos. Nenhum dado foi importado.',

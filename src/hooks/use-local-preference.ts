@@ -53,12 +53,15 @@ export function useLocalPreference<T>(key: string, fallback: T) {
     (next: T) => {
       changedByUser.current = true;
       setValue(next);
-      window.dispatchEvent(
-        new CustomEvent('animonkey:local-preference-updated', {
-          detail: { key, value: next },
-        }),
-      );
-      void putPreference(key, next).catch(() => undefined);
+      void putPreference(key, next)
+        .then(() => {
+          window.dispatchEvent(
+            new CustomEvent('animonkey:local-preference-updated', {
+              detail: { key, value: next },
+            }),
+          );
+        })
+        .catch(() => undefined);
     },
     [key],
   );

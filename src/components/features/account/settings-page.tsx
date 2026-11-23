@@ -13,6 +13,7 @@ import {
   Languages,
   LogOut,
   RefreshCw,
+  Shield,
   Trash2,
   Upload,
   UserRound,
@@ -21,6 +22,11 @@ import { useAccount } from '@/context/account-state';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import {
+  useContinueWatchingVisibilityPreference,
+  useRecordWatchProgressPreference,
+  useSyncWatchProgressPreference,
+} from '@/hooks/use-watch-history-preferences';
 import {
   DEFAULT_SUBTITLE_SIZE,
   isSubtitleSize,
@@ -52,6 +58,7 @@ import { SettingsDebugPanel } from './settings-debug-panel';
 
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
+  { id: 'privacy', label: 'Privacidade', icon: Shield },
   { id: 'preferences', label: 'Preferências', icon: Languages },
   { id: 'shortcuts', label: 'Atalhos', icon: Keyboard },
   { id: 'navigation', label: 'Navegação', icon: ArrowUpDown },
@@ -89,6 +96,9 @@ export function SettingsPage() {
     updateProfile,
   } = useAccount();
   const { titleLanguage, setTitleLanguage } = useTitleLanguage();
+  const recordWatchProgress = useRecordWatchProgressPreference();
+  const continueWatchingVisibility = useContinueWatchingVisibilityPreference();
+  const syncWatchProgress = useSyncWatchProgressPreference();
   const {
     includeAdult,
     setIncludeAdult,
@@ -724,29 +734,6 @@ export function SettingsPage() {
                     )}
                   </div>
                 </div>
-                <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/[0.07] pt-4">
-                  <div>
-                    <h3 className="text-xs font-semibold text-white/80">
-                      Privacidade da atividade
-                    </h3>
-                    <p className="mt-1 max-w-lg text-xs text-white/40">
-                      Quando ativada, atividades de episódios e avaliações podem
-                      aparecer no feed.
-                    </p>
-                  </div>
-                  <label className="flex shrink-0 items-center gap-2 text-xs text-white/65">
-                    <input
-                      type="checkbox"
-                      checked={activityPrivacy ?? false}
-                      disabled={activityPrivacy === null || accountBusy}
-                      onChange={(event) =>
-                        void toggleActivityPrivacy(event.target.checked)
-                      }
-                      className="accent-[#49d77a]"
-                    />
-                    Compartilhar
-                  </label>
-                </div>
                 <form
                   onSubmit={(event) => void changePassword(event)}
                   className="mt-5 space-y-3 border-t border-white/[0.07] pt-4"
@@ -932,6 +919,142 @@ export function SettingsPage() {
                 {accountError}
               </p>
             )}
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-privacy"
+          role="tabpanel"
+          aria-labelledby="settings-tab-privacy"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'privacy'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Seus dados
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Privacidade
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Controle separadamente a gravação, a exibição e a sincronização do
+              seu progresso. Desativar uma opção não apaga dados existentes.
+            </p>
+          </header>
+
+          <section className="space-y-5 rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <fieldset>
+              <legend className="text-sm font-semibold text-white/90">
+                Progresso neste dispositivo
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={recordWatchProgress.enabled}
+                  disabled={!recordWatchProgress.loaded}
+                  onChange={(event) =>
+                    recordWatchProgress.setEnabled(event.currentTarget.checked)
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/85">
+                    Salvar novos tempos assistidos
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desative para parar de gravar novos tempos neste
+                    dispositivo. O progresso já salvo permanece disponível para
+                    retomar episódios, aparecer no histórico e ser incluído no
+                    backup.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Exibição do histórico
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={continueWatchingVisibility.enabled}
+                  disabled={!continueWatchingVisibility.loaded}
+                  onChange={(event) =>
+                    continueWatchingVisibility.setEnabled(
+                      event.currentTarget.checked,
+                    )
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/85">
+                    Mostrar Continuar Assistindo
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desative para ocultar a seção da página inicial, a página do
+                    histórico e seu atalho na navegação. Os registros continuam
+                    salvos e voltam a aparecer quando reativar.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Sincronização da conta
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={syncWatchProgress.enabled}
+                  disabled={
+                    !syncWatchProgress.loaded || syncState === 'syncing'
+                  }
+                  onChange={(event) =>
+                    syncWatchProgress.setEnabled(event.currentTarget.checked)
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/85">
+                    Sincronizar progresso de episódios
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Quando ativada e conectado à conta, o progresso local pode
+                    ser enviado e o progresso da conta pode ser recebido.
+                    Desativar pausa essa troca sem remover os dados locais ou
+                    remotos.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Visibilidade da atividade
+              </legend>
+              <div className="mt-3 flex items-start justify-between gap-4">
+                <p className="max-w-xl text-xs leading-relaxed text-white/45">
+                  {session
+                    ? 'Controla se atividades de episódios e avaliações aparecem no feed. Desativar oculta a atividade sem apagar os registros da conta.'
+                    : 'Entre na sua conta para controlar se atividades de episódios e avaliações aparecem no feed.'}
+                </p>
+                <label className="flex shrink-0 items-center gap-2 text-xs text-white/65">
+                  <input
+                    type="checkbox"
+                    checked={activityPrivacy ?? false}
+                    disabled={activityPrivacy === null || accountBusy}
+                    onChange={(event) =>
+                      void toggleActivityPrivacy(event.currentTarget.checked)
+                    }
+                    className="accent-[#49d77a]"
+                  />
+                  Compartilhar
+                </label>
+              </div>
+            </fieldset>
           </section>
         </section>
 

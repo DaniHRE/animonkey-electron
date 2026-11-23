@@ -72,6 +72,37 @@ export function normalizeSidebarRouteOrder(value: unknown): SidebarRouteOrder {
   };
 }
 
+export function isSidebarRouteOrder(
+  value: unknown,
+): value is SidebarRouteOrder {
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    return false;
+  const stored = value as Record<string, unknown>;
+  if (
+    Object.keys(stored).length !== 2 ||
+    !Array.isArray(stored.primary) ||
+    !Array.isArray(stored.more)
+  )
+    return false;
+
+  const hasExactRouteSet = (
+    routes: unknown[],
+    allowedRoutes: readonly SidebarRouteId[],
+  ) =>
+    routes.length === allowedRoutes.length &&
+    routes.every(
+      (route): route is SidebarRouteId =>
+        typeof route === 'string' &&
+        allowedRoutes.includes(route as SidebarRouteId),
+    ) &&
+    new Set(routes).size === allowedRoutes.length;
+
+  return (
+    hasExactRouteSet(stored.primary, SIDEBAR_PRIMARY_ROUTE_IDS) &&
+    hasExactRouteSet(stored.more, SIDEBAR_MORE_ROUTE_IDS)
+  );
+}
+
 export function moveSidebarRoute<T extends SidebarRouteId>(
   order: readonly T[],
   routeId: T,

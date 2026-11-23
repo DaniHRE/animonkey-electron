@@ -63,8 +63,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-09 — Adult-content privacy controls
 
 - Difficulty: High.
-- Current state: No per-category privacy controls were found for continue-watching history, activity, or sync.
-- Technical analysis: Define each data flow separately: local progress, visible Continue Watching entries, account sync, and activity records. Decide whether controls prevent future recording, hide existing records, or also delete them. Keep local-first access, backup semantics, and optional sync consistent; do not silently discard existing user data.
+- Current state: Settings has separate controls for recording new local episode progress, showing Continue Watching on Home and in navigation, syncing episode progress with an account, and sharing activity in the account feed. Controls default to the current behavior. Disabling them stops future writes, pauses progress sync, or hides entries without deleting existing local or remote records. Privacy preferences are included in local backups and validated on import.
+- Technical analysis: Keep local progress recording, Continue Watching visibility, episode-progress sync, and account activity visibility independent. Sync opt-out skips only episode-progress reconciliation; library and rating sync continue. Preserve existing local and remote data while disabled, keep local backups valid for all supported preferences, and restore normal behavior when each control is re-enabled.
 
 ### DISC-10 — Configure caption appearance in Settings
 

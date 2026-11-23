@@ -29,6 +29,7 @@ import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
+import { useContinueWatchingVisibilityPreference } from '@/hooks/use-watch-history-preferences';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
@@ -239,6 +240,8 @@ export function AppShell() {
   const [activeSearchPreviewIndex, setActiveSearchPreviewIndex] = useState(-1);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const { enabled: showContinueWatching } =
+    useContinueWatchingVisibilityPreference();
   const { value: storedShortcuts, loaded: shortcutsLoaded } =
     useLocalPreference<unknown>(
       SHORTCUT_PREFERENCE_KEY,
@@ -265,8 +268,14 @@ export function AppShell() {
     [sidebarRouteOrder.primary],
   );
   const orderedMoreItems = useMemo(
-    () => orderSidebarItems(moreItems, sidebarRouteOrder.more),
-    [sidebarRouteOrder.more],
+    () =>
+      orderSidebarItems(
+        showContinueWatching
+          ? moreItems
+          : moreItems.filter((item) => item.id !== 'continue-watching'),
+        sidebarRouteOrder.more,
+      ),
+    [showContinueWatching, sidebarRouteOrder.more],
   );
   const navItems = [...pinnedNavItems, ...orderedPrimaryNavItems];
   const shouldReduceMotion = useReducedMotion() ?? false;

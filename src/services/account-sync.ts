@@ -5,11 +5,13 @@ import {
   applyRemoteAnimeRatingDeletion,
   applyRemoteWatchLater,
   applyRemoteWatchLaterDeletion,
+  getPreference,
   getEpisodeProgressSyncData,
   getAnimeRatingsSyncData,
   getWatchLaterSyncData,
 } from '@/services/cache/local-db';
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
+import { WATCH_HISTORY_PREFERENCE_KEYS } from '@/lib/watch-history-preferences';
 
 interface Version<T> {
   value: T | null;
@@ -125,6 +127,12 @@ async function syncWatchLater(): Promise<void> {
 }
 
 async function syncEpisodeProgress(): Promise<void> {
+  if (
+    (await getPreference<boolean>(
+      WATCH_HISTORY_PREFERENCE_KEYS.syncProgress,
+    )) === false
+  )
+    return;
   const local = await getEpisodeProgressSyncData();
   const remote = await window.animonkey.account.listEpisodeProgress();
   const localByAnime = groupProgress(local.records);
