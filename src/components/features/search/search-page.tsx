@@ -460,8 +460,7 @@ export function SearchPage() {
           {query ? `Resultados para “${query}”` : 'Buscar animes'}
         </h1>
         <p className="mt-2 text-xs text-white/40">
-          Combine filtros avançados do catálogo de anime AniList. Os critérios
-          ficam salvos na URL.
+          Combine filtros avançados para encontrar animes no catálogo AniList.
         </p>
       </div>
       <div className="mb-8 overflow-visible rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_55%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.18)] sm:p-5">
@@ -522,7 +521,7 @@ export function SearchPage() {
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/[0.07] pt-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-xs font-medium text-white/40">
               Conteúdo:
@@ -545,9 +544,6 @@ export function SearchPage() {
               );
             })}
           </div>
-          <span className="text-xs text-white/30">
-            Os filtros selecionados ficam salvos na URL
-          </span>
         </div>
 
         <details className="group mt-4 border-t border-white/[0.07] pt-1">

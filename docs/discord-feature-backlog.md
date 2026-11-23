@@ -81,8 +81,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-12 — Remove the “filters saved in URL” explanation
 
 - Difficulty: Low.
-- Current state: The search page explicitly says its criteria are saved in the URL. Search state is represented by internal TanStack hash-route parameters; the desktop window has no normal browser address bar.
-- Technical analysis: Remove or rewrite the explanatory copy while retaining internal search parameters unless the request explicitly asks to change filter persistence. Preserving route state supports back/forward navigation and reopening a search.
+- Current state: The search page describes AniList filtering without exposing internal URL persistence. Search state remains in TanStack hash-route parameters, preserving back/forward navigation and reopening a search.
+- Technical analysis: Remove copy that explains filters are saved in the URL. Keep the underlying search route parameters because they support back/forward navigation and reopening a search.
 
 ## Discovery, notifications, and catalog defects
 
