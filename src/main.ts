@@ -20,6 +20,7 @@ import type {
   ActivityFeedCursor,
   AccountRegistration,
   EpisodeProgressInput,
+  FeedbackSubmissionInput,
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeRating, AnimeTitle } from './types/anime';
@@ -325,6 +326,33 @@ function parseRegistration(value: unknown): AccountRegistration {
   return { ...credentials, name: input.name as string | undefined };
 }
 
+function isFeedbackSubmissionInput(
+  value: unknown,
+): value is FeedbackSubmissionInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    ['suggestion', 'bug_report'].includes(String(input.type)) &&
+    [
+      'discovery',
+      'catalog',
+      'player',
+      'library',
+      'account',
+      'notifications',
+      'interface',
+      'other',
+    ].includes(String(input.area)) &&
+    typeof input.title === 'string' &&
+    input.title.trim().length >= 1 &&
+    input.title.trim().length <= 120 &&
+    typeof input.description === 'string' &&
+    input.description.trim().length >= 1 &&
+    input.description.trim().length <= 2000 &&
+    input.consentVersion === 'feedback-v1'
+  );
+}
+
 function registerAccountIpc(): void {
   ipcMain.handle('account:register', (event, value: unknown) => {
     assertTrustedIpcSender(event);
@@ -341,6 +369,13 @@ function registerAccountIpc(): void {
   ipcMain.handle('account:get-session', (event) => {
     assertTrustedIpcSender(event);
     return accountService.getSession();
+  });
+  ipcMain.handle('account:feedback:submit', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    if (!isFeedbackSubmissionInput(value)) {
+      throw new Error('Feedback inválido.');
+    }
+    return accountService.submitFeedback(value);
   });
   ipcMain.handle('account:watch-later:list', (event) => {
     assertTrustedIpcSender(event);

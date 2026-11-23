@@ -22,6 +22,26 @@ export interface AccountRegistration extends AccountCredentials {
   name?: string;
 }
 
+export type FeedbackSubmissionType = 'suggestion' | 'bug_report';
+
+export type FeedbackFunctionalArea =
+  | 'discovery'
+  | 'catalog'
+  | 'player'
+  | 'library'
+  | 'account'
+  | 'notifications'
+  | 'interface'
+  | 'other';
+
+export interface FeedbackSubmissionInput {
+  type: FeedbackSubmissionType;
+  area: FeedbackFunctionalArea;
+  title: string;
+  description: string;
+  consentVersion: 'feedback-v1';
+}
+
 export type WatchLaterRemoteItem = WatchLaterItem & {
   title: AnimeTitle;
 };
@@ -58,6 +78,7 @@ export interface AccountDataExport {
   episodeProgress: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   activity: Record<string, unknown>[];
+  feedback: Record<string, unknown>[];
 }
 
 export type ActivityType =
@@ -113,4 +134,5 @@ export interface AccountBridge {
     limit: number,
   ): Promise<ActivityFeedPage>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  submitFeedback(input: FeedbackSubmissionInput): Promise<void>;
 }

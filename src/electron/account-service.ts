@@ -14,6 +14,7 @@ import type {
   ActivityFeedPage,
   EpisodeProgressInput,
   EpisodeProgressSyncSnapshot,
+  FeedbackSubmissionInput,
   RemoteSyncTombstone,
   WatchLaterRemoteItem,
   WatchLaterSyncSnapshot,
@@ -89,6 +90,12 @@ function getFriendlyError(
   code: unknown,
   action: string,
 ): string {
+  if (code === 'too_many_feedback_submissions') {
+    return 'Você já enviou três mensagens nas últimas 24 horas. Tente novamente mais tarde.';
+  }
+  if (code === 'invalid_feedback') {
+    return 'Confira os campos do feedback e tente novamente.';
+  }
   if (status === 429 || code === 'too_many_attempts') {
     return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
   }
@@ -662,6 +669,12 @@ class DesktopAccountService {
     await this.authenticatedRequest('password.change', {
       currentPassword,
       newPassword,
+    });
+  }
+
+  async submitFeedback(input: FeedbackSubmissionInput): Promise<void> {
+    await this.authenticatedRequest('feedback.submit', {
+      submission: input,
     });
   }
 }

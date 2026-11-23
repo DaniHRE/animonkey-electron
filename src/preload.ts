@@ -5,6 +5,7 @@ import type {
   AccountRegistration,
   ActivityFeedCursor,
   EpisodeProgressInput,
+  FeedbackSubmissionInput,
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
@@ -88,6 +89,8 @@ contextBridge.exposeInMainWorld('animonkey', {
         currentPassword,
         newPassword,
       }),
+    submitFeedback: (input: FeedbackSubmissionInput) =>
+      ipcRenderer.invoke('account:feedback:submit', input),
   } satisfies AccountBridge,
   artwork: {
     getMetadata: (identities) =>

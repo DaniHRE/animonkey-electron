@@ -13,6 +13,7 @@ import {
   Keyboard,
   Languages,
   LogOut,
+  MessageSquareText,
   RefreshCw,
   Shield,
   Trash2,
@@ -57,9 +58,11 @@ import {
   importLocalBackup,
 } from '@/services/cache/local-db';
 import { SettingsDebugPanel } from './settings-debug-panel';
+import { FeedbackSettingsSection } from './feedback-settings-section';
 
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
+  { id: 'feedback', label: 'Feedback', icon: MessageSquareText },
   { id: 'privacy', label: 'Privacidade', icon: Shield },
   { id: 'notifications', label: 'Notificações', icon: Bell },
   { id: 'preferences', label: 'Preferências', icon: Languages },
@@ -943,6 +946,12 @@ export function SettingsPage() {
             )}
           </section>
         </section>
+
+        <FeedbackSettingsSection
+          active={activeSettingsSection === 'feedback'}
+          session={session}
+          onOpenAccount={() => setActiveSettingsSection('account')}
+        />
 
         <section
           id="settings-panel-privacy"
