@@ -145,8 +145,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-22 — Remember player preferences such as volume
 
 - Difficulty: Medium.
-- Current state: Watch progress is persisted, but no application-level volume preference was found.
-- Technical analysis: Select the supported player settings to persist, store them using the app's local preference model, and restore them when a Vidstack instance mounts. Validate numeric ranges and use safe defaults. Do not persist signed source URLs or provider credentials.
+- Current state: Implemented and integrated locally into `dev`. Vidstack volume now loads from and saves to the existing IndexedDB-backed local preference store.
+- Technical analysis: Use `useLocalPreference` instead of a TanStack Query-only cache so volume survives app restarts. Restore the preference when Vidstack mounts, clamp finite numeric values to the supported 0–1 range, and use the existing full-volume default for invalid data. Do not persist signed source URLs or provider credentials.
 
 ### DISC-23 — Download episodes for offline playback
 

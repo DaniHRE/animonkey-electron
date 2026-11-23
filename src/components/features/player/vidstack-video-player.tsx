@@ -26,6 +26,7 @@ import {
   getSubtitleLabel,
   normalizeSubtitleLanguage,
 } from '@/lib/subtitle';
+import { useLocalPreference } from '@/hooks/use-local-preference';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
 import './vidstack-video-player.css';
@@ -45,6 +46,14 @@ interface Props {
 }
 
 type SubtitleFormat = 'vtt' | 'srt' | 'ass' | 'ssa' | 'json';
+const PLAYER_VOLUME_PREFERENCE_KEY = 'player.volume';
+const DEFAULT_PLAYER_VOLUME = 1;
+
+function normalizePlayerVolume(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value))
+    return DEFAULT_PLAYER_VOLUME;
+  return Math.min(1, Math.max(0, value));
+}
 
 function formatChapterTime(time: number): string {
   const milliseconds = Math.round(time * 1000);
@@ -131,6 +140,16 @@ export function VidstackVideoPlayer({
   onProgress,
 }: Props) {
   const playerRef = useRef<MediaPlayerInstance | null>(null);
+  const {
+    value: savedVolume,
+    update: updateVolumePreference,
+    loaded: volumePreferenceLoaded,
+  } = useLocalPreference<unknown>(
+    PLAYER_VOLUME_PREFERENCE_KEY,
+    DEFAULT_PLAYER_VOLUME,
+  );
+  const playerVolume = normalizePlayerVolume(savedVolume);
+  const volumePreferenceReady = useRef(false);
   const sourceKey =
     sourceId ??
     `${sources?.format ?? ''}:${sources?.sourceUrl ?? ''}:${sources?.embedUrl ?? ''}`;
@@ -183,6 +202,17 @@ export function VidstackVideoPlayer({
   );
   const intro = sources?.intro;
   const outro = sources?.outro;
+
+  useEffect(() => {
+    if (!volumePreferenceLoaded) return;
+    volumePreferenceReady.current = true;
+    if (savedVolume !== playerVolume) updateVolumePreference(playerVolume);
+  }, [
+    playerVolume,
+    savedVolume,
+    updateVolumePreference,
+    volumePreferenceLoaded,
+  ]);
 
   const chapterContent = useMemo(
     () => createChapterVtt(intro, outro),
@@ -272,6 +302,15 @@ export function VidstackVideoPlayer({
     [initialTime, intro, onProgress, outro, setPlaybackSkip],
   );
 
+  const handleVolumeChange = useCallback(
+    ({ volume }: { volume: number }) => {
+      if (!volumePreferenceReady.current || !volumePreferenceLoaded) return;
+      const nextVolume = normalizePlayerVolume(volume);
+      if (nextVolume !== playerVolume) updateVolumePreference(nextVolume);
+    },
+    [playerVolume, updateVolumePreference, volumePreferenceLoaded],
+  );
+
   const retryPlayback = useCallback(() => {
     resumed.current = false;
     resetPlayback();
@@ -330,10 +369,12 @@ export function VidstackVideoPlayer({
           className="h-full w-full"
           title={title}
           poster={poster}
+          volume={playerVolume}
           src={{ src: activeSource, type: sourceType }}
           playsInline
           preload="none"
           onProviderChange={handleProviderChange}
+          onVolumeChange={handleVolumeChange}
           onPlay={() => {
             playbackRequested.current = true;
           }}
