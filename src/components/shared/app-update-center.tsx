@@ -10,7 +10,6 @@ import {
   LoaderCircle,
   Play,
   RefreshCw,
-  Sparkles,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -115,7 +114,7 @@ function AppUpdateIcon({
     case 'error':
       return <CircleAlert {...iconProps} />;
     default:
-      return <Sparkles {...iconProps} />;
+      return <RefreshCw {...iconProps} />;
   }
 }
 
@@ -283,7 +282,7 @@ export function AppUpdateCenter() {
         <div className="app-update-dialog__surface">
           <div className="app-update-dialog__topline">
             <div className="app-update-dialog__brand-mark" aria-hidden="true">
-              <Sparkles size={21} strokeWidth={1.8} />
+              <RefreshCw size={20} strokeWidth={1.8} />
             </div>
             <span className="app-update-dialog__version">
               ANIMONKEY <span>·</span> v{currentVersion}
@@ -300,22 +299,28 @@ export function AppUpdateCenter() {
 
           {panel === 'update' ? (
             <section className="app-update-dialog__content">
-              <div className={`app-update-dialog__status-icon is-${status}`}>
-                <AppUpdateIcon
-                  status={status}
-                  size={24}
-                  className={isBusy ? 'app-update-center__spin' : undefined}
-                />
-              </div>
-              <p className="app-update-dialog__eyebrow">ATUALIZAÇÃO</p>
-              <h2 id="app-update-dialog-title">{updateCopy[status].title}</h2>
-              <p className="app-update-dialog__summary">{statusMessage}</p>
-              <div className="app-update-dialog__status-line" role="status">
-                <span
-                  className={`app-update-center__indicator is-${status}`}
-                  aria-hidden="true"
-                />
-                {updateCopy[status].label}
+              <div className={`app-update-dialog__status-hero is-${status}`}>
+                <div className={`app-update-dialog__status-icon is-${status}`}>
+                  <AppUpdateIcon
+                    status={status}
+                    size={28}
+                    className={isBusy ? 'app-update-center__spin' : undefined}
+                  />
+                </div>
+                <div className="app-update-dialog__status-copy">
+                  <p className="app-update-dialog__eyebrow">ATUALIZAÇÃO</p>
+                  <h2 id="app-update-dialog-title">
+                    {updateCopy[status].title}
+                  </h2>
+                  <p className="app-update-dialog__summary">{statusMessage}</p>
+                  <div className="app-update-dialog__status-line" role="status">
+                    <span
+                      className={`app-update-center__indicator is-${status}`}
+                      aria-hidden="true"
+                    />
+                    {updateCopy[status].label}
+                  </div>
+                </div>
               </div>
               <div className="app-update-dialog__actions">
                 {status === 'ready' ? (

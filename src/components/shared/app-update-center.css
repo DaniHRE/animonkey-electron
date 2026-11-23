@@ -102,20 +102,20 @@
 }
 
 .app-update-dialog {
-  width: min(620px, calc(100vw - 32px));
+  width: min(820px, calc(100vw - 32px));
   max-width: none;
-  max-height: min(760px, calc(100dvh - 32px));
+  max-height: min(800px, calc(100dvh - 32px));
   margin: auto;
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 22px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 24px;
   background:
-    radial-gradient(ellipse at 88% 0%, rgb(73 215 122 / 9%), transparent 36%),
-    #111214;
+    radial-gradient(ellipse at 84% -8%, rgb(73 215 122 / 13%), transparent 38%),
+    linear-gradient(150deg, #17191c 0%, #111214 58%, #0f1012 100%);
   box-shadow:
-    0 32px 100px rgb(0 0 0 / 62%),
-    0 0 0 1px rgb(255 255 255 / 2%);
+    0 36px 110px rgb(0 0 0 / 68%),
+    0 0 0 1px rgb(255 255 255 / 3%);
   color: #f5f5f5;
   font-family: Rubik, sans-serif;
 }
@@ -126,8 +126,8 @@
 }
 
 .app-update-dialog__surface {
-  max-height: min(760px, calc(100dvh - 32px));
-  padding: 24px;
+  max-height: min(800px, calc(100dvh - 32px));
+  padding: 30px;
   overflow-y: auto;
   scrollbar-color: rgb(255 255 255 / 20%) transparent;
   scrollbar-width: thin;
@@ -135,19 +135,19 @@
 
 .app-update-dialog__topline {
   display: flex;
-  min-height: 38px;
+  min-height: 42px;
   align-items: center;
   gap: 10px;
 }
 
 .app-update-dialog__brand-mark {
   display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   place-items: center;
   border: 1px solid rgb(73 215 122 / 24%);
-  border-radius: 11px;
+  border-radius: 13px;
   background: linear-gradient(
     145deg,
     rgb(73 215 122 / 17%),
@@ -158,7 +158,7 @@
 
 .app-update-dialog__version {
   color: rgb(229 231 235 / 60%);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.09em;
 }
@@ -189,7 +189,7 @@
 }
 
 .app-update-dialog__content {
-  padding-top: 28px;
+  padding-top: 30px;
 }
 
 .app-update-dialog__eyebrow {
@@ -201,17 +201,17 @@
 }
 
 .app-update-dialog__content h2 {
-  max-width: 500px;
+  max-width: 680px;
   margin: 0;
   color: #f7f7f5;
-  font-size: clamp(24px, 5vw, 32px);
+  font-size: clamp(26px, 4vw, 36px);
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.16;
 }
 
 .app-update-dialog__summary {
-  max-width: 520px;
+  max-width: 660px;
   margin: 13px 0 0;
   color: rgb(229 231 235 / 70%);
   font-size: 14px;
@@ -275,7 +275,7 @@
 
 .app-update-dialog__history-layout {
   display: grid;
-  grid-template-columns: minmax(128px, 0.34fr) minmax(0, 1fr);
+  grid-template-columns: minmax(150px, 0.3fr) minmax(0, 1fr);
   gap: 12px;
   margin-top: 24px;
 }
@@ -389,13 +389,17 @@
 
 .app-update-dialog__status-icon {
   display: grid;
-  width: 52px;
-  height: 52px;
+  width: 68px;
+  height: 68px;
+  flex: 0 0 68px;
   place-items: center;
-  margin-bottom: 22px;
-  border: 1px solid rgb(73 215 122 / 22%);
-  border-radius: 16px;
-  background: rgb(73 215 122 / 9%);
+  border: 1px solid rgb(73 215 122 / 25%);
+  border-radius: 20px;
+  background: linear-gradient(
+    145deg,
+    rgb(73 215 122 / 17%),
+    rgb(73 215 122 / 6%)
+  );
   color: #72e394;
 }
 
@@ -405,11 +409,66 @@
   color: #f1c36d;
 }
 
+.app-update-dialog__status-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  margin-top: 25px;
+  padding: 26px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 20px;
+  background: linear-gradient(
+    120deg,
+    rgb(73 215 122 / 8%),
+    rgb(255 255 255 / 3%) 48%,
+    rgb(0 0 0 / 10%)
+  );
+}
+
+.app-update-dialog__status-hero::after {
+  position: absolute;
+  top: -100px;
+  right: -30px;
+  width: 250px;
+  height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(73 215 122 / 11%), transparent 68%);
+  content: '';
+  pointer-events: none;
+}
+
+.app-update-dialog__status-hero.is-error {
+  border-color: rgb(241 195 109 / 16%);
+  background: linear-gradient(
+    120deg,
+    rgb(241 195 109 / 7%),
+    rgb(255 255 255 / 3%) 52%,
+    rgb(0 0 0 / 10%)
+  );
+}
+
+.app-update-dialog__status-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.app-update-dialog__status-copy .app-update-dialog__eyebrow {
+  margin-bottom: 8px;
+}
+
+.app-update-dialog__status-copy .app-update-dialog__summary {
+  margin-top: 9px;
+}
+
 .app-update-dialog__status-line {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: 20px;
+  margin-top: 16px;
   color: rgb(229 231 235 / 78%);
   font-size: 13px;
   font-weight: 600;
@@ -428,6 +487,20 @@
 @media (max-width: 560px) {
   .app-update-dialog__surface {
     padding: 18px;
+  }
+
+  .app-update-dialog__status-hero {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 18px;
+    padding: 20px;
+  }
+
+  .app-update-dialog__status-icon {
+    width: 56px;
+    height: 56px;
+    flex-basis: 56px;
+    border-radius: 16px;
   }
 
   .app-update-dialog__highlights {
