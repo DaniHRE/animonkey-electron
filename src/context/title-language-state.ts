@@ -4,7 +4,7 @@ export type TitleLanguage = 'en' | 'jp';
 
 export interface TitleLanguageContextValue {
   titleLanguage: TitleLanguage;
-  toggleTitleLanguage: () => void;
+  setTitleLanguage: (language: TitleLanguage) => void;
 }
 
 export const TitleLanguageContext =

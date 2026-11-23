@@ -5,6 +5,7 @@ import {
   Cloud,
   Download,
   HardDrive,
+  Languages,
   LogOut,
   RefreshCw,
   Trash2,
@@ -12,6 +13,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 import {
   exportLocalBackup,
   importLocalBackup,
@@ -20,6 +22,7 @@ import { SettingsDebugPanel } from './settings-debug-panel';
 
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
+  { id: 'preferences', label: 'Preferências', icon: Languages },
   { id: 'diagnostics', label: 'Debug', icon: Bug },
   // Re-enable this section when caption controls are available in the player.
   // { id: 'captions', label: 'Legendas', icon: Captions },
@@ -40,6 +43,7 @@ export function SettingsPage() {
     importGuestLibrary,
     updateProfile,
   } = useAccount();
+  const { titleLanguage, setTitleLanguage } = useTitleLanguage();
   const backupInput = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -736,6 +740,69 @@ export function SettingsPage() {
                 {accountError}
               </p>
             )}
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-preferences"
+          role="tabpanel"
+          aria-labelledby="settings-tab-preferences"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'preferences'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Aplicativo
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Preferências
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Personalize as informações exibidas pelo Animonkey.
+            </p>
+          </header>
+
+          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <fieldset>
+              <legend className="text-base font-semibold">
+                Idioma dos títulos
+              </legend>
+              <p className="mt-2 text-sm leading-relaxed text-white/45">
+                Escolha qual título deve aparecer primeiro nos cartões e nas
+                páginas de anime.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    ['jp', 'Japonês (romaji)', 'Prioriza o título romanizado.'],
+                    ['en', 'Inglês', 'Prioriza o título em inglês.'],
+                  ] as const
+                ).map(([language, label, description]) => (
+                  <label
+                    key={language}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${titleLanguage === language ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.08]' : 'border-white/[0.08] bg-white/[0.015] hover:bg-white/[0.04]'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="title-language"
+                      value={language}
+                      checked={titleLanguage === language}
+                      onChange={() => setTitleLanguage(language)}
+                      className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white/90">
+                        {label}
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                        {description}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
           </section>
         </section>
 

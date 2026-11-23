@@ -32,7 +32,6 @@ import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { WindowControls } from '@/components/layout/window-controls';
-import { useTitleLanguage } from '@/hooks/use-title-language';
 import './app-shell.css';
 
 const navItems = [
@@ -176,7 +175,6 @@ export function AppShell() {
   const canNavigateBack = canGoBack || pathname !== '/';
   const backLabel = canGoBack ? 'Voltar' : 'Ir para o início';
   const { session } = useAccount();
-  const { titleLanguage, toggleTitleLanguage } = useTitleLanguage();
   const useContentFrame =
     pathname !== '/' &&
     !pathname.startsWith('/anime/') &&
@@ -481,25 +479,6 @@ export function AppShell() {
           </div>
 
           <div className="app-header__actions flex items-center gap-4">
-            <button
-              type="button"
-              className="app-header__language"
-              onClick={toggleTitleLanguage}
-              aria-pressed={titleLanguage === 'jp'}
-              aria-label={`EN/JP: títulos em ${titleLanguage === 'jp' ? 'japonês (romaji). Mudar para inglês' : 'inglês. Mudar para japonês (romaji)'}`}
-              title={`Títulos em ${titleLanguage === 'jp' ? 'japonês (romaji)' : 'inglês'}`}
-            >
-              <span className="app-header__language-thumb" aria-hidden="true" />
-              {(['en', 'jp'] as const).map((language) => (
-                <span
-                  key={language}
-                  aria-hidden="true"
-                  className={`app-header__language-option ${titleLanguage === language ? 'is-active' : ''}`}
-                >
-                  {language.toUpperCase()}
-                </span>
-              ))}
-            </button>
             <AppUpdateCenter />
             <Link
               to="/settings"

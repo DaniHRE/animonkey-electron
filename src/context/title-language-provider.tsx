@@ -1,20 +1,33 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
-import { TitleLanguageContext } from '@/context/title-language-state';
+import {
+  TitleLanguageContext,
+  type TitleLanguage,
+} from '@/context/title-language-state';
+import { useLocalPreference } from '@/hooks/use-local-preference';
+
+const TITLE_LANGUAGE_PREFERENCE_KEY = 'ui.title-language';
 
 export function TitleLanguageProvider({ children }: { children: ReactNode }) {
-  const [titleLanguage, setTitleLanguage] = useState<'en' | 'jp'>('jp');
-  const value = useMemo(
+  const { value: storedLanguage, update } = useLocalPreference<unknown>(
+    TITLE_LANGUAGE_PREFERENCE_KEY,
+    'jp',
+  );
+  const titleLanguage: TitleLanguage = storedLanguage === 'en' ? 'en' : 'jp';
+  const setTitleLanguage = useCallback(
+    (language: TitleLanguage) => update(language),
+    [update],
+  );
+  const contextValue = useMemo(
     () => ({
       titleLanguage,
-      toggleTitleLanguage: () =>
-        setTitleLanguage((current) => (current === 'en' ? 'jp' : 'en')),
+      setTitleLanguage,
     }),
-    [titleLanguage],
+    [titleLanguage, setTitleLanguage],
   );
 
   return (
-    <TitleLanguageContext.Provider value={value}>
+    <TitleLanguageContext.Provider value={contextValue}>
       {children}
     </TitleLanguageContext.Provider>
   );

@@ -43,8 +43,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-06 — Move title-language preference to Settings
 
 - Difficulty: Low.
-- Current state: The EN/JP title toggle is in the header. Its provider initializes in memory and does not persist the selection.
-- Technical analysis: Move the control into local application preferences and persist it with the existing local preference mechanism. Preserve the current title resolution behavior and make the selected language visible to the user.
+- Current state: The title-language control is in Settings > Preferências. Its selection is stored in the existing local preference store and included in local preference backups; the default remains Japanese (romaji), and invalid imported values fall back to that default.
+- Technical analysis: Keep the EN/JP selection in local application preferences and expose it in Settings rather than the header. Preserve the current title resolution behavior and make the selected language visible to the user.
 
 ## Settings, privacy, and interaction
 
