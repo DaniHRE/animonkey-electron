@@ -31,8 +31,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-04 — Common and configurable keyboard shortcuts
 
 - Difficulty: Medium.
-- Current state: The watch page describes a few player shortcuts. There is no application-level Ctrl+B action or shortcut editor.
-- Technical analysis: Define a small typed command registry in the renderer, then add shortcut preferences and collision validation. Avoid handling shortcuts while the user is typing in an input or editable control. Keep playback shortcuts owned by Vidstack where possible, and account for platform-specific modifier keys and accessibility.
+- Current state: Settings provides editable, locally persisted shortcuts for toggling the sidebar, focusing search, and opening Settings. The command registry uses Ctrl on Windows/Linux and Command on macOS, reserves common editing, window, browser, and developer-tools shortcuts, rejects collisions, and ignores key events from editable controls. Preferences are included in local backups.
+- Technical analysis: Keep application commands in a typed renderer registry and persist only validated shortcut bindings. Reject reserved combinations and collisions before saving, normalize imported preference values, and do not handle shortcuts while the user is typing in an input or editable control. Keep playback shortcuts owned by Vidstack where possible.
 
 ### DISC-05 — Reorderable sidebar
 

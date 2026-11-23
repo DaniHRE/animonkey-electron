@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import {
   Bug,
   Cloud,
   Download,
   HardDrive,
+  Keyboard,
   Languages,
   LogOut,
   RefreshCw,
@@ -13,7 +14,18 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
+import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import {
+  createShortcutBinding,
+  DEFAULT_SHORTCUT_PREFERENCES,
+  findShortcutCollision,
+  formatShortcutBinding,
+  normalizeShortcutPreferences,
+  SHORTCUT_COMMANDS,
+  SHORTCUT_PREFERENCE_KEY,
+} from '@/lib/keyboard-shortcuts';
+import type { ShortcutCommandId } from '@/lib/keyboard-shortcuts';
 import {
   exportLocalBackup,
   importLocalBackup,
@@ -23,6 +35,7 @@ import { SettingsDebugPanel } from './settings-debug-panel';
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
   { id: 'preferences', label: 'Preferências', icon: Languages },
+  { id: 'shortcuts', label: 'Atalhos', icon: Keyboard },
   { id: 'diagnostics', label: 'Debug', icon: Bug },
   // Re-enable this section when caption controls are available in the player.
   // { id: 'captions', label: 'Legendas', icon: Captions },
@@ -44,6 +57,22 @@ export function SettingsPage() {
     updateProfile,
   } = useAccount();
   const { titleLanguage, setTitleLanguage } = useTitleLanguage();
+  const {
+    value: storedShortcuts,
+    update: updateStoredShortcuts,
+    loaded: shortcutsLoaded,
+  } = useLocalPreference<unknown>(
+    SHORTCUT_PREFERENCE_KEY,
+    DEFAULT_SHORTCUT_PREFERENCES,
+  );
+  const shortcutPreferences = useMemo(
+    () => normalizeShortcutPreferences(storedShortcuts),
+    [storedShortcuts],
+  );
+  const [capturingShortcut, setCapturingShortcut] =
+    useState<ShortcutCommandId | null>(null);
+  const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null);
+  const platform = window.animonkey.platform;
   const backupInput = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -72,6 +101,87 @@ export function SettingsPage() {
   const activityPrivacy =
     privacy?.userId === session?.user.id ? (privacy?.value ?? null) : null;
   const sessionUserId = session?.user.id ?? null;
+
+  const captureShortcut = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    commandId: ShortcutCommandId,
+  ) => {
+    if (capturingShortcut !== commandId) return;
+
+    if (event.key === 'Tab') {
+      setCapturingShortcut(null);
+      setShortcutFeedback('Gravação do atalho cancelada.');
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setCapturingShortcut(null);
+      setShortcutFeedback('Gravação do atalho cancelada.');
+      return;
+    }
+
+    event.preventDefault();
+    const binding = createShortcutBinding(event.nativeEvent, platform);
+    if (!binding) {
+      setShortcutFeedback(
+        'Atalho inválido ou reservado. Use Ctrl/⌘ com uma tecla compatível.',
+      );
+      return;
+    }
+
+    const collision = findShortcutCollision(
+      binding,
+      shortcutPreferences,
+      commandId,
+    );
+    if (collision) {
+      const conflictingCommand = SHORTCUT_COMMANDS.find(
+        ({ id }) => id === collision,
+      );
+      setShortcutFeedback(
+        `Esse atalho já está atribuído a ${conflictingCommand?.label ?? 'outra ação'}.`,
+      );
+      return;
+    }
+
+    updateStoredShortcuts({
+      ...shortcutPreferences,
+      [commandId]: binding,
+    });
+    setCapturingShortcut(null);
+    setShortcutFeedback('Atalho atualizado.');
+  };
+
+  const restoreShortcut = (commandId: ShortcutCommandId) => {
+    const defaultBinding = DEFAULT_SHORTCUT_PREFERENCES[commandId];
+    const collision = findShortcutCollision(
+      defaultBinding,
+      shortcutPreferences,
+      commandId,
+    );
+    if (collision) {
+      const conflictingCommand = SHORTCUT_COMMANDS.find(
+        ({ id }) => id === collision,
+      );
+      setShortcutFeedback(
+        `Libere o atalho usado por ${conflictingCommand?.label ?? 'outra ação'} antes de restaurar este padrão.`,
+      );
+      return;
+    }
+
+    updateStoredShortcuts({
+      ...shortcutPreferences,
+      [commandId]: defaultBinding,
+    });
+    setShortcutFeedback('Atalho padrão restaurado.');
+  };
+
+  const disableShortcut = (commandId: ShortcutCommandId) => {
+    updateStoredShortcuts({ ...shortcutPreferences, [commandId]: null });
+    setCapturingShortcut(null);
+    setShortcutFeedback('Atalho desativado.');
+  };
 
   const handleSettingsTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -803,6 +913,112 @@ export function SettingsPage() {
                 ))}
               </div>
             </fieldset>
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-shortcuts"
+          role="tabpanel"
+          aria-labelledby="settings-tab-shortcuts"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'shortcuts'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Aplicativo
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Atalhos
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Personalize os comandos do aplicativo. As alterações ficam neste
+              dispositivo e acompanham o backup local.
+            </p>
+          </header>
+
+          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <div className="space-y-3">
+              {SHORTCUT_COMMANDS.map(({ id, label, description }) => (
+                <div
+                  key={id}
+                  className="flex flex-col gap-3 rounded-lg border border-white/[0.07] bg-black/[0.12] p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-white/90">
+                      {label}
+                    </h2>
+                    <p className="mt-1 text-xs leading-relaxed text-white/45">
+                      {description}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!shortcutsLoaded}
+                      aria-label={
+                        capturingShortcut === id
+                          ? `Pressione as teclas do atalho para ${label}`
+                          : `Alterar atalho para ${label}`
+                      }
+                      aria-pressed={capturingShortcut === id}
+                      onClick={() => {
+                        if (capturingShortcut === id) {
+                          setCapturingShortcut(null);
+                          setShortcutFeedback('Gravação do atalho cancelada.');
+                          return;
+                        }
+                        setCapturingShortcut(id);
+                        setShortcutFeedback(
+                          'Pressione Ctrl/⌘ e uma tecla. Esc cancela a gravação.',
+                        );
+                      }}
+                      onKeyDown={(event) => captureShortcut(event, id)}
+                      onBlur={() => {
+                        if (capturingShortcut === id)
+                          setCapturingShortcut(null);
+                      }}
+                      className="min-h-10 min-w-32 rounded-md border border-white/[0.12] bg-white/[0.04] px-3 text-xs font-semibold text-white/85 transition hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      {capturingShortcut === id
+                        ? 'Pressione as teclas…'
+                        : formatShortcutBinding(
+                            shortcutPreferences[id],
+                            platform,
+                          )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!shortcutsLoaded}
+                      aria-label={`Restaurar atalho padrão para ${label}`}
+                      onClick={() => restoreShortcut(id)}
+                      className="min-h-10 rounded-md border border-white/[0.08] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.05] hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Padrão
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!shortcutsLoaded}
+                      aria-label={`Desativar atalho para ${label}`}
+                      onClick={() => disableShortcut(id)}
+                      className="min-h-10 rounded-md border border-white/[0.08] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.05] hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Desativar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p
+              className="mt-4 min-h-5 text-xs leading-relaxed text-white/45"
+              role="status"
+              aria-live="polite"
+            >
+              {shortcutFeedback ??
+                (platform === 'darwin'
+                  ? 'Use ⌘ com outra tecla. Atalhos de edição e do sistema são reservados.'
+                  : 'Use Ctrl com outra tecla. Atalhos de edição e do sistema são reservados.')}
+            </p>
           </section>
         </section>
 

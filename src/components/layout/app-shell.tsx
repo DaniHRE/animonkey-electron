@@ -16,7 +16,7 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import {
   Link,
@@ -28,6 +28,7 @@ import {
 import { motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
+import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
 import { resolveAnimeTitle } from '@/lib/anime';
@@ -35,6 +36,14 @@ import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { WindowControls } from '@/components/layout/window-controls';
+import {
+  DEFAULT_SHORTCUT_PREFERENCES,
+  isShortcutEditableTarget,
+  matchesShortcut,
+  normalizeShortcutPreferences,
+  SHORTCUT_COMMANDS,
+  SHORTCUT_PREFERENCE_KEY,
+} from '@/lib/keyboard-shortcuts';
 import { animeQueries } from '@/services/anime-queries';
 import './app-shell.css';
 
@@ -164,6 +173,15 @@ export function AppShell() {
   const [activeSearchPreviewIndex, setActiveSearchPreviewIndex] = useState(-1);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const { value: storedShortcuts, loaded: shortcutsLoaded } =
+    useLocalPreference<unknown>(
+      SHORTCUT_PREFERENCE_KEY,
+      DEFAULT_SHORTCUT_PREFERENCES,
+    );
+  const shortcutPreferences = useMemo(
+    () => normalizeShortcutPreferences(storedShortcuts),
+    [storedShortcuts],
+  );
   const shouldReduceMotion = useReducedMotion() ?? false;
   const shellRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -178,6 +196,7 @@ export function AppShell() {
   const showMoreItems = moreExpanded || moreRouteActive;
   const router = useRouter();
   const navigate = useNavigate();
+  const platform = window.animonkey.platform;
   const { canGoBack, canGoForward } = useInAppHistory(router);
   const canNavigateBack = canGoBack || pathname !== '/';
   const backLabel = canGoBack ? 'Voltar' : 'Ir para o início';
@@ -251,6 +270,43 @@ export function AppShell() {
 
     previousSidebarVisibility.current = sidebarVisible;
   }, [sidebarVisible]);
+
+  useEffect(() => {
+    if (!shortcutsLoaded) return;
+
+    const handleShortcut = (event: globalThis.KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        isShortcutEditableTarget(event.target)
+      )
+        return;
+
+      const command = SHORTCUT_COMMANDS.find(({ id }) =>
+        matchesShortcut(event, shortcutPreferences[id], platform),
+      );
+      if (!command) return;
+
+      event.preventDefault();
+      switch (command.id) {
+        case 'toggleSidebar':
+          setSidebarVisible((visible) => !visible);
+          break;
+        case 'focusSearch':
+          if (pathname !== '/search') setSearchPreviewOpen(true);
+          document
+            .querySelector<HTMLInputElement>('[data-app-shortcut-search]')
+            ?.focus();
+          break;
+        case 'openSettings':
+          void navigate({ to: '/settings' });
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [navigate, pathname, platform, shortcutPreferences, shortcutsLoaded]);
 
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -557,6 +613,7 @@ export function AppShell() {
                   aria-label="Buscar anime"
                   role="combobox"
                   aria-autocomplete="list"
+                  data-app-shortcut-search="true"
                   aria-haspopup="listbox"
                   aria-expanded={isSearchPreviewVisible}
                   aria-controls={

@@ -512,6 +512,7 @@ export function SearchPage() {
               />
               <input
                 className={`${inputClass} w-full pl-9`}
+                data-app-shortcut-search="true"
                 value={query}
                 placeholder="Buscar anime..."
                 onChange={(event) => update('q', event.target.value)}
