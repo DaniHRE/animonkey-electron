@@ -12,9 +12,9 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 ### DISC-01 — Custom navigation bar appearance
 
-- Difficulty: Low if the request is purely visual; scope is unclear.
-- Current state: The Electron renderer already provides a custom header and sidebar. The request says the navigation uses Electron's default bar, which does not match the inspected shell.
-- Technical analysis: Confirm which control or visual region the report refers to before changing the shell. If the request concerns another native surface, identify it separately. Do not replace the existing TanStack Router or add browser navigation chrome without a concrete requirement.
+- Difficulty: Medium.
+- Current state: The renderer already provided a custom header and sidebar, while the Windows window still used its native menu and title bar. This item now targets the native File/Edit/View/Window menu and the operating-system title and window controls.
+- Technical analysis: On Windows, use a frameless BrowserWindow and remove its menu. Place compact, accessible application controls in a 32-pixel draggable strip above the existing navigation header. Keep native window chrome on other platforms and preserve resizing, maximize/restore, minimize, close, and the existing router.
 
 ### DISC-02 — Restore the last visited page
 

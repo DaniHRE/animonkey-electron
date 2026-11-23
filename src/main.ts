@@ -4,6 +4,7 @@ import {
   BrowserWindow,
   ipcMain,
   shell,
+  type IpcMainEvent,
   type IpcMainInvokeEvent,
 } from 'electron';
 import path from 'node:path';
@@ -20,6 +21,7 @@ import type {
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeRating, AnimeTitle } from './types/anime';
+import type { WindowControlsState } from './types/window-controls';
 import type { AppUpdateSnapshot, AppUpdateStatus } from './types/updates';
 
 registerMediaScheme();
@@ -167,12 +169,18 @@ if (!hasSingleInstanceLock) {
   });
 }
 
-function assertTrustedIpcSender(event: IpcMainInvokeEvent): void {
-  if (
-    !mainWindow ||
-    event.sender !== mainWindow.webContents ||
-    event.senderFrame !== event.sender.mainFrame
-  ) {
+function isTrustedIpcSender(event: IpcMainInvokeEvent | IpcMainEvent): boolean {
+  return Boolean(
+    mainWindow &&
+    event.sender === mainWindow.webContents &&
+    event.senderFrame === event.sender.mainFrame,
+  );
+}
+
+function assertTrustedIpcSender(
+  event: IpcMainInvokeEvent | IpcMainEvent,
+): void {
+  if (!isTrustedIpcSender(event)) {
     throw new Error('A solicitação do aplicativo não pôde ser autorizada.');
   }
 }
@@ -252,6 +260,49 @@ function registerUpdateIpc(): void {
   ipcMain.handle('updates:install', (event) => {
     assertTrustedIpcSender(event);
     if (updateSnapshot.status === 'ready') autoUpdater.quitAndInstall();
+  });
+}
+
+function getWindowControlsState(): WindowControlsState {
+  return {
+    isMaximized: Boolean(
+      mainWindow && !mainWindow.isDestroyed() && mainWindow.isMaximized(),
+    ),
+  };
+}
+
+function publishWindowControlsState(): void {
+  if (
+    !mainWindow ||
+    mainWindow.isDestroyed() ||
+    mainWindow.webContents.isDestroyed()
+  ) {
+    return;
+  }
+  mainWindow.webContents.send(
+    'window-controls:state',
+    getWindowControlsState(),
+  );
+}
+
+function registerWindowControlsIpc(): void {
+  ipcMain.on('window-controls:minimize', (event) => {
+    if (!isTrustedIpcSender(event)) return;
+    mainWindow?.minimize();
+  });
+  ipcMain.on('window-controls:toggle-maximize', (event) => {
+    if (!isTrustedIpcSender(event)) return;
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  });
+  ipcMain.on('window-controls:close', (event) => {
+    if (!isTrustedIpcSender(event)) return;
+    mainWindow?.close();
+  });
+  ipcMain.handle('window-controls:get-state', (event) => {
+    assertTrustedIpcSender(event);
+    return getWindowControlsState();
   });
 }
 
@@ -487,8 +538,11 @@ const createWindow = () => {
     height: 920,
     minWidth: 900,
     minHeight: 640,
+    resizable: true,
     backgroundColor: '#0b0b0c',
     icon: appIconPath,
+    frame: process.platform !== 'win32',
+    autoHideMenuBar: process.platform === 'win32',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -496,6 +550,13 @@ const createWindow = () => {
       sandbox: true,
     },
   });
+
+  if (process.platform === 'win32') {
+    mainWindow.setMenuBarVisibility(false);
+    mainWindow.removeMenu();
+  }
+  mainWindow.on('maximize', publishWindowControlsState);
+  mainWindow.on('unmaximize', publishWindowControlsState);
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isAllowedExternalUrl(url)) void shell.openExternal(url);
@@ -529,6 +590,7 @@ const createWindow = () => {
 };
 
 registerUpdateIpc();
+registerWindowControlsIpc();
 registerAccountIpc();
 registerAnimeArtworkIpc();
 registerAnivexaIpc(assertTrustedIpcSender);
