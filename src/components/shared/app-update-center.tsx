@@ -3,11 +3,11 @@ import {
   ArrowLeft,
   ArrowDownToLine,
   BookmarkCheck,
+  ChevronRight,
   CircleAlert,
   CircleCheck,
   Compass,
   Download,
-  History,
   LoaderCircle,
   Play,
   RefreshCw,
@@ -47,7 +47,7 @@ const noteIcons = {
   play: Play,
 } satisfies Record<ReleaseNoteIcon, LucideIcon>;
 const VERSION_STORAGE_KEY = 'animonkey:last-seen-app-version';
-type UpdateCenterPanel = 'update' | 'whats-new' | 'history';
+type UpdateCenterPanel = 'overview' | 'history';
 
 const updateCopy: Record<
   AppUpdateStatus,
@@ -55,9 +55,8 @@ const updateCopy: Record<
 > = {
   unsupported: {
     label: 'Atualizações automáticas indisponíveis',
-    title: 'Atualizações para Windows',
-    detail:
-      'O canal automático está disponível para a versão Windows x64 do Animonkey.',
+    title: 'Atualização automática indisponível',
+    detail: 'Esta instalação não recebe atualizações automáticas.',
   },
   idle: {
     label: 'Atualização ainda não verificada',
@@ -113,6 +112,7 @@ function AppUpdateIcon({
     case 'current':
       return <CircleCheck {...iconProps} />;
     case 'error':
+    case 'unsupported':
       return <CircleAlert {...iconProps} />;
     default:
       return <Download {...iconProps} />;
@@ -143,7 +143,7 @@ function ReleaseHighlights({ release }: { release: ReleaseNotesEntry }) {
 export function AppUpdateCenter() {
   const [snapshot, setSnapshot] = useState<AppUpdateSnapshot | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [panel, setPanel] = useState<UpdateCenterPanel>('whats-new');
+  const [panel, setPanel] = useState<UpdateCenterPanel>('overview');
   const [selectedHistoryVersion, setSelectedHistoryVersion] = useState<
     string | null
   >(null);
@@ -166,7 +166,7 @@ export function AppUpdateCenter() {
           const previousVersion =
             window.localStorage.getItem(VERSION_STORAGE_KEY);
           if (previousVersion && previousVersion !== next.currentVersion) {
-            setPanel('whats-new');
+            setPanel('overview');
             setIsOpen(true);
           }
           window.localStorage.setItem(VERSION_STORAGE_KEY, next.currentVersion);
@@ -176,7 +176,7 @@ export function AppUpdateCenter() {
       }
 
       if (next.status === 'ready' && previousStatus.current !== 'ready') {
-        setPanel('update');
+        setPanel('overview');
         setIsOpen(true);
       }
       previousStatus.current = next.status;
@@ -207,29 +207,26 @@ export function AppUpdateCenter() {
   const statusMessage = bridgeError
     ? 'Não foi possível acessar as atualizações. Tente novamente.'
     : updateCopy[status].detail;
-  const release = releaseNotesByVersion[currentVersion];
+  const statusTitle = bridgeError
+    ? 'Não foi possível verificar'
+    : updateCopy[status].title;
   const historyVersion = releaseVersions.includes(selectedHistoryVersion ?? '')
     ? selectedHistoryVersion
     : (releaseVersions[0] ?? null);
   const historyRelease = historyVersion
     ? releaseNotesByVersion[historyVersion]
     : null;
-  const canBrowseHistory = releaseVersions.length > 1;
   const isBusy = status === 'checking' || status === 'downloading';
   const busyActionLabel =
     status === 'downloading' ? 'Baixando…' : 'Verificando…';
 
   const openCenter = () => {
-    setPanel('update');
+    setPanel('overview');
     setIsOpen(true);
   };
 
-  const openHistory = () => {
-    setSelectedHistoryVersion(
-      releaseVersions.includes(currentVersion)
-        ? currentVersion
-        : (releaseVersions[0] ?? null),
-    );
+  const openRelease = (version: string) => {
+    setSelectedHistoryVersion(version);
     setPanel('history');
   };
 
@@ -285,9 +282,7 @@ export function AppUpdateCenter() {
             <div className="app-update-dialog__brand-mark" aria-hidden="true">
               <Download size={20} strokeWidth={1.8} />
             </div>
-            <span className="app-update-dialog__version">
-              ANIMONKEY <span>·</span> v{currentVersion}
-            </span>
+            <span className="app-update-dialog__version">ANIMONKEY</span>
             <button
               type="button"
               className="app-update-dialog__close"
@@ -298,99 +293,130 @@ export function AppUpdateCenter() {
             </button>
           </div>
 
-          {panel === 'update' ? (
+          {panel === 'overview' ? (
             <section className="app-update-dialog__content">
-              <div className={`app-update-dialog__status-hero is-${status}`}>
-                <div className="app-update-dialog__status-rail">
-                  <div
-                    className={`app-update-dialog__status-icon is-${status}`}
-                  >
-                    <AppUpdateIcon
-                      status={status}
-                      size={28}
-                      className={isBusy ? 'app-update-center__spin' : undefined}
-                    />
-                  </div>
-                  <div className="app-update-dialog__status-rail-meta">
-                    <span className="app-update-dialog__version-label">
-                      VERSÃO INSTALADA
-                    </span>
-                    <strong className="app-update-dialog__version-number">
-                      v{currentVersion}
-                    </strong>
-                    <div
-                      className="app-update-dialog__status-line"
-                      role="status"
-                    >
-                      <span
-                        className={`app-update-center__indicator is-${status}`}
-                        aria-hidden="true"
-                      />
-                      {updateCopy[status].label}
-                    </div>
-                  </div>
+              <div className="app-update-dialog__overview-heading">
+                <div>
+                  <p className="app-update-dialog__eyebrow">ATUALIZAÇÕES</p>
+                  <h2 id="app-update-dialog-title">Versões do Animonkey</h2>
+                  <p className="app-update-dialog__summary">
+                    Novidades e melhorias de cada versão.
+                  </p>
                 </div>
-                <div className="app-update-dialog__status-copy">
-                  <p className="app-update-dialog__eyebrow">ATUALIZAÇÃO</p>
-                  <h2 id="app-update-dialog-title">
-                    {updateCopy[status].title}
-                  </h2>
-                  <p className="app-update-dialog__summary">{statusMessage}</p>
+                <div
+                  className={`app-update-dialog__installed-version is-${status}`}
+                >
+                  <span>INSTALADA</span>
+                  <strong>v{currentVersion}</strong>
                 </div>
               </div>
-              <div className="app-update-dialog__actions">
-                {status === 'ready' ? (
-                  <>
-                    <Button onClick={installUpdate}>
-                      <ArrowDownToLine aria-hidden="true" />
-                      Reiniciar para atualizar
-                    </Button>
-                    <Button variant="ghost" onClick={() => setIsOpen(false)}>
-                      Mais tarde
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    {status !== 'unsupported' && (
-                      <Button onClick={checkNow} disabled={isBusy}>
-                        {isBusy ? (
-                          <LoaderCircle
-                            className="app-update-center__spin"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <RefreshCw aria-hidden="true" />
-                        )}
-                        {isBusy ? busyActionLabel : 'Verificar novamente'}
+
+              <div
+                className={`app-update-dialog__overview-status is-${status}`}
+                role="status"
+              >
+                <span className="app-update-dialog__overview-status-icon">
+                  <AppUpdateIcon
+                    status={status}
+                    size={17}
+                    className={isBusy ? 'app-update-center__spin' : undefined}
+                  />
+                </span>
+                <span className="app-update-dialog__overview-status-copy">
+                  <strong>{statusTitle}</strong>
+                  <span>{statusMessage}</span>
+                </span>
+                <span
+                  className={`app-update-center__indicator is-${status}`}
+                  aria-hidden="true"
+                />
+              </div>
+
+              {status !== 'unsupported' && (
+                <div className="app-update-dialog__actions app-update-dialog__overview-actions">
+                  {status === 'ready' ? (
+                    <>
+                      <Button onClick={installUpdate}>
+                        <ArrowDownToLine aria-hidden="true" />
+                        Reiniciar para atualizar
                       </Button>
-                    )}
-                    <Button variant="ghost" onClick={() => setIsOpen(false)}>
-                      Fechar
+                      <Button variant="ghost" onClick={() => setIsOpen(false)}>
+                        Mais tarde
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={checkNow} disabled={isBusy}>
+                      {isBusy ? (
+                        <LoaderCircle
+                          className="app-update-center__spin"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <RefreshCw aria-hidden="true" />
+                      )}
+                      {isBusy ? busyActionLabel : 'Verificar atualizações'}
                     </Button>
-                  </>
-                )}
-                {release && (
-                  <Button variant="ghost" onClick={() => setPanel('whats-new')}>
-                    Ver novidades da v{currentVersion}
-                  </Button>
-                )}
-                {canBrowseHistory && (
-                  <Button variant="ghost" onClick={openHistory}>
-                    <History aria-hidden="true" />
-                    Histórico de versões
-                  </Button>
+                  )}
+                </div>
+              )}
+
+              <div className="app-update-dialog__release-heading">
+                <h3>Versões</h3>
+                <span>{releaseVersions.length}</span>
+              </div>
+              <div className="app-update-dialog__release-list">
+                {releaseVersions.length > 0 ? (
+                  releaseVersions.map((version) => {
+                    const versionRelease = releaseNotesByVersion[version];
+                    const isInstalled = version === currentVersion;
+                    return (
+                      <button
+                        key={version}
+                        type="button"
+                        className="app-update-dialog__release-row"
+                        data-installed={isInstalled}
+                        onClick={() => openRelease(version)}
+                        aria-label={`Ver novidades da versão ${version}${isInstalled ? ', versão instalada' : ''}`}
+                      >
+                        <span className="app-update-dialog__release-version">
+                          <strong>v{version}</strong>
+                          {isInstalled && (
+                            <span className="app-update-dialog__release-badges">
+                              <span>Em uso</span>
+                            </span>
+                          )}
+                        </span>
+                        <span className="app-update-dialog__release-copy">
+                          <strong>{versionRelease.title}</strong>
+                          <span>{versionRelease.summary}</span>
+                        </span>
+                        <ChevronRight
+                          className="app-update-dialog__release-arrow"
+                          size={16}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    );
+                  })
+                ) : (
+                  <p className="app-update-dialog__missing-notes">
+                    Ainda não há notas de versão disponíveis.
+                  </p>
                 )}
               </div>
             </section>
-          ) : panel === 'history' ? (
+          ) : (
             <section className="app-update-dialog__content">
               <p className="app-update-dialog__eyebrow">
                 HISTÓRICO DE ATUALIZAÇÕES
               </p>
-              <h2 id="app-update-dialog-title">Novidades por versão</h2>
+              <h2 id="app-update-dialog-title">
+                {historyVersion
+                  ? `Versão ${historyVersion}`
+                  : 'Novidades por versão'}
+              </h2>
               <p className="app-update-dialog__summary">
-                Consulte as mudanças incluídas nas versões anteriores do
-                Animonkey.
+                Selecione uma versão para ver o resumo e as mudanças.
               </p>
 
               {historyRelease && historyVersion ? (
@@ -417,9 +443,6 @@ export function AppUpdateCenter() {
                     className="app-update-dialog__history-entry"
                     aria-live="polite"
                   >
-                    <p className="app-update-dialog__eyebrow">
-                      {historyRelease.eyebrow}
-                    </p>
                     <h3>{historyRelease.title}</h3>
                     <p className="app-update-dialog__summary">
                       {historyRelease.summary}
@@ -434,63 +457,13 @@ export function AppUpdateCenter() {
               )}
 
               <div className="app-update-dialog__actions">
-                <Button variant="ghost" onClick={() => setPanel('update')}>
+                <Button variant="ghost" onClick={() => setPanel('overview')}>
                   <ArrowLeft aria-hidden="true" />
-                  Estado da atualização
+                  Todas as versões
                 </Button>
                 <Button variant="ghost" onClick={() => setIsOpen(false)}>
                   Fechar
                 </Button>
-              </div>
-            </section>
-          ) : (
-            <section className="app-update-dialog__content">
-              <p className="app-update-dialog__eyebrow">
-                {release?.eyebrow ?? 'NOVIDADES'}
-              </p>
-              <h2 id="app-update-dialog-title">
-                {release?.title ?? `Novidades da versão ${currentVersion}`}
-              </h2>
-              <p className="app-update-dialog__summary">
-                {release?.summary ??
-                  'As notas desta versão ainda não foram adicionadas.'}
-              </p>
-
-              {release ? (
-                <ReleaseHighlights release={release} />
-              ) : (
-                <p className="app-update-dialog__missing-notes">
-                  As notas serão exibidas assim que forem incluídas nesta
-                  versão.
-                </p>
-              )}
-
-              <div className="app-update-dialog__actions">
-                <Button variant="ghost" onClick={() => setPanel('update')}>
-                  Estado da atualização
-                </Button>
-                {canBrowseHistory && (
-                  <Button variant="ghost" onClick={openHistory}>
-                    <History aria-hidden="true" />
-                    Histórico de versões
-                  </Button>
-                )}
-                <Button variant="ghost" onClick={() => setIsOpen(false)}>
-                  Fechar
-                </Button>
-                {status !== 'unsupported' && (
-                  <Button onClick={checkNow} disabled={isBusy}>
-                    {isBusy ? (
-                      <LoaderCircle
-                        className="app-update-center__spin"
-                        aria-hidden="true"
-                      />
-                    ) : (
-                      <RefreshCw aria-hidden="true" />
-                    )}
-                    {isBusy ? busyActionLabel : 'Verificar atualização'}
-                  </Button>
-                )}
               </div>
             </section>
           )}
