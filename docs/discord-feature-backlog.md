@@ -19,8 +19,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-02 — Restore the last visited page
 
 - Difficulty: Medium.
-- Current state: The renderer uses TanStack Router with hash history; no persisted last route was found.
-- Technical analysis: Persist a validated internal route and restore it after startup, while allowing explicit deep links to take precedence. Only restore routes whose parameters still validate. Keep local data and the home route available if the stored route is invalid or its data is unavailable.
+- Current state: Implemented locally. The renderer stores the last successfully resolved, allow-listed hash route in versioned local storage and restores it when startup begins at the default home route. An explicit app-protocol anime deep link takes precedence. Invalid routes or parameters leave startup at home; existing route error states and shell navigation remain available when content cannot load.
+- Technical analysis: Persist only validated internal routes and supported parameters. Restore them through the existing hash history, while allowing explicit deep links to take precedence. Keep local data and home navigation available when a stored route is invalid or its data is unavailable.
 
 ### DISC-03 — Application-level back button
 
