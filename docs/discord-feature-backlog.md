@@ -13,19 +13,19 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-01 — Custom navigation bar appearance
 
 - Difficulty: Medium.
-- Current state: Implemented locally on `dev`: Windows uses a frameless window with a hidden native menu and compact application controls in a transparent 32-pixel strip. The packaged Windows build passed, but the window was not visually checked at runtime. Other platforms retain native window chrome.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Windows uses a frameless window with a hidden native menu and compact application controls in a transparent 32-pixel strip. The packaged Windows build passed, but the window was not visually checked at runtime. Other platforms retain native window chrome.
 - Technical analysis: On Windows, use a frameless BrowserWindow and remove its menu. Place compact, accessible application controls in a 32-pixel draggable strip above the existing navigation header. Keep native window chrome on other platforms and preserve resizing, maximize/restore, minimize, close, and the existing router.
 
 ### DISC-02 — Restore the last visited page
 
 - Difficulty: Medium.
-- Current state: Implemented locally. The renderer stores the last successfully resolved, allow-listed hash route in versioned local storage and restores it when startup begins at the default home route. An explicit app-protocol anime deep link takes precedence. Invalid routes or parameters leave startup at home; existing route error states and shell navigation remain available when content cannot load.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. The renderer stores the last successfully resolved, allow-listed hash route in versioned local storage and restores it when startup begins at the default home route. An explicit app-protocol anime deep link takes precedence. Invalid routes or parameters leave startup at home; existing route error states and shell navigation remain available when content cannot load.
 - Technical analysis: Persist only validated internal routes and supported parameters. Restore them through the existing hash history, while allowing explicit deep links to take precedence. Keep local data and home navigation available when a stored route is invalid or its data is unavailable.
 
 ### DISC-03 — Application-level back button
 
 - Difficulty: Low to Medium.
-- Current state: Implemented locally on `feature/disc-03-application-back-button`. Back and forward controls sit in Windows' custom title bar beside the window controls; platforms with native title bars keep them in the app header. Back uses TanStack's in-app history index. Without a valid in-app entry it returns non-home routes to Início and is disabled on Início. Forward is enabled only for an in-app entry observed during the current session. Navigation preserves hash routes and query state, including the episode parameter.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Back and forward controls sit in Windows' custom title bar beside the window controls; platforms with native title bars keep them in the app header. Back uses TanStack's in-app history index. Without a valid in-app entry it returns non-home routes to Início and is disabled on Início. Forward is enabled only for an in-app entry observed during the current session. Navigation preserves hash routes and query state, including the episode parameter.
 - Technical analysis: Add a shell control that uses TanStack Router history and handles an empty or external-entry history safely. Preserve hash routes, browser back/forward behavior, and the episode query parameter.
 
 ### DISC-04 — Common and configurable keyboard shortcuts
@@ -51,7 +51,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-07 — Redesign the Settings page
 
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. Account and sync, Anivexa diagnostics, and local backup use a section navigation layout inspired by the reviewed Re:ANIME Settings page. Caption guidance is temporarily commented out until the player exposes configurable caption controls.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Account and sync, Anivexa diagnostics, and local backup use a section navigation layout inspired by the reviewed Re:ANIME Settings page. Caption guidance is temporarily commented out until the player exposes configurable caption controls.
 - Technical analysis: Adapt the reference's persistent settings navigation and clear section hierarchy to the Electron app's existing dark and green visual identity. Preserve local-data and account boundaries, loading/error/offline states, accessible labels, and current Anivexa diagnostics. Keep the redesign within the Electron repository.
 
 ### DISC-08 — Adult-content preference with SFW default
@@ -145,7 +145,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-22 — Remember player preferences such as volume
 
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. Vidstack volume uses the IndexedDB-backed local preference store, and Anivexa episode lists use a persistent client-side cache with expiry driven by the next airing time and hourly retries when a scheduled episode is still missing.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Vidstack volume uses the IndexedDB-backed local preference store, and Anivexa episode lists use a persistent client-side cache with expiry driven by the next airing time and hourly retries when a scheduled episode is still missing.
 - Technical analysis: Store volume with `useLocalPreference` so it survives app restarts. Persist episode lists in the existing IndexedDB catalog cache and return cached data until its deadline. Use the AniList next-airing timestamp as the TTL; after that time, retry hourly while the expected episode is missing. Once it appears, expire at the following weekly slot, or in seven days when an ongoing series has no updated schedule. Keep completed series with a complete episode list for 30 days. A failed refresh serves the last cached list and retries in one hour. Do not persist signed source URLs or provider credentials; stream-link caching remains a separate decision.
 
 ### DISC-23 — Download episodes for offline playback
@@ -210,8 +210,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 12:20.
 - Difficulty: Medium to High.
-- Current state: A Discord report shows repeated `Anivexa request cancelled` errors from the IPC handler and requests a way to open DevTools. The cancellation path has not been traced to determine whether these are expected aborts or leaked runtime errors.
-- Technical analysis: Reproduce and trace cancellation through the renderer, preload, IPC handler, and Anivexa runtime. Treat expected aborts separately from provider failures and avoid logging sensitive request data. Define a developer-only DevTools entry point that preserves the production security model; do not expose unrestricted DevTools access in release builds without a reviewed product decision.
+- Current state: The reported IPC error is caused by an expected renderer `AbortSignal` cancellation: the preload sends `anivexa:cancel`, `AnivexaRuntime.cancel()` rejects the pending request, and the rejected promise reaches Electron's `ipcMain.handle` logger. The renderer has already aborted that request; this stack trace does not establish a runtime crash or increased response latency. Expected cancellations now return an internal HTTP 499 sentinel at the IPC boundary, while other errors still reject. F12 and the platform DevTools shortcut open detached DevTools only when the Vite development server is active. Changes are local on `fix/discord-disc-30-anivexa-runtime-cancellations`; runtime behavior has not yet been verified.
+- Technical analysis: Preserve the renderer's abort as the source of cancellation and keep expected aborts separate from provider failures. Do not log sensitive request data. Restrict DevTools access to development builds and preserve the production security model.
 
 ## Application updates
 
@@ -219,7 +219,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 12:47.
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. The header places the update action beside an avatar-only profile link, the status indicator pulses while a package downloads or is ready, and the dialog can browse existing release notes for versions 1.0.0 through 1.0.2. The requested Discord image was retrieved and reviewed after the owner asked for it.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. The header places the update action beside an avatar-only profile link, the status indicator pulses while a package downloads or is ready, and the dialog browses versioned release notes from the app's existing release data. The requested Discord image was retrieved and reviewed after the owner asked for it.
 - Technical analysis: Place the update action beside an avatar-only profile control. Use the supplied compact header reference, preserve the existing update state and install flow, and add a restrained pulse only while a new package is downloading or ready, respecting reduced-motion preferences. Let users browse the existing versioned release notes as update history without adding another update service or persistence layer.
 
 ## Per-item branch and integration rule

@@ -555,6 +555,27 @@ const createWindow = () => {
     mainWindow.setMenuBarVisibility(false);
     mainWindow.removeMenu();
   }
+
+  const devToolsWindow = mainWindow;
+  if (devToolsWindow && MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    devToolsWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      const key = input.key.toLowerCase();
+      const isDevToolsShortcut =
+        key === 'f12' ||
+        (key === 'i' &&
+          ((input.control && input.shift) || (input.meta && input.alt)));
+      if (!isDevToolsShortcut) return;
+
+      event.preventDefault();
+      if (devToolsWindow.webContents.isDevToolsOpened()) {
+        devToolsWindow.webContents.closeDevTools();
+      } else {
+        devToolsWindow.webContents.openDevTools({ mode: 'detach' });
+      }
+    });
+  }
+
   mainWindow.on('maximize', publishWindowControlsState);
   mainWindow.on('unmaximize', publishWindowControlsState);
 

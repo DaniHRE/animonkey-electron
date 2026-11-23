@@ -21,6 +21,7 @@ const STARTUP_TIMEOUT_MS = 15_000;
 const MAX_PENDING_REQUESTS = 24;
 const MAX_DIAGNOSTIC_ENTRIES = 100;
 const REQUEST_ID_PATTERN = /^[0-9a-f-]{36}$/i;
+const REQUEST_CANCELLED_MESSAGE = 'Anivexa request cancelled.';
 
 interface PendingRequest {
   resolve: (response: AnivexaDesktopResponse) => void;
@@ -239,7 +240,7 @@ class AnivexaRuntime {
 
   cancel(
     requestId: string,
-    reason = new Error('Anivexa request cancelled.'),
+    reason = new Error(REQUEST_CANCELLED_MESSAGE),
   ): void {
     if (!this.pending.has(requestId)) return;
     this.child?.postMessage({ type: 'cancel', requestId });
@@ -395,7 +396,7 @@ class AnivexaRuntime {
           `${pending.summary} excedeu o tempo limite após ${durationMs} ms.`,
         );
       } else if (
-        error.message !== 'Anivexa request cancelled.' &&
+        error.message !== REQUEST_CANCELLED_MESSAGE &&
         error.message !== 'Anivexa runtime stopped.'
       ) {
         this.recordDiagnostic(
@@ -474,7 +475,18 @@ export function registerAnivexaIpc(
   ipcMain.handle('anivexa:request', (event, value: unknown) => {
     assertTrustedSender(event);
     const parsed = parseRequest(value);
-    return anivexaRuntime.request(parsed.requestId, parsed.request);
+    return anivexaRuntime
+      .request(parsed.requestId, parsed.request)
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          error.message === REQUEST_CANCELLED_MESSAGE
+        ) {
+          // The renderer's AbortSignal owns cancellation; avoid rejecting invoke IPC.
+          return { status: 499, body: '' } satisfies AnivexaDesktopResponse;
+        }
+        throw error;
+      });
   });
   ipcMain.on('anivexa:cancel', (event, requestId: unknown) => {
     try {
