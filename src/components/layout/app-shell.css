@@ -642,15 +642,6 @@
     width: 68px;
     flex-basis: 68px;
   }
-
-  .app-header__account > span,
-  .app-header__account > svg {
-    display: none;
-  }
-
-  .app-header__account {
-    padding: 6px;
-  }
 }
 
 @media (max-width: 600px) {
