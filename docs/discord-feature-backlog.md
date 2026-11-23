@@ -2,7 +2,7 @@
 
 ## Scope and source
 
-This backlog catalogs the 26 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). Every included message is dated 2026-11-21 in Brasília. No earlier Discord messages were used.
+This backlog catalogs the 32 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
 The reader returned attachment filenames for some messages, but not the attached image or video contents. Visual reports below are therefore based on message text and the current source tree; affected screens still need review when an item is selected.
 
@@ -13,7 +13,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-01 — Custom navigation bar appearance
 
 - Difficulty: Medium.
-- Current state: The renderer already provided a custom header and sidebar, while the Windows window still used its native menu and title bar. This item now targets the native File/Edit/View/Window menu and the operating-system title and window controls.
+- Current state: Implemented locally on `dev`: Windows uses a frameless window with a hidden native menu and compact application controls in a transparent 32-pixel strip. The packaged Windows build passed, but the window was not visually checked at runtime. Other platforms retain native window chrome.
 - Technical analysis: On Windows, use a frameless BrowserWindow and remove its menu. Place compact, accessible application controls in a 32-pixel draggable strip above the existing navigation header. Keep native window chrome on other platforms and preserve resizing, maximize/restore, minimize, close, and the existing router.
 
 ### DISC-02 — Restore the last visited page
@@ -160,6 +160,49 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Current state: No mobile application or episode-download feature is part of this repository. Existing account sync covers supported library data, not media files.
 - Technical analysis: This requires an explicitly scoped cross-product design, including a mobile client, backend storage/transfer, quota, bandwidth, offline authorization, and user-data policy. Do not modify the separate website or Anivexa submodule as part of a desktop-only implementation.
 
+## Feedback intake
+
+### DISC-25 — Submit suggestions and bug reports
+
+- Request date (Brasília): 2026-11-23.
+- Difficulty: High.
+- Current state: No general suggestion/report intake UI or GitHub issue automation was found. The app already uses Supabase for account services, but no feedback intake contract or table was found.
+- Technical analysis: A feedback form is applicable to the desktop app. The requested storage and GitHub issue workflow need a defined backend contract, privacy and retention rules, validation, rate limits, anti-abuse handling, and a review step before issue creation. Keep GitHub credentials on a trusted backend; never ship a GitHub token in the Electron app. The UI and backend automation may need separate implementation scopes.
+
+## Discovery and catalog defects
+
+### DISC-26 — Disable the unsupported music format filter
+
+- Request date (Brasília): 2026-11-23.
+- Difficulty: Medium.
+- Current state: Search exposes `MUSIC` in its format filters, while the AniList query is constrained to anime and the app has no music playback flow. The reported client error has not been independently reproduced.
+- Technical analysis: Reproduce the failure and trace whether it occurs in search results, anime details, or playback. Temporarily remove the unsupported `MUSIC` filter from the UI, then audit the other exposed format and source filters against the app's anime metadata and Anivexa playback contracts. Preserve AniList query behavior and do not claim the reported cause is confirmed until reproduced.
+
+## Discord integrations
+
+### DISC-27 — Show Animonkey presence in Discord
+
+- Request date (Brasília): 2026-11-23.
+- Difficulty: High.
+- Current state: No Discord presence integration was found. This is a desktop-app feature and could be optional.
+- Technical analysis: Define opt-in behavior and which activity details may be shared before selecting an integration mechanism. Cover Discord being closed or unavailable, app lifecycle, platform support, and privacy. Never expose provider URLs, account credentials, or other private data in presence.
+
+### DISC-28 — Announce releases and new episodes through a Discord bot
+
+- Request date (Brasília): 2026-11-23.
+- Difficulty: Very high; the bot itself is outside the desktop app's scope.
+- Current state: No Discord bot or announcement service was found. The Electron app already registers the `app:` protocol and can open anime deep links by ID.
+- Technical analysis: Bot hosting, Discord credentials, announcement sources, deduplication, and scheduling belong in a separate trusted service. The desktop app can support the request by opening validated anime deep links; define the bot's link format against the existing protocol and route contract. Do not embed bot credentials or implement the bot inside the renderer.
+
+## Provider health monitoring
+
+### DISC-29 — Monitor provider availability in a Supabase health table
+
+- Request date (Brasília): 2026-11-23, 00:48.
+- Difficulty: High; primarily a backend service task.
+- Current state: The desktop app has local Anivexa runtime diagnostics, but no scheduled provider health pipeline or shared Supabase status table was found. This is related to, but distinct from, client-side failure reports in DISC-15.
+- Technical analysis: Define which frequently used providers to probe, the check cadence, success criteria, retry policy, and freshness/expiry of stored results. Run probes in a trusted scheduled service and write sanitized status records through a restricted backend contract; do not expose provider credentials or probe secrets to Electron. Guard against transient network errors and false outage reports.
+
 ## Per-item branch and integration rule
 
 When an item is selected for development:
@@ -169,4 +212,4 @@ When an item is selected for development:
 3. Target dev for integration. Follow AGENTS.md and CONTRIBUTING.md for pull-request and review requirements. Never integrate these items into main without separate explicit release authorization.
 4. If one selected item must be split into independently reviewable changes, give each resulting change its own branch and record the relationship here.
 
-No feature branch has been created for this backlog; implementation scope remains for the user to select.
+The backlog does not authorize implementation. The owner selects each item before feature work begins.
