@@ -165,9 +165,10 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-25 — Submit suggestions and bug reports
 
 - Request date (Brasília): 2026-11-23.
+- Reply metadata: The 00:38 Brasília follow-up is a native Discord reply to the 00:31 request, confirmed by the local MCP reader.
 - Difficulty: High.
 - Current state: No general suggestion/report intake UI or GitHub issue automation was found. The app already uses Supabase for account services, but no feedback intake contract or table was found.
-- Technical analysis: A feedback form is applicable to the desktop app. The requested storage and GitHub issue workflow need a defined backend contract, privacy and retention rules, validation, rate limits, anti-abuse handling, and a review step before issue creation. Keep GitHub credentials on a trusted backend; never ship a GitHub token in the Electron app. The UI and backend automation may need separate implementation scopes.
+- Technical analysis: A shared feedback component is applicable to the desktop app, with distinct suggestion/report categories and classification tags. Store validated entries in a dedicated Supabase table, with defined consent, privacy, retention, rate limits, and anti-abuse controls. A trusted backend workflow should take reviewed entries from Supabase, reshape free-form user text into the project's standard issue format, and create the corresponding GitHub issues. Keep GitHub credentials on the backend; never ship a GitHub token in the Electron app. The UI and backend automation may need separate implementation scopes.
 
 ## Discovery and catalog defects
 
