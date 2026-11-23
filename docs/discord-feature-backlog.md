@@ -231,6 +231,15 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Current state: Implemented and integrated locally into `dev`. Settings now has a Debug section with runtime status, severity counts and filters, and a readable list of current-session Anivexa events. Users can export the session records to JSON through a native save dialog or clear them. The export includes app version and timestamp and may contain provider and anime IDs; it excludes credentials, signed URLs, and payloads. Visual runtime validation has not been performed.
 - Technical analysis: Give the debug area a clear Settings destination with runtime status, event counts, readable recent entries, severity filters, and actions to export and clear the current session diagnostics. Keep exports limited to sanitized diagnostic data, use a native save dialog, and disclose that request summaries can contain provider and anime identifiers. Do not imply that logs persist between sessions or include credentials, signed URLs, or request payloads.
 
+## Account configuration and Windows distribution
+
+### DISC-33 — Configure the account API in the Windows package
+
+- Request date (Brasília): 2026-11-23, 18:28.
+- Difficulty: Low to Medium.
+- Current state: A user reported that account registration in the distributed app fails because the account service is not configured. The main-process Vite config requires `VITE_DESKTOP_API_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; local `.env` has both, but the Windows CI and stable release workflows did not pass them to `pnpm make`. The workflows now read both values from GitHub Actions repository variables, and production builds fail when either value is missing or the API URL is not an HTTPS `/desktop-api` endpoint. The repository variables must be configured, and these code changes require a future authorized Windows package build; an already distributed installer is unchanged.
+- Technical analysis: Treat the Desktop API URL and Supabase publishable key as public build-time configuration, not secrets. Explicitly inject them into both Windows packaging workflows and never rely on a local ignored `.env`. Keep service-role keys and other private credentials out of Vite and the distributed app.
+
 ## Per-item branch and integration rule
 
 When an item is selected for development:
