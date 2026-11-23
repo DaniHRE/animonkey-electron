@@ -4,6 +4,7 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Bell,
   Bug,
   Captions,
   Cloud,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
+import { useAiringNotificationPreferences } from '@/hooks/use-airing-notification-preferences';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import {
@@ -59,6 +61,7 @@ import { SettingsDebugPanel } from './settings-debug-panel';
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
   { id: 'privacy', label: 'Privacidade', icon: Shield },
+  { id: 'notifications', label: 'Notificações', icon: Bell },
   { id: 'preferences', label: 'Preferências', icon: Languages },
   { id: 'shortcuts', label: 'Atalhos', icon: Keyboard },
   { id: 'navigation', label: 'Navegação', icon: ArrowUpDown },
@@ -99,6 +102,10 @@ export function SettingsPage() {
   const recordWatchProgress = useRecordWatchProgressPreference();
   const continueWatchingVisibility = useContinueWatchingVisibilityPreference();
   const syncWatchProgress = useSyncWatchProgressPreference();
+  const airingNotifications = useAiringNotificationPreferences();
+  const [notificationsSupported, setNotificationsSupported] = useState<
+    boolean | null
+  >(null);
   const {
     includeAdult,
     setIncludeAdult,
@@ -310,6 +317,21 @@ export function SettingsPage() {
       active = false;
     };
   }, [sessionUserId]);
+
+  useEffect(() => {
+    let active = true;
+    void window.animonkey.notifications
+      .isSupported()
+      .then((supported) => {
+        if (active) setNotificationsSupported(supported);
+      })
+      .catch(() => {
+        if (active) setNotificationsSupported(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1054,6 +1076,84 @@ export function SettingsPage() {
                   Compartilhar
                 </label>
               </div>
+            </fieldset>
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-notifications"
+          role="tabpanel"
+          aria-labelledby="settings-tab-notifications"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'notifications'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Agenda de episódios
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Notificações
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Acompanhe episódios novos dos animes que você escolher.
+            </p>
+          </header>
+          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <fieldset>
+              <legend className="text-base font-semibold">
+                Avisos de novos episódios
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={airingNotifications.notificationsEnabled}
+                  disabled={
+                    !airingNotifications.notificationsLoaded ||
+                    notificationsSupported !== true
+                  }
+                  onChange={(event) =>
+                    airingNotifications.setNotificationsEnabled(
+                      event.currentTarget.checked,
+                    )
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/90">
+                    Notificar quando houver episódio novo
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desativado por padrão. Com o Animonkey aberto e conectado, a
+                    agenda é verificada a cada 15 minutos. Um aviso de
+                    recuperação pode mencionar o episódio mais recente após um
+                    período offline.
+                  </span>
+                </span>
+              </label>
+              {notificationsSupported === false && (
+                <p role="status" className="mt-4 text-xs text-white/45">
+                  Notificações do sistema não estão disponíveis neste ambiente.
+                </p>
+              )}
+              {notificationsSupported === null && (
+                <p role="status" className="mt-4 text-xs text-white/45">
+                  Verificando suporte a notificações do sistema…
+                </p>
+              )}
+              <p className="mt-4 border-t border-white/[0.07] pt-4 text-xs leading-relaxed text-white/45">
+                Acompanhar é independente de Assistir Depois. A lista fica
+                somente neste dispositivo, acompanha o backup local e não é
+                sincronizada com a conta. Os avisos mostram o título e o
+                episódio na notificação do sistema.
+              </p>
+              <p className="mt-2 text-xs text-white/40">
+                {airingNotifications.followedAnimeLoaded
+                  ? 'Animes acompanhados neste dispositivo: ' +
+                    String(airingNotifications.followedAnime.length) +
+                    ' de 50. Use o botão Acompanhar na página de cada anime para adicionar ou remover.'
+                  : 'Carregando animes acompanhados…'}
+              </p>
             </fieldset>
           </section>
         </section>

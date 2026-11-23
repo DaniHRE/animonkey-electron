@@ -1,4 +1,5 @@
 import type {
+  AnimeAiringInfo,
   AnimeResult,
   AnimeInfo,
   AnimeSearchFilters,
@@ -646,6 +647,58 @@ export const AniListCatalog = {
                 },
               ]
             : [];
+        });
+      },
+    );
+  },
+
+  async airingEpisodes(
+    ids: string[],
+    signal?: AbortSignal,
+    includeAdult = false,
+  ): Promise<AnimeAiringInfo[]> {
+    const numericIds = [
+      ...new Set(
+        ids.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0),
+      ),
+    ].slice(0, 50);
+    if (!numericIds.length) return [];
+    return withCatalogCache(
+      'airing-followed:' + includeAdult + ':' + numericIds.join(','),
+      10 * 60 * 1000,
+      signal,
+      async () => {
+        const adultFilter = includeAdult ? '' : ', isAdult: false';
+        const query =
+          'query ($ids: [Int], $page: Int, $perPage: Int) { Page(page: $page, perPage: $perPage) { media(id_in: $ids, type: ANIME' +
+          adultFilter +
+          ') { ' +
+          CARD_FIELDS +
+          ' nextAiringEpisode { airingAt episode } } } }';
+        const response = await request(
+          query,
+          { ids: numericIds, page: 1, perPage: 50 },
+          signal,
+        );
+        return (response.data?.Page?.media ?? []).flatMap((media) => {
+          const [anime] = mapCatalogResults([media], includeAdult);
+          if (!anime) return [];
+          const airing = media.nextAiringEpisode;
+          return [
+            {
+              id: anime.id,
+              title: anime.title,
+              nextAiringEpisode:
+                typeof airing?.airingAt === 'number' &&
+                Number.isSafeInteger(airing.airingAt) &&
+                airing.airingAt > 0 &&
+                typeof airing.episode === 'number' &&
+                Number.isSafeInteger(airing.episode) &&
+                airing.episode > 0
+                  ? { airingAt: airing.airingAt, episode: airing.episode }
+                  : undefined,
+            },
+          ];
         });
       },
     );

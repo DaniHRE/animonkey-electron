@@ -5,6 +5,7 @@ import type { AnimeArtworkBridge } from './anime';
 import type { AnivexaBridge } from './anivexa';
 import type { AppUpdateBridge } from './updates';
 import type { ScreenshotSearchBridge } from './screenshot-search';
+import type { DesktopNotificationsBridge } from './notifications';
 import type { WindowControlsBridge } from './window-controls';
 
 declare global {
@@ -17,6 +18,7 @@ declare global {
       anivexa: AnivexaBridge;
       updates: AppUpdateBridge;
       screenshotSearch: ScreenshotSearchBridge;
+      notifications: DesktopNotificationsBridge;
       windowControls: WindowControlsBridge;
     };
   }

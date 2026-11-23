@@ -14,6 +14,7 @@ import {
   type AnivexaBridge,
 } from './types/anivexa';
 import type { ScreenshotSearchBridge } from './types/screenshot-search';
+import type { DesktopNotificationsBridge } from './types/notifications';
 import { isAppUpdateSnapshot, type AppUpdateBridge } from './types/updates';
 import {
   isWindowControlsState,
@@ -106,6 +107,11 @@ contextBridge.exposeInMainWorld('animonkey', {
     cancel: (requestId) =>
       ipcRenderer.send('screenshot-search:cancel', requestId),
   } satisfies ScreenshotSearchBridge,
+  notifications: {
+    isSupported: () => ipcRenderer.invoke('notifications:is-supported'),
+    showNewEpisode: (input) =>
+      ipcRenderer.invoke('notifications:show-new-episode', input),
+  } satisfies DesktopNotificationsBridge,
   anivexa: {
     request: (request, requestId) =>
       ipcRenderer.invoke('anivexa:request', { request, requestId }),

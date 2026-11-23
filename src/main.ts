@@ -13,6 +13,7 @@ import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
 import { anivexaRuntime, registerAnivexaIpc } from './electron/anivexa-runtime';
 import { registerScreenshotSearchIpc } from './electron/screenshot-search';
+import { registerDesktopNotificationIpc } from './electron/desktop-notifications';
 import { getTaizenMetadata } from './electron/taizen-artwork';
 import type {
   AccountCredentials,
@@ -616,6 +617,7 @@ registerWindowControlsIpc();
 registerAccountIpc();
 registerAnimeArtworkIpc();
 registerScreenshotSearchIpc(assertTrustedIpcSender);
+registerDesktopNotificationIpc(assertTrustedIpcSender);
 registerAnivexaIpc(assertTrustedIpcSender);
 
 app.on('before-quit', () => {

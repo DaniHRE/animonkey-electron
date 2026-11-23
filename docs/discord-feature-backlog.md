@@ -89,8 +89,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-13 — Follow airing anime and notify on new episodes
 
 - Difficulty: High.
-- Current state: The app displays a general airing schedule and has a Watch Later list, but no followed-anime notification preference was found.
-- Technical analysis: Define whether following is a separate list or reuses an existing list. Store it locally and decide whether it participates in optional account sync. Detect new episodes from AniList schedule data without aggressive polling, and handle time zones, duplicate alerts, offline periods, and missed-airing changes.
+- Current state: Anime pages can add or remove a separate local “Acompanhar” entry, independent of Assistir Depois. Up to 50 followed anime are stored in local preferences and included in local backups; they do not sync with the account. Native new-episode notifications are opt-in and off by default. While the app is open and online, AniList airing data is checked every 15 minutes; successful alerts are deduplicated by episode, and a catch-up alert can cover the latest missed episode. Settings explains that the notification exposes the title and episode to the operating system.
+- Technical analysis: Keep following separate from Watch Later and local-only until account sync is explicitly designed. Require an opt-in for system notifications, avoid polling while offline or disabled, use AniList airing data with a bounded cadence, and deduplicate alerts. On reconnect, report at most the latest missed episode rather than generating a notification burst.
 
 ### DISC-14 — General notification center
 

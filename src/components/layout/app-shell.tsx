@@ -30,6 +30,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useContinueWatchingVisibilityPreference } from '@/hooks/use-watch-history-preferences';
+import { useAiringNotificationMonitor } from '@/hooks/use-airing-notification-monitor';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
@@ -242,6 +243,7 @@ export function AppShell() {
   const [moreExpanded, setMoreExpanded] = useState(false);
   const { enabled: showContinueWatching } =
     useContinueWatchingVisibilityPreference();
+  useAiringNotificationMonitor();
   const { value: storedShortcuts, loaded: shortcutsLoaded } =
     useLocalPreference<unknown>(
       SHORTCUT_PREFERENCE_KEY,

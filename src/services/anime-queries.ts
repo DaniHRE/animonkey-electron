@@ -2,6 +2,7 @@ import { queryOptions, type QueryClient } from '@tanstack/react-query';
 import { AnivexaCatalog } from '@/services/anivexa.service';
 import { AniListCatalog } from '@/services/anilist.service';
 import type {
+  AnimeAiringInfo,
   AnimeArtworkIdentity,
   AnimeArtworkMetadataResponse,
   AnimeInfo,
@@ -164,6 +165,8 @@ export const animeQueryKeys = {
     ['anime', 'detail', id, includeAdult] as const,
   anilistDetail: (id: string, includeAdult = false) =>
     ['anime', 'anilist', id, includeAdult] as const,
+  airingEpisodes: (ids: string[], includeAdult = false) =>
+    ['catalog', 'airing-notifications', ids, includeAdult] as const,
   taizen: (id: string) => ['anime', 'taizen', id] as const,
   episodes: (id: string) => ['anivexa', 'episodes', id] as const,
   servers: (episodeId: string) => ['anivexa', 'servers', episodeId] as const,
@@ -289,6 +292,16 @@ export const animeQueries = {
       retry: false,
       queryFn: ({ signal }) =>
         AniListCatalog.getAnime(id, signal, includeAdult),
+    });
+  },
+  airingEpisodes(ids: string[], includeAdult = false) {
+    const sortedIds = [...new Set(ids)].sort();
+    return queryOptions({
+      queryKey: animeQueryKeys.airingEpisodes(sortedIds, includeAdult),
+      staleTime: 10 * MINUTE,
+      gcTime: DAY,
+      queryFn: ({ signal }): Promise<AnimeAiringInfo[]> =>
+        AniListCatalog.airingEpisodes(sortedIds, signal, includeAdult),
     });
   },
   detail(client: QueryClient, id: string, includeAdult = false) {

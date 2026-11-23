@@ -12,6 +12,7 @@ import {
   SIDEBAR_ORDER_PREFERENCE_KEY,
 } from '@/lib/sidebar-route-order';
 import { isWatchHistoryPreference } from '@/lib/watch-history-preferences';
+import { isAiringNotificationPreference } from '@/lib/airing-notifications';
 
 const DATABASE_NAME = 'animonkey-desktop';
 const DATABASE_VERSION = 6;
@@ -449,6 +450,11 @@ function isLocalPreference(value: unknown): value is LocalPreference {
     return value.value === 'en' || value.value === 'jp';
   if (value.key === 'adult-content-enabled-v1')
     return typeof value.value === 'boolean';
+  if (
+    value.key === 'notifications.new-episodes-v1' ||
+    value.key === 'notifications.followed-anime-v1'
+  )
+    return isAiringNotificationPreference(value.key, value.value);
   return isWatchHistoryPreference(value.key, value.value);
 }
 

@@ -188,6 +188,12 @@ export interface AnimeInfo extends AnimeResult {
   recommendations: AnimeResult[];
 }
 
+export interface AnimeAiringInfo {
+  id: string;
+  title: AnimeTitle;
+  nextAiringEpisode?: { airingAt: number; episode: number };
+}
+
 export interface WatchLaterItem {
   animeId: string;
   title: AnimeTitle;
