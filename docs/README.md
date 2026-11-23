@@ -16,6 +16,10 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 - [Migration plan](archive/MIGRATION_PLAN.md) — historical decisions and evidence; the migration itself is complete.
 - [Migration progress tracker](archive/MIGRATION_PROGRESS.md) — preserved historical tracker; it is no longer active.
 
+## Product feedback
+
+- [Discord feature and fix backlog](discord-feature-backlog.md) — requests from the project's private testers Discord, with current Electron coverage, relative difficulty, technical notes, and per-item branch guidance.
+
 ## Technical debt
 
 - [Technical debt index](technical-debt/README.md) — deferred issues with evidence and acceptance criteria.
