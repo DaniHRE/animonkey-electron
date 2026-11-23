@@ -131,8 +131,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-20 — Search jumps to the top when changing page
 
 - Difficulty: Medium.
-- Current state: Pagination updates the search route's page parameter. The handler has no explicit scroll call; runtime behavior has not been reproduced.
-- Technical analysis: Reproduce with a long result list and determine whether router scroll restoration or component remounting causes the jump. Preserve query and filters, and restore the intended result-list position without interfering with back/forward navigation or accessibility focus.
+- Current state: Search page changes now set TanStack Router's `resetScroll` option to `false`, preserving the current scroll position while the page parameter changes. Query and filter changes keep their normal navigation behavior. Runtime visual validation has not been performed.
+- Technical analysis: TanStack navigation resets scroll to the top by default. Override that behavior only for search pagination; preserve route history, query, and filters so back and forward navigation continue to work.
 
 ### DISC-21 — Remove wasted space beside the Home schedule
 

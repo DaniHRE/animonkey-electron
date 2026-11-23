@@ -378,6 +378,7 @@ export function SearchPage() {
     update(key, values.join(','));
   const goToPage = (nextPage: number) => {
     void navigate({
+      resetScroll: false,
       search: (previous) => {
         const next = { ...previous };
         if (nextPage > 1) next.page = String(nextPage);
