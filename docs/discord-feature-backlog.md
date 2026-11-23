@@ -2,9 +2,9 @@
 
 ## Scope and source
 
-This backlog catalogs the 34 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 35 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
-The reader returned attachment filenames for some messages, but not the attached image or video contents. Visual reports below are therefore based on message text and the current source tree; affected screens still need review when an item is selected.
+The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved separately through the local read-only Discord configuration after the owner requested it; other attachment content remains unreviewed.
 
 This is an inventory, not an approved implementation plan. Estimates are relative: Low means a localized UI or behavior change; Medium means multiple renderer components or persisted preferences; High means substantial integration, data policy, or media/storage work; Very high means cross-product or platform scope. Defect reports are not treated as confirmed causes until reproduced.
 
@@ -212,6 +212,15 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Difficulty: Medium to High.
 - Current state: A Discord report shows repeated `Anivexa request cancelled` errors from the IPC handler and requests a way to open DevTools. The cancellation path has not been traced to determine whether these are expected aborts or leaked runtime errors.
 - Technical analysis: Reproduce and trace cancellation through the renderer, preload, IPC handler, and Anivexa runtime. Treat expected aborts separately from provider failures and avoid logging sensitive request data. Define a developer-only DevTools entry point that preserves the production security model; do not expose unrestricted DevTools access in release builds without a reviewed product decision.
+
+## Application updates
+
+### DISC-31 — Redesign the application update center
+
+- Request date (Brasília): 2026-11-23, 12:47.
+- Difficulty: Medium.
+- Current state: `AppUpdateCenter` is rendered before the language selector and account control in the header. The account control includes the profile image, account name, and chevron. The update dialog shows the current update state and release notes for the current version; `release-notes.json` already contains entries for 1.0.0 through 1.0.2, but the UI does not browse older entries. The requested Discord image was retrieved and reviewed after the owner asked for it.
+- Technical analysis: Place the update action beside an avatar-only profile control. Use the supplied compact header reference, preserve the existing update state and install flow, and add a restrained pulse only while a new package is downloading or ready, respecting reduced-motion preferences. Let users browse the existing versioned release notes as update history without adding another update service or persistence layer.
 
 ## Per-item branch and integration rule
 
