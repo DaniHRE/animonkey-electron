@@ -4,6 +4,7 @@ This page is the index for current project guidance and historical records.
 
 ## Release records
 
+- [1.0.3 release candidate](releases/1.0.3-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0 release closeout](releases/1.0-checklist.md) — published v1.0.2, completed 1.0 gates, evidence, and known limitations.
 - [Original 1.0 roadmap](archive/1.0-roadmap.md) — historical plan, superseded by the completed release workflow.
 

@@ -1,4 +1,61 @@
 {
+  "1.0.3": {
+    "eyebrow": "ATUALIZAÇÃO 1.0.3",
+    "title": "Uma experiência desktop mais prática e ágil.",
+    "summary": "Esta versão aprimora a navegação e as configurações, salva a preferência de volume e reaproveita listas de episódios para reduzir consultas repetidas.",
+    "highlights": [
+      {
+        "icon": "discover",
+        "title": "Navegação integrada à janela",
+        "description": "Use voltar e avançar na barra superior e retome a última página visitada."
+      },
+      {
+        "icon": "library",
+        "title": "Configurações reorganizadas",
+        "description": "As opções estão agrupadas em seções para facilitar o acesso."
+      },
+      {
+        "icon": "sync",
+        "title": "Volume salvo localmente",
+        "description": "O nível de volume do player é mantido entre as sessões."
+      },
+      {
+        "icon": "play",
+        "title": "Listas de episódios em cache",
+        "description": "Listas recentes podem ser reutilizadas para agilizar a abertura de episódios."
+      }
+    ],
+    "githubRelease": {
+      "summary": "Animonkey 1.0.3 refines desktop navigation and Settings, remembers player volume locally, caches Anivexa episode lists, and makes the update center easier to scan.",
+      "sections": [
+        {
+          "title": "Window navigation",
+          "details": [
+            "Windows now uses the custom application title bar with in-app back and forward controls. The app also restores the last successfully visited internal route at startup, while explicit anime deep links take precedence ([custom window chrome](https://github.com/DaniHRE/animonkey-electron/commit/ff6bc97), [route restoration](https://github.com/DaniHRE/animonkey-electron/commit/45ffd94), [back and forward controls](https://github.com/DaniHRE/animonkey-electron/commit/09359c9))."
+          ]
+        },
+        {
+          "title": "Settings experience",
+          "details": [
+            "Settings is organized into sections for account and sync, Anivexa diagnostics, and local backup. The unavailable caption settings entry is hidden until the app supports configurable caption preferences ([Settings redesign](https://github.com/DaniHRE/animonkey-electron/commit/fc60ecb), [caption settings adjustment](https://github.com/DaniHRE/animonkey-electron/commit/d099019))."
+          ]
+        },
+        {
+          "title": "Playback preferences and episode cache",
+          "details": [
+            "Player volume is stored through the existing IndexedDB-backed local preference store and restored across app sessions ([volume preference](https://github.com/DaniHRE/animonkey-electron/commit/025ec1b)).",
+            "Anivexa episode lists are persisted client-side in the existing IndexedDB catalog cache. Expiry follows AniList airing data: after an expected episode time, missing episodes are retried hourly; once the episode appears, the cache follows the next weekly slot. Completed lists are retained for 30 days, and a failed refresh serves the previous list and retries after an hour ([episode-list cache](https://github.com/DaniHRE/animonkey-electron/commit/6b06346))."
+          ]
+        },
+        {
+          "title": "Application update center",
+          "details": [
+            "The update center opens on a compact version overview, identifies the installed version, and lets users select a release to read its concise app-facing notes. Existing update detection and install behavior remain in place ([update-center redesign](https://github.com/DaniHRE/animonkey-electron/commit/80f94ae), [version overview](https://github.com/DaniHRE/animonkey-electron/commit/b6f19f8))."
+          ]
+        }
+      ]
+    }
+  },
   "1.0.2": {
     "eyebrow": "ATUALIZAÇÃO 1.0.2",
     "title": "Aprimoramentos de diagnóstico e confiabilidade.",
