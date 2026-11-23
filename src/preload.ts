@@ -13,11 +13,14 @@ import {
   isAnivexaDiagnosticsSnapshot,
   type AnivexaBridge,
 } from './types/anivexa';
+import type { ScreenshotSearchBridge } from './types/screenshot-search';
 import { isAppUpdateSnapshot, type AppUpdateBridge } from './types/updates';
 import {
   isWindowControlsState,
   type WindowControlsBridge,
 } from './types/window-controls';
+
+const MAX_SCREENSHOT_SEARCH_IMAGE_BYTES = 10 * 1024 * 1024;
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -89,6 +92,20 @@ contextBridge.exposeInMainWorld('animonkey', {
     getMetadata: (identities) =>
       ipcRenderer.invoke('anime:artwork:metadata', identities),
   } satisfies AnimeArtworkBridge,
+  screenshotSearch: {
+    search: (input, requestId) => {
+      if (
+        !(input.bytes instanceof Uint8Array) ||
+        input.bytes.byteLength === 0 ||
+        input.bytes.byteLength > MAX_SCREENSHOT_SEARCH_IMAGE_BYTES ||
+        !['image/jpeg', 'image/png', 'image/webp'].includes(input.contentType)
+      )
+        return Promise.reject(new Error('Selecione uma imagem válida.'));
+      return ipcRenderer.invoke('screenshot-search:search', input, requestId);
+    },
+    cancel: (requestId) =>
+      ipcRenderer.send('screenshot-search:cancel', requestId),
+  } satisfies ScreenshotSearchBridge,
   anivexa: {
     request: (request, requestId) =>
       ipcRenderer.invoke('anivexa:request', { request, requestId }),

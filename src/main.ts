@@ -12,6 +12,7 @@ import started from 'electron-squirrel-startup';
 import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
 import { anivexaRuntime, registerAnivexaIpc } from './electron/anivexa-runtime';
+import { registerScreenshotSearchIpc } from './electron/screenshot-search';
 import { getTaizenMetadata } from './electron/taizen-artwork';
 import type {
   AccountCredentials,
@@ -614,6 +615,7 @@ registerUpdateIpc();
 registerWindowControlsIpc();
 registerAccountIpc();
 registerAnimeArtworkIpc();
+registerScreenshotSearchIpc(assertTrustedIpcSender);
 registerAnivexaIpc(assertTrustedIpcSender);
 
 app.on('before-quit', () => {

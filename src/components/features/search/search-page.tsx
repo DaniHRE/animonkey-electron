@@ -12,6 +12,7 @@ import { getRouteApi, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
+import { ScreenshotSearchPanel } from '@/components/features/search/screenshot-search-panel';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
 import type {
@@ -486,6 +487,9 @@ export function SearchPage() {
           Combine filtros avançados para encontrar animes no catálogo AniList.
         </p>
       </div>
+      <ScreenshotSearchPanel
+        adultMode={filters.adultMode ?? (includeAdult ? 'include' : 'exclude')}
+      />
       <div className="mb-8 overflow-visible rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_55%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>

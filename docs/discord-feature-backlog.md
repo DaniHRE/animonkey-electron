@@ -113,8 +113,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-17 — Search by screenshot using trace.moe
 
 - Difficulty: High.
-- Current state: No screenshot search or trace.moe integration was found.
-- Technical analysis: Define accepted image formats and size limits, explain that image data is sent to an external service, and make that action explicit. Validate returned matches and map confirmed catalog IDs back to AniList metadata. Handle rate limits, network failure, cancellation, and untrusted response data.
+- Current state: The Search page accepts PNG, JPEG, or WebP images up to 10 MiB, previews the selected file locally, and uploads it only after the user selects “Enviar imagem e buscar.” A narrow IPC bridge sends the image to trace.moe; the app does not persist it. Returned IDs, scene times, episode values, and similarity scores are validated before matching the IDs to AniList results and applying the current adult-content filter. Search supports cancellation and presents service, timeout, and rate-limit errors.
+- Technical analysis: Keep the upload user-initiated and disclose the external transfer before submission. Limit formats, size, request duration, and response size; validate results before using catalog IDs; and handle rate limits, network failure, cancellation, and untrusted response data. trace.moe documents multipart image uploads and states that images uploaded to its search engine are deleted immediately ([API](https://github.com/soruly/trace.moe-api/blob/master/swagger.yaml), [terms](https://trace.moe/terms)).
 
 ### DISC-18 — Show continuation or recommendations at the finale
 
