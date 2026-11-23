@@ -57,8 +57,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-08 — Adult-content preference with SFW default
 
 - Difficulty: Medium.
-- Current state: Settings has a local “include adult content in discovery” preference that defaults to off for existing installations and backups without the key. The preference applies to search and its header preview, Home and catalog lists, airing schedules, relations, recommendations, and adult search tags. Search can override the global setting per query. Invalid AniList anime/adult flags are excluded from discovery results; direct title links and user-owned library items remain accessible.
-- Technical analysis: Persist a validated boolean with a fail-closed default. Apply the setting through query keys, AniList requests, and recommendation mapping so changing it refreshes the affected surfaces. Preserve the per-search include/exclude/only choice, default missing or invalid imports to exclude, and do not silently remove existing library or progress data.
+- Current state: Settings has a local “include adult content in discovery” preference that defaults to off for existing installations and backups without the key. The preference applies to search and its header preview, Home and catalog lists, airing schedules, relations, recommendations, and adult search tags. Anime discovery uses this global setting without per-search content mode controls. Invalid AniList anime/adult flags are excluded from discovery results; direct title links and user-owned library items remain accessible.
+- Technical analysis: Persist a validated boolean with a fail-closed default. Apply the setting through query keys, AniList requests, and recommendation mapping so changing it refreshes the affected surfaces. Keep discovery behavior controlled by the global setting, default missing or invalid imports to exclude, and do not silently remove existing library or progress data.
 
 ### DISC-09 — Adult-content privacy controls
 

@@ -11,7 +11,6 @@ import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
-import type { AnimeSearchFilters } from '@/types/anime';
 import type {
   ScreenshotImageType,
   ScreenshotSearchMatch,
@@ -27,10 +26,6 @@ const SUPPORTED_IMAGE_TYPES = new Set<ScreenshotImageType>([
 interface SelectedImage {
   file: File;
   previewUrl: string;
-}
-
-interface ScreenshotSearchPanelProps {
-  adultMode: NonNullable<AnimeSearchFilters['adultMode']>;
 }
 
 function formatTime(seconds: number): string {
@@ -61,9 +56,7 @@ function matchDescription(match: ScreenshotSearchMatch): string {
   );
 }
 
-export function ScreenshotSearchPanel({
-  adultMode,
-}: ScreenshotSearchPanelProps) {
+export function ScreenshotSearchPanel() {
   const { includeAdult } = useAdultContentPreference();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activeRequestId = useRef<string | null>(null);
@@ -80,7 +73,7 @@ export function ScreenshotSearchPanel({
     [matches],
   );
   const catalogQuery = useQuery({
-    ...animeQueries.search('', 1, { idsIn: animeIds, adultMode }, includeAdult),
+    ...animeQueries.search('', 1, { idsIn: animeIds }, includeAdult),
     enabled: animeIds.length > 0,
   });
   const animeById = useMemo(

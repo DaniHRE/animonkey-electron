@@ -326,13 +326,6 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
     const value = params.get(param);
     if (value) Object.assign(filters, { [key]: value });
   }
-  const adultMode = params.get('adultMode');
-  if (
-    adultMode === 'include' ||
-    adultMode === 'exclude' ||
-    adultMode === 'only'
-  )
-    filters.adultMode = adultMode;
   const licensed = params.get('isLicensed');
   if (licensed === 'true' || licensed === 'false')
     filters.isLicensed = licensed === 'true';
@@ -468,7 +461,7 @@ export function SearchPage() {
     .sort()
     .map((category) => [category, category] as [string, string]);
   const activeFilterCount = Object.keys(params).filter((key) => {
-    if (['q', 'page', 'sort'].includes(key)) return false;
+    if (['q', 'page', 'sort', 'adultMode'].includes(key)) return false;
     if (key === 'formatIn' || key === 'formatNotIn')
       return formatListParam(params[key] ?? null).length > 0;
     return true;
@@ -487,9 +480,7 @@ export function SearchPage() {
           Combine filtros avançados para encontrar animes no catálogo AniList.
         </p>
       </div>
-      <ScreenshotSearchPanel
-        adultMode={filters.adultMode ?? (includeAdult ? 'include' : 'exclude')}
-      />
+      <ScreenshotSearchPanel />
       <div className="mb-8 overflow-visible rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_55%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.18)] sm:p-5">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -547,33 +538,6 @@ export function SearchPage() {
               ))}
             </select>
           </label>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/[0.07] pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-xs font-medium text-white/40">
-              Conteúdo:
-            </span>
-            {[
-              ['include', 'Todos'],
-              ['exclude', 'Sem adulto'],
-              ['only', 'Adulto'],
-            ].map(([value, label]) => {
-              const active =
-                (filters.adultMode ??
-                  (includeAdult ? 'include' : 'exclude')) === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => update('adultMode', value)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${active ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.11] text-[#91ecad]' : 'border-white/[0.08] text-white/45 hover:border-white/20 hover:text-white/75'}`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
         </div>
 
         <details className="group mt-4 border-t border-white/[0.07] pt-1">
