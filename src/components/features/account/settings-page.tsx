@@ -5,6 +5,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Bug,
+  Captions,
   Cloud,
   Download,
   HardDrive,
@@ -20,6 +21,12 @@ import { useAccount } from '@/context/account-state';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useLocalPreference } from '@/hooks/use-local-preference';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import {
+  DEFAULT_SUBTITLE_SIZE,
+  isSubtitleSize,
+  normalizeSubtitleSize,
+  SUBTITLE_SIZE_PREFERENCE_KEY,
+} from '@/lib/subtitle-appearance';
 import {
   createShortcutBinding,
   DEFAULT_SHORTCUT_PREFERENCES,
@@ -49,8 +56,7 @@ const settingsSections = [
   { id: 'shortcuts', label: 'Atalhos', icon: Keyboard },
   { id: 'navigation', label: 'Navegação', icon: ArrowUpDown },
   { id: 'diagnostics', label: 'Debug', icon: Bug },
-  // Re-enable this section when caption controls are available in the player.
-  // { id: 'captions', label: 'Legendas', icon: Captions },
+  { id: 'captions', label: 'Legendas', icon: Captions },
   { id: 'backup', label: 'Backup', icon: HardDrive },
 ] as const;
 
@@ -104,6 +110,14 @@ export function SettingsPage() {
     SIDEBAR_ORDER_PREFERENCE_KEY,
     DEFAULT_SIDEBAR_ROUTE_ORDER,
   );
+  const {
+    value: storedSubtitleSize,
+    update: updateStoredSubtitleSize,
+    loaded: subtitlePreferenceLoaded,
+  } = useLocalPreference<unknown>(
+    SUBTITLE_SIZE_PREFERENCE_KEY,
+    DEFAULT_SUBTITLE_SIZE,
+  );
   const shortcutPreferences = useMemo(
     () => normalizeShortcutPreferences(storedShortcuts),
     [storedShortcuts],
@@ -112,6 +126,7 @@ export function SettingsPage() {
     () => normalizeSidebarRouteOrder(storedSidebarRouteOrder),
     [storedSidebarRouteOrder],
   );
+  const subtitleSize = normalizeSubtitleSize(storedSubtitleSize);
   const [capturingShortcut, setCapturingShortcut] =
     useState<ShortcutCommandId | null>(null);
   const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null);
@@ -1194,7 +1209,6 @@ export function SettingsPage() {
           isActive={activeSettingsSection === 'diagnostics'}
         />
 
-        {/* Caption settings are unavailable until configurable player controls exist.
         <section
           id="settings-panel-captions"
           role="tabpanel"
@@ -1211,19 +1225,43 @@ export function SettingsPage() {
               Legendas
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-white/45">
-              Ajuste a aparência das legendas enquanto assiste a um episódio.
+              Escolha o tamanho do texto das legendas do player. A preferência é
+              salva neste dispositivo.
             </p>
           </header>
 
           <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
-            <h2 className="text-base font-semibold">Estilos de legenda</h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/45">
-              Durante a reprodução, ajuste o tamanho e a aparência em
-              Acessibilidade → Estilos de legenda no menu do Vidstack.
+            <label
+              htmlFor="settings-subtitle-size"
+              className="block text-sm font-semibold text-white/90"
+            >
+              Tamanho do texto
+            </label>
+            <p
+              id="settings-subtitle-size-description"
+              className="mt-1 max-w-xl text-xs leading-relaxed text-white/45"
+            >
+              A alteração vale para as legendas exibidas pelo player.
             </p>
+            <select
+              id="settings-subtitle-size"
+              aria-describedby="settings-subtitle-size-description"
+              value={subtitleSize}
+              disabled={!subtitlePreferenceLoaded}
+              onChange={(event) => {
+                const nextSize = event.currentTarget.value;
+                if (isSubtitleSize(nextSize))
+                  updateStoredSubtitleSize(nextSize);
+              }}
+              className="mt-4 min-h-11 w-full max-w-xs rounded-lg border border-white/10 bg-[#111113] px-3 text-sm text-white outline-none transition-colors focus-visible:border-[#49d77a] focus-visible:ring-2 focus-visible:ring-[#49d77a]/35 disabled:cursor-wait disabled:opacity-60"
+            >
+              <option value="small">Pequeno</option>
+              <option value="medium">Médio</option>
+              <option value="large">Grande</option>
+              <option value="xlarge">Extra grande</option>
+            </select>
           </section>
         </section>
-        */}
 
         <section
           id="settings-panel-backup"

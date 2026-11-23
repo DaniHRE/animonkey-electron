@@ -69,8 +69,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-10 — Configure caption appearance in Settings
 
 - Difficulty: Medium.
-- Current state: Vidstack exposes caption appearance controls during playback. Settings currently points users to those controls but does not edit or persist them.
-- Technical analysis: Identify which caption style values Vidstack supports, persist only supported values locally, and apply them to the existing Vidstack player. Do not infer caption availability or language, and do not add a second player framework.
+- Current state: Settings has a caption section for selecting small, medium, large, or extra-large text. The validated `player.subtitle-size` preference is stored locally, included in backups, and applied to Vidstack's caption font-size multiplier. The existing player remains responsible for track selection and playback.
+- Technical analysis: Keep the preference limited to supported size values, default missing or invalid stored values to medium, and use Vidstack's existing caption style variable. Do not infer caption availability or language, and do not add a second player framework.
 
 ### DISC-11 — Avoid accidental text selection
 

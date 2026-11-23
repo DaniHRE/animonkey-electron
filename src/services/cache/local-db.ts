@@ -1,4 +1,8 @@
 import type { AnimeRating, AnimeTitle, WatchLaterItem } from '@/types/anime';
+import {
+  isSubtitleSize,
+  SUBTITLE_SIZE_PREFERENCE_KEY,
+} from '@/lib/subtitle-appearance';
 
 const DATABASE_NAME = 'animonkey-desktop';
 const DATABASE_VERSION = 6;
@@ -524,8 +528,8 @@ export async function importLocalBackup(text: string): Promise<number> {
     !preferences.every(
       (item) =>
         isRecord(item) &&
-        item.key === 'player.subtitle-size' &&
-        ['small', 'medium', 'large', 'xlarge'].includes(String(item.value)) &&
+        item.key === SUBTITLE_SIZE_PREFERENCE_KEY &&
+        isSubtitleSize(item.value) &&
         typeof item.updatedAt === 'number' &&
         Number.isFinite(item.updatedAt),
     )
