@@ -119,8 +119,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-18 — Show continuation or recommendations at the finale
 
 - Difficulty: Medium.
-- Current state: The watch page already shows relations and recommendations on every episode; it does not condition their presentation on the final episode.
-- Technical analysis: Detect a finale only when the current episode and known episode count provide reliable evidence. Prefer continuation relations when available, then show recommendations if no continuation exists. Avoid claiming a series has ended when it is ongoing or the provider's episode list is incomplete.
+- Current state: On a confirmed final episode, the watch page highlights AniList sequel relations, or recommendations when no sequel relation exists. Finale detection requires a finished catalog status, a positive known episode count, and a complete contiguous provider episode list that matches that count.
+- Technical analysis: Treat the finale as confirmed only when catalog status, total episode count, provider episode sequence, and current episode all agree. Prefer sequel relations, then recommendations if no continuation exists. Keep the existing related titles and recommendation sections on other episodes; do not classify ongoing series or incomplete provider lists as finished.
 
 ### DISC-19 — Search reports too many pages
 

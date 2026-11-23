@@ -349,6 +349,25 @@ function WatchPageContent() {
     episodeIndex > 0 ? episodes[episodeIndex - 1] : undefined;
   const nextEpisode =
     episodeIndex >= 0 ? episodes[episodeIndex + 1] : undefined;
+  const expectedEpisodeCount = anime.totalEpisodes;
+  const providerEpisodeListIsComplete =
+    expectedEpisodeCount !== undefined &&
+    Number.isSafeInteger(expectedEpisodeCount) &&
+    expectedEpisodeCount > 0 &&
+    episodes.length === expectedEpisodeCount &&
+    episodes.every((episode, index) => episode.number === index + 1);
+  const isConfirmedFinalEpisode =
+    episodesQuery.isSuccess &&
+    anime.status === 'FINISHED' &&
+    providerEpisodeListIsComplete &&
+    currentEpisode?.number === expectedEpisodeCount;
+  const continuations = anime.relations.filter(
+    (relation) => relation.relationType === 'SEQUEL',
+  );
+  const finaleItems =
+    continuations.length > 0 ? continuations : anime.recommendations;
+  const finaleVariant =
+    continuations.length > 0 ? 'related' : 'recommendations';
   const playingServer = currentServerState.servers.find(
     (server) => server.id === activeServerId,
   );
@@ -492,18 +511,48 @@ function WatchPageContent() {
               </Link>
             </div>
           </div>
-          <WatchRelatedList
-            variant="related"
-            title="Animes relacionados"
-            items={anime.relations}
-            titleLanguage={titleLanguage}
-          />
-          <WatchRelatedList
-            variant="recommendations"
-            title="Recomendações"
-            items={anime.recommendations}
-            titleLanguage={titleLanguage}
-          />
+          {isConfirmedFinalEpisode ? (
+            <section
+              className="watch-finale"
+              aria-label="Recomendações após o episódio final"
+            >
+              <p className="watch-finale__message">
+                Você chegou ao último episódio.
+              </p>
+              {finaleItems.length > 0 ? (
+                <WatchRelatedList
+                  variant={finaleVariant}
+                  title={
+                    continuations.length > 0
+                      ? 'Continue a história'
+                      : 'Talvez você goste'
+                  }
+                  items={finaleItems}
+                  titleLanguage={titleLanguage}
+                />
+              ) : (
+                <p className="watch-finale__empty">
+                  Não encontramos uma continuação nem recomendações para esta
+                  obra.
+                </p>
+              )}
+            </section>
+          ) : (
+            <>
+              <WatchRelatedList
+                variant="related"
+                title="Animes relacionados"
+                items={anime.relations}
+                titleLanguage={titleLanguage}
+              />
+              <WatchRelatedList
+                variant="recommendations"
+                title="Recomendações"
+                items={anime.recommendations}
+                titleLanguage={titleLanguage}
+              />
+            </>
+          )}
         </aside>
 
         <section className="watch-page__center" aria-label="Reprodução">
