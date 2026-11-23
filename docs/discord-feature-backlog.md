@@ -185,8 +185,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23.
 - Difficulty: High.
-- Current state: No Discord presence integration was found. This is a desktop-app feature and could be optional.
-- Technical analysis: Define opt-in behavior and which activity details may be shared before selecting an integration mechanism. Cover Discord being closed or unavailable, app lifecycle, platform support, and privacy. Never expose provider URLs, account credentials, or other private data in presence.
+- Current state: Repository inspection found no Discord Application ID or local RPC integration. Discord's Rich Presence documentation uses an Application ID to identify the activity, and Discord exposes separate activity-sharing controls ([Rich Presence client reference](https://discord.com/developers/docs/social-sdk/classdiscordpp_1_1Client.html), [Activity Sharing FAQ](https://support.discord.com/hc/en-us/articles/7931156448919-Activity-Sharing-on-Discord-FAQ)). Recommended scope: an app-owned opt-in, off by default, that shares only a generic Animonkey Desktop presence and never an anime title, provider, URL, or account data. Clear it when disabled or when the app exits; treat Discord being unavailable as a no-op. Implementation needs the owner's Animonkey Application ID from the Discord Developer Portal.
+- Technical analysis: Keep opt-in behavior independent from Discord's own visibility controls. Avoid sharing anime titles or identifiers until the owner explicitly selects that scope. Cover Discord being closed or unavailable, app lifecycle, and supported platforms. Never expose provider URLs, account credentials, or other private data in presence.
 
 ### DISC-28 — Announce releases and new episodes through a Discord bot
 
