@@ -63,9 +63,17 @@
   right: 5px;
 }
 
+.app-update-center__trigger[data-status='downloading']
+  > .app-update-center__indicator,
+.app-update-center__trigger[data-status='ready']
+  > .app-update-center__indicator {
+  animation: app-update-pulse 1.8s ease-out infinite;
+}
+
 .app-update-center__trigger[data-status='error']
   > .app-update-center__indicator,
-.app-update-center__indicator.is-error {
+.app-update-center__indicator.is-error,
+.app-update-center__indicator.is-unsupported {
   background: #f1c36d;
   box-shadow: 0 0 0 2px rgb(241 195 109 / 15%);
 }
@@ -80,21 +88,35 @@
   }
 }
 
+@keyframes app-update-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(73 215 122 / 48%);
+  }
+
+  70% {
+    box-shadow: 0 0 0 7px rgb(73 215 122 / 0%);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgb(73 215 122 / 0%);
+  }
+}
+
 .app-update-dialog {
-  width: min(620px, calc(100vw - 32px));
+  width: min(820px, calc(100vw - 32px));
   max-width: none;
-  max-height: min(760px, calc(100dvh - 32px));
+  max-height: min(800px, calc(100dvh - 32px));
   margin: auto;
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgb(255 255 255 / 12%);
-  border-radius: 22px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 24px;
   background:
-    radial-gradient(ellipse at 88% 0%, rgb(73 215 122 / 9%), transparent 36%),
-    #111214;
+    radial-gradient(ellipse at 84% -8%, rgb(73 215 122 / 13%), transparent 38%),
+    linear-gradient(150deg, #17191c 0%, #111214 58%, #0f1012 100%);
   box-shadow:
-    0 32px 100px rgb(0 0 0 / 62%),
-    0 0 0 1px rgb(255 255 255 / 2%);
+    0 36px 110px rgb(0 0 0 / 68%),
+    0 0 0 1px rgb(255 255 255 / 3%);
   color: #f5f5f5;
   font-family: Rubik, sans-serif;
 }
@@ -105,8 +127,8 @@
 }
 
 .app-update-dialog__surface {
-  max-height: min(760px, calc(100dvh - 32px));
-  padding: 24px;
+  max-height: min(800px, calc(100dvh - 32px));
+  padding: 30px;
   overflow-y: auto;
   scrollbar-color: rgb(255 255 255 / 20%) transparent;
   scrollbar-width: thin;
@@ -114,19 +136,19 @@
 
 .app-update-dialog__topline {
   display: flex;
-  min-height: 38px;
+  min-height: 42px;
   align-items: center;
   gap: 10px;
 }
 
 .app-update-dialog__brand-mark {
   display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
   place-items: center;
   border: 1px solid rgb(73 215 122 / 24%);
-  border-radius: 11px;
+  border-radius: 13px;
   background: linear-gradient(
     145deg,
     rgb(73 215 122 / 17%),
@@ -137,14 +159,9 @@
 
 .app-update-dialog__version {
   color: rgb(229 231 235 / 60%);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.09em;
-}
-
-.app-update-dialog__version span {
-  padding: 0 4px;
-  color: rgb(73 215 122 / 70%);
 }
 
 .app-update-dialog__close {
@@ -168,7 +185,7 @@
 }
 
 .app-update-dialog__content {
-  padding-top: 28px;
+  padding-top: 30px;
 }
 
 .app-update-dialog__eyebrow {
@@ -180,17 +197,17 @@
 }
 
 .app-update-dialog__content h2 {
-  max-width: 500px;
+  max-width: 680px;
   margin: 0;
   color: #f7f7f5;
-  font-size: clamp(24px, 5vw, 32px);
+  font-size: clamp(26px, 4vw, 36px);
   font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.16;
 }
 
 .app-update-dialog__summary {
-  max-width: 520px;
+  max-width: 660px;
   margin: 13px 0 0;
   color: rgb(229 231 235 / 70%);
   font-size: 14px;
@@ -199,36 +216,29 @@
 
 .app-update-dialog__highlights {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 24px 0 0;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  margin: 16px 0 0;
   padding: 0;
   list-style: none;
 }
 
 .app-update-dialog__highlights li {
   display: flex;
-  min-height: 106px;
-  gap: 11px;
-  padding: 14px;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 13px;
-  background: linear-gradient(
-    145deg,
-    rgb(255 255 255 / 4%),
-    rgb(255 255 255 / 2%)
-  );
+  min-height: 0;
+  gap: 9px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgb(255 255 255 / 7%);
 }
 
 .app-update-dialog__highlight-icon {
   display: grid;
-  width: 30px;
-  height: 30px;
-  flex: 0 0 30px;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
   place-items: center;
-  border: 1px solid rgb(73 215 122 / 17%);
-  border-radius: 9px;
-  background: rgb(73 215 122 / 8%);
+  border-radius: 7px;
+  background: transparent;
   color: #72df93;
 }
 
@@ -236,20 +246,113 @@
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
 }
 
 .app-update-dialog__highlights strong {
   color: #f1f3f2;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
   line-height: 1.35;
 }
 
 .app-update-dialog__highlights li > span:last-child > span {
   color: rgb(229 231 235 / 61%);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.app-update-dialog__history-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.3fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.app-update-dialog__history-versions {
+  display: flex;
+  max-height: 360px;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-color: rgb(255 255 255 / 20%) transparent;
+  scrollbar-width: thin;
+}
+
+.app-update-dialog__history-version {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: rgb(229 231 235 / 64%);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.app-update-dialog__history-version:hover,
+.app-update-dialog__history-version:focus-visible,
+.app-update-dialog__history-version[data-selected='true'] {
+  border-color: rgb(73 215 122 / 22%);
+  background: rgb(73 215 122 / 8%);
+  color: #f5f5f5;
+}
+
+.app-update-dialog__history-version:focus-visible {
+  outline: 2px solid #49d77a;
+  outline-offset: 2px;
+}
+
+.app-update-dialog__history-version > span:first-child {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.app-update-dialog__history-version > span:last-child {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  opacity: 0.72;
+}
+
+.app-update-dialog__history-entry {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 16px;
+  background: linear-gradient(
+    145deg,
+    rgb(255 255 255 / 4%),
+    rgb(255 255 255 / 1.5%)
+  );
+}
+
+.app-update-dialog__history-entry h3 {
+  margin: 0;
+  color: #f7f7f5;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+}
+
+.app-update-dialog__history-entry .app-update-dialog__summary {
+  margin-top: 7px;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.55;
+}
+
+.app-update-dialog__history-entry .app-update-dialog__highlights {
+  margin-top: 12px;
 }
 
 .app-update-dialog__missing-notes {
@@ -260,34 +363,6 @@
   color: rgb(229 231 235 / 60%);
   font-size: 13px;
   line-height: 1.55;
-}
-
-.app-update-dialog__status-icon {
-  display: grid;
-  width: 52px;
-  height: 52px;
-  place-items: center;
-  margin-bottom: 22px;
-  border: 1px solid rgb(73 215 122 / 22%);
-  border-radius: 16px;
-  background: rgb(73 215 122 / 9%);
-  color: #72e394;
-}
-
-.app-update-dialog__status-icon.is-error {
-  border-color: rgb(241 195 109 / 24%);
-  background: rgb(241 195 109 / 8%);
-  color: #f1c36d;
-}
-
-.app-update-dialog__status-line {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin-top: 20px;
-  color: rgb(229 231 235 / 78%);
-  font-size: 13px;
-  font-weight: 600;
 }
 
 .app-update-dialog__actions {
@@ -305,12 +380,21 @@
     padding: 18px;
   }
 
-  .app-update-dialog__highlights {
+  .app-update-dialog__history-layout {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .app-update-dialog__highlights li {
-    min-height: 0;
+  .app-update-dialog__history-versions {
+    max-height: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .app-update-dialog__history-version {
+    width: auto;
+    min-width: 104px;
+    flex: 1 1 auto;
   }
 
   .app-update-dialog__actions {
@@ -326,6 +410,301 @@
   .app-update-center__trigger,
   .app-update-center__spin {
     animation: none;
+    transition: none;
+  }
+
+  .app-update-center__trigger[data-status='downloading']
+    > .app-update-center__indicator,
+  .app-update-center__trigger[data-status='ready']
+    > .app-update-center__indicator {
+    animation: none;
+  }
+}
+
+.app-update-dialog__overview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.app-update-dialog__overview-heading h2 {
+  font-size: clamp(25px, 3.5vw, 30px);
+}
+
+.app-update-dialog__overview-heading .app-update-dialog__summary {
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.app-update-dialog__installed-version {
+  display: flex;
+  min-width: 112px;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 13px;
+  border: 1px solid rgb(73 215 122 / 18%);
+  border-radius: 12px;
+  background: rgb(73 215 122 / 6%);
+}
+
+.app-update-dialog__installed-version > span {
+  color: rgb(229 231 235 / 54%);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+}
+
+.app-update-dialog__installed-version > strong {
+  color: #f7f7f5;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.app-update-dialog__installed-version.is-error,
+.app-update-dialog__installed-version.is-unsupported {
+  border-color: rgb(241 195 109 / 20%);
+  background: rgb(241 195 109 / 6%);
+}
+
+.app-update-dialog__overview-status {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  gap: 11px;
+  margin-top: 22px;
+  padding: 10px 13px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 13px;
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.app-update-dialog__overview-status.is-ready {
+  border-color: rgb(73 215 122 / 20%);
+  background: rgb(73 215 122 / 5%);
+}
+
+.app-update-dialog__overview-status.is-error,
+.app-update-dialog__overview-status.is-unsupported {
+  border-color: rgb(241 195 109 / 17%);
+  background: rgb(241 195 109 / 4%);
+}
+
+.app-update-dialog__overview-status-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgb(73 215 122 / 9%);
+  color: #72df93;
+}
+
+.app-update-dialog__overview-status.is-error
+  .app-update-dialog__overview-status-icon,
+.app-update-dialog__overview-status.is-unsupported
+  .app-update-dialog__overview-status-icon {
+  background: rgb(241 195 109 / 9%);
+  color: #f1c36d;
+}
+
+.app-update-dialog__overview-status-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.app-update-dialog__overview-status-copy > strong {
+  color: #f1f3f2;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.app-update-dialog__overview-status-copy > span {
+  overflow: hidden;
+  color: rgb(229 231 235 / 58%);
+  font-size: 11px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-update-dialog__overview-status > .app-update-center__indicator {
+  margin-left: auto;
+}
+
+.app-update-dialog__overview-actions {
+  margin-top: 10px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.app-update-dialog__release-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 23px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.app-update-dialog__release-heading h3 {
+  margin: 0;
+  color: #f1f3f2;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.app-update-dialog__release-heading > span {
+  display: grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 7%);
+  color: rgb(229 231 235 / 64%);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.app-update-dialog__release-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.app-update-dialog__release-row {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(116px, 0.26fr) minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 13px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 2.5%);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.app-update-dialog__release-row:hover,
+.app-update-dialog__release-row:focus-visible {
+  border-color: rgb(255 255 255 / 11%);
+  background: rgb(255 255 255 / 5%);
+}
+
+.app-update-dialog__release-row:focus-visible {
+  outline: 2px solid #49d77a;
+  outline-offset: 2px;
+}
+
+.app-update-dialog__release-row[data-installed='true'] {
+  border-color: rgb(73 215 122 / 17%);
+  background: linear-gradient(100deg, rgb(73 215 122 / 6%), transparent 65%);
+}
+
+.app-update-dialog__release-version,
+.app-update-dialog__release-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.app-update-dialog__release-version {
+  gap: 6px;
+}
+
+.app-update-dialog__release-version > strong {
+  color: #f5f5f5;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.app-update-dialog__release-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.app-update-dialog__release-badges > span {
+  color: #72df93;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.app-update-dialog__release-copy {
+  gap: 4px;
+}
+
+.app-update-dialog__release-copy > strong {
+  overflow: hidden;
+  color: #e9ecea;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-update-dialog__release-copy > span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgb(229 231 235 / 55%);
+  font-size: 11px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.app-update-dialog__release-arrow {
+  color: rgb(229 231 235 / 35%);
+}
+
+.app-update-dialog__release-row:hover .app-update-dialog__release-arrow,
+.app-update-dialog__release-row:focus-visible
+  .app-update-dialog__release-arrow {
+  color: #72df93;
+}
+
+.app-update-dialog__history-entry .app-update-dialog__highlights li:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 560px) {
+  .app-update-dialog__overview-heading {
+    gap: 10px;
+  }
+
+  .app-update-dialog__installed-version {
+    min-width: 86px;
+    padding: 9px 10px;
+  }
+
+  .app-update-dialog__release-row {
+    grid-template-columns: minmax(84px, 0.3fr) minmax(0, 1fr) 14px;
+    gap: 9px;
+    padding: 11px 9px;
+  }
+
+  .app-update-dialog__overview-status-copy > span {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-update-dialog__release-row {
     transition: none;
   }
 }

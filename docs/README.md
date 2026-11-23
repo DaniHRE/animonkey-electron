@@ -2,15 +2,24 @@
 
 This page is the index for current project guidance and historical records.
 
-## Release 1.0
+## Release records
 
-- [Release roadmap](releases/1.0-roadmap.md) — order and boundaries for the remaining release work.
-- [Active release checklist](releases/1.0-checklist.md) — current gates, evidence, decisions, and limitations.
+- [1.0.3 release candidate](releases/1.0.3-candidate.md) — Windows x64 release validation and promotion record.
+- [1.0 release closeout](releases/1.0-checklist.md) — published v1.0.2, completed 1.0 gates, evidence, and known limitations.
+- [Original 1.0 roadmap](archive/1.0-roadmap.md) — historical plan, superseded by the completed release workflow.
+
+## Starting new feature work
+
+Start from the latest `dev`, create a focused branch, and open a pull request against `dev`. Choose a SemVer release type only after the feature scope and compatibility impact are clear; see [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ## Archived migration records
 
 - [Migration plan](archive/MIGRATION_PLAN.md) — historical decisions and evidence; the migration itself is complete.
 - [Migration progress tracker](archive/MIGRATION_PROGRESS.md) — preserved historical tracker; it is no longer active.
+
+## Product feedback
+
+- [Discord feature and fix backlog](discord-feature-backlog.md) — requests from the project's private testers Discord, with current Electron coverage, relative difficulty, technical notes, and per-item branch guidance.
 
 ## Technical debt
 

@@ -9,10 +9,85 @@ import type {
   AnimeSearchFilters,
   AnimeTaizenMetadata,
 } from '@/types/anime';
-import type { EpisodeSources } from '@/types/player';
+import type { AnimeEpisode, EpisodeSources } from '@/types/player';
+import {
+  getCatalogCache,
+  putCatalogCacheUntil,
+} from '@/services/cache/local-db';
 
 const MINUTE = 60 * 1000;
+const HOUR = 60 * MINUTE;
 const DAY = 24 * 60 * MINUTE;
+const WEEK = 7 * DAY;
+const COMPLETED_EPISODE_CACHE_TTL = 30 * DAY;
+
+interface CachedEpisodeList {
+  episodes: AnimeEpisode[];
+  expiresAt: number;
+}
+
+function episodeCacheKey(animeId: string): string {
+  return `anivexa:episodes:${animeId}`;
+}
+
+function nextEpisodeListExpiration(
+  anime: AnimeInfo | null,
+  episodes: AnimeEpisode[],
+  previousEpisodes: AnimeEpisode[] | null,
+  now: number,
+): number {
+  const maxEpisode = episodes.reduce(
+    (maximum, episode) => Math.max(maximum, episode.number),
+    -1,
+  );
+  const hasCompleteList =
+    anime?.totalEpisodes === undefined || maxEpisode >= anime.totalEpisodes;
+
+  if (anime?.status === 'FINISHED' && hasCompleteList) {
+    return now + COMPLETED_EPISODE_CACHE_TTL;
+  }
+
+  const nextAiring = anime?.nextAiringEpisode;
+  if (
+    nextAiring &&
+    Number.isFinite(nextAiring.airingAt) &&
+    Number.isSafeInteger(nextAiring.episode) &&
+    nextAiring.episode > 0
+  ) {
+    const airingAt = nextAiring.airingAt * 1000;
+    if (airingAt > now) return airingAt;
+
+    const episodeIsAvailable = episodes.some(
+      (episode) => episode.number === nextAiring.episode,
+    );
+    if (episodeIsAvailable) {
+      const followingAiring = airingAt + WEEK;
+      return followingAiring > now ? followingAiring : now + HOUR;
+    }
+
+    return now + HOUR;
+  }
+
+  const previousNumbers = new Set(
+    previousEpisodes?.map((episode) => episode.number) ?? [],
+  );
+  const hasNewEpisode = episodes.some(
+    (episode) => !previousNumbers.has(episode.number),
+  );
+  if (hasNewEpisode && anime?.status === 'RELEASING') return now + WEEK;
+
+  return now + HOUR;
+}
+
+function cachedEpisodeList(data: unknown): data is CachedEpisodeList {
+  if (!data || typeof data !== 'object') return false;
+  const candidate = data as Partial<CachedEpisodeList>;
+  return (
+    Array.isArray(candidate.episodes) &&
+    typeof candidate.expiresAt === 'number' &&
+    Number.isFinite(candidate.expiresAt)
+  );
+}
 
 function dateKey(date: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -237,12 +312,62 @@ export const animeQueries = {
       },
     });
   },
-  episodes(id: string) {
-    return queryOptions({
-      queryKey: animeQueryKeys.episodes(id),
-      staleTime: 30 * MINUTE,
+  episodes(id: string, anime: AnimeInfo | null = null) {
+    const queryKey = animeQueryKeys.episodes(id);
+    const cacheKey = episodeCacheKey(id);
+    return queryOptions<CachedEpisodeList, Error, AnimeEpisode[]>({
+      queryKey,
+      staleTime: (query) => {
+        const data = query.state.data;
+        return cachedEpisodeList(data)
+          ? Math.max(0, data.expiresAt - Date.now())
+          : 0;
+      },
       gcTime: DAY,
-      queryFn: ({ signal }) => AnivexaCatalog.episodes(id, signal),
+      select: (data) => data.episodes,
+      queryFn: async ({ signal, client }): Promise<CachedEpisodeList> => {
+        let cached: Awaited<
+          ReturnType<typeof getCatalogCache<AnimeEpisode[]>>
+        > = null;
+        try {
+          cached = await getCatalogCache<AnimeEpisode[]>(cacheKey);
+        } catch {
+          // Local persistence is an optimization; Anivexa remains available.
+        }
+
+        const isInvalidated = client.getQueryState(queryKey)?.isInvalidated;
+        if (cached?.isFresh && !isInvalidated) {
+          return { episodes: cached.value, expiresAt: cached.expiresAt };
+        }
+
+        try {
+          const episodes = await AnivexaCatalog.episodes(id, signal);
+          const now = Date.now();
+          const expiresAt = nextEpisodeListExpiration(
+            anime,
+            episodes,
+            cached?.value ?? null,
+            now,
+          );
+          const result = { episodes, expiresAt };
+          try {
+            await putCatalogCacheUntil(cacheKey, episodes, expiresAt);
+          } catch {
+            // A storage failure must not fail a successful provider request.
+          }
+          return result;
+        } catch (error) {
+          if (signal.aborted || !cached) throw error;
+
+          const expiresAt = Date.now() + HOUR;
+          try {
+            await putCatalogCacheUntil(cacheKey, cached.value, expiresAt);
+          } catch {
+            // Keep the current session usable even if offline data cannot save.
+          }
+          return { episodes: cached.value, expiresAt };
+        }
+      },
     });
   },
   servers(episodeId: string) {

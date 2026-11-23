@@ -65,8 +65,8 @@ The package prepares the pinned [`vendor/anivexa-api`](vendor/anivexa-api) submo
 ## Documentation
 
 - [Documentation index](docs/README.md)
-- [1.0 release roadmap](docs/releases/1.0-roadmap.md)
-- [Active 1.0 release checklist](docs/releases/1.0-checklist.md)
+- [1.0 release closeout — v1.0.2 published](docs/releases/1.0-checklist.md)
+- [Archived original 1.0 roadmap](docs/archive/1.0-roadmap.md)
 - [Archived migration plan](docs/archive/MIGRATION_PLAN.md)
 - [Contributing guide](CONTRIBUTING.md)
 

@@ -111,7 +111,7 @@ function WatchPageContent() {
   const animeQuery = useQuery(animeQueries.detail(queryClient, id));
   const anime = animeQuery.data ?? null;
   const episodesQuery = useQuery({
-    ...animeQueries.episodes(id),
+    ...animeQueries.episodes(id, anime),
     enabled: Boolean(anime),
   });
   const episodes = useMemo(

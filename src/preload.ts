@@ -13,6 +13,10 @@ import {
   type AnivexaBridge,
 } from './types/anivexa';
 import { isAppUpdateSnapshot, type AppUpdateBridge } from './types/updates';
+import {
+  isWindowControlsState,
+  type WindowControlsBridge,
+} from './types/window-controls';
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -111,4 +115,23 @@ contextBridge.exposeInMainWorld('animonkey', {
       return () => ipcRenderer.removeListener('updates:state', listener);
     },
   } satisfies AppUpdateBridge,
+  windowControls: {
+    minimize: () => ipcRenderer.send('window-controls:minimize'),
+    toggleMaximize: () => ipcRenderer.send('window-controls:toggle-maximize'),
+    close: () => ipcRenderer.send('window-controls:close'),
+    getState: async () => {
+      const state: unknown = await ipcRenderer.invoke(
+        'window-controls:get-state',
+      );
+      return isWindowControlsState(state) ? state : { isMaximized: false };
+    },
+    onStateChanged: (callback) => {
+      const listener = (_event: IpcRendererEvent, value: unknown) => {
+        if (isWindowControlsState(value)) callback(value);
+      };
+      ipcRenderer.on('window-controls:state', listener);
+      return () =>
+        ipcRenderer.removeListener('window-controls:state', listener);
+    },
+  } satisfies WindowControlsBridge,
 });

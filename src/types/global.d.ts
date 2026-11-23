@@ -4,6 +4,7 @@ import type { AccountBridge } from './account';
 import type { AnimeArtworkBridge } from './anime';
 import type { AnivexaBridge } from './anivexa';
 import type { AppUpdateBridge } from './updates';
+import type { WindowControlsBridge } from './window-controls';
 
 declare global {
   interface Window {
@@ -14,6 +15,7 @@ declare global {
       artwork: AnimeArtworkBridge;
       anivexa: AnivexaBridge;
       updates: AppUpdateBridge;
+      windowControls: WindowControlsBridge;
     };
   }
 }
