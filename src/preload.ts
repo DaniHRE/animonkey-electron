@@ -9,6 +9,7 @@ import type {
 } from './types/account';
 import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
 import {
+  isAnivexaDiagnosticsExportResult,
   isAnivexaDiagnosticsSnapshot,
   type AnivexaBridge,
 } from './types/anivexa';
@@ -94,6 +95,15 @@ contextBridge.exposeInMainWorld('animonkey', {
     cancel: (requestId) => ipcRenderer.send('anivexa:cancel', requestId),
     getDiagnostics: () => ipcRenderer.invoke('anivexa:diagnostics:get'),
     clearDiagnostics: () => ipcRenderer.invoke('anivexa:diagnostics:clear'),
+    exportDiagnostics: async () => {
+      const value: unknown = await ipcRenderer.invoke(
+        'anivexa:diagnostics:export',
+      );
+      if (!isAnivexaDiagnosticsExportResult(value)) {
+        throw new Error('Invalid Anivexa diagnostics export result.');
+      }
+      return value;
+    },
     onDiagnosticsChanged: (callback) => {
       const listener = (_event: IpcRendererEvent, value: unknown) => {
         if (isAnivexaDiagnosticsSnapshot(value)) callback(value);

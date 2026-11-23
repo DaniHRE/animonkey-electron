@@ -1,12 +1,14 @@
 import {
   BrowserWindow,
   app,
+  dialog,
   ipcMain,
   utilityProcess,
   type IpcMainInvokeEvent,
   type UtilityProcess,
 } from 'electron';
 import { randomUUID } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type {
   AnivexaDiagnosticEntry,
@@ -471,6 +473,41 @@ export function registerAnivexaIpc(
   ipcMain.handle('anivexa:diagnostics:clear', (event) => {
     assertTrustedSender(event);
     return anivexaRuntime.clearDiagnostics();
+  });
+  ipcMain.handle('anivexa:diagnostics:export', async (event) => {
+    assertTrustedSender(event);
+    const parentWindow = BrowserWindow.fromWebContents(event.sender);
+    const exportedAt = new Date();
+    const fileName =
+      'animonkey-debug-' +
+      exportedAt.toISOString().replace(/[:.]/g, '-') +
+      '.json';
+    const options = {
+      title: 'Export Animonkey diagnostics',
+      defaultPath: fileName,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    };
+    const result = parentWindow
+      ? await dialog.showSaveDialog(parentWindow, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return { status: 'cancelled' };
+
+    const snapshot = anivexaRuntime.getDiagnostics();
+    const data = {
+      schemaVersion: 1,
+      exportedAt: exportedAt.toISOString(),
+      application: { name: app.getName(), version: app.getVersion() },
+      runtimeStatus: snapshot.status,
+      entries: snapshot.entries,
+    };
+    try {
+      await writeFile(result.filePath, JSON.stringify(data, null, 2) + '\n', {
+        encoding: 'utf8',
+      });
+    } catch {
+      throw new Error('The diagnostics file could not be saved.');
+    }
+    return { status: 'saved' };
   });
   ipcMain.handle('anivexa:request', (event, value: unknown) => {
     assertTrustedSender(event);

@@ -29,6 +29,17 @@ export interface AnivexaDiagnosticsSnapshot {
   entries: AnivexaDiagnosticEntry[];
 }
 
+export type AnivexaDiagnosticsExportResult =
+  { status: 'saved' } | { status: 'cancelled' };
+
+export function isAnivexaDiagnosticsExportResult(
+  value: unknown,
+): value is AnivexaDiagnosticsExportResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return result.status === 'saved' || result.status === 'cancelled';
+}
+
 export function isAnivexaDiagnosticsSnapshot(
   value: unknown,
 ): value is AnivexaDiagnosticsSnapshot {
@@ -66,6 +77,7 @@ export interface AnivexaBridge {
   cancel: (requestId: string) => void;
   getDiagnostics: () => Promise<AnivexaDiagnosticsSnapshot>;
   clearDiagnostics: () => Promise<AnivexaDiagnosticsSnapshot>;
+  exportDiagnostics: () => Promise<AnivexaDiagnosticsExportResult>;
   onDiagnosticsChanged: (
     callback: (snapshot: AnivexaDiagnosticsSnapshot) => void,
   ) => () => void;

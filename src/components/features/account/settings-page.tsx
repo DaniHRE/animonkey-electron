@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import {
-  Activity,
+  Bug,
   Cloud,
   Download,
   HardDrive,
@@ -16,11 +16,11 @@ import {
   exportLocalBackup,
   importLocalBackup,
 } from '@/services/cache/local-db';
-import type { AnivexaDiagnosticsSnapshot } from '@/types/anivexa';
+import { SettingsDebugPanel } from './settings-debug-panel';
 
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
-  { id: 'diagnostics', label: 'Anivexa', icon: Activity },
+  { id: 'diagnostics', label: 'Debug', icon: Bug },
   // Re-enable this section when caption controls are available in the player.
   // { id: 'captions', label: 'Legendas', icon: Captions },
   { id: 'backup', label: 'Backup', icon: HardDrive },
@@ -56,15 +56,6 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [anivexaDiagnostics, setAnivexaDiagnostics] =
-    useState<AnivexaDiagnosticsSnapshot>({
-      revision: -1,
-      status: 'stopped',
-      entries: [],
-    });
-  const [anivexaDiagnosticsError, setAnivexaDiagnosticsError] = useState<
-    string | null
-  >(null);
   const [name, setName] = useState('');
   const [profileDraft, setProfileDraft] = useState<{
     userId: string;
@@ -99,32 +90,6 @@ export function SettingsPage() {
     setActiveSettingsSection(settingsSections[nextIndex].id);
     settingsTabRefs.current[nextIndex]?.focus();
   };
-
-  useEffect(() => {
-    let active = true;
-    const applySnapshot = (snapshot: AnivexaDiagnosticsSnapshot) => {
-      if (!active) return;
-      setAnivexaDiagnostics((current) =>
-        snapshot.revision >= current.revision ? snapshot : current,
-      );
-    };
-    const unsubscribe =
-      window.animonkey.anivexa.onDiagnosticsChanged(applySnapshot);
-    void window.animonkey.anivexa
-      .getDiagnostics()
-      .then(applySnapshot)
-      .catch(() => {
-        if (active) {
-          setAnivexaDiagnosticsError(
-            'Não foi possível carregar o diagnóstico da Anivexa.',
-          );
-        }
-      });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     if (!sessionUserId) return;
@@ -382,25 +347,6 @@ export function SettingsPage() {
       );
     }
   };
-
-  const clearAnivexaDiagnostics = async () => {
-    setAnivexaDiagnosticsError(null);
-    try {
-      const snapshot = await window.animonkey.anivexa.clearDiagnostics();
-      setAnivexaDiagnostics(snapshot);
-    } catch {
-      setAnivexaDiagnosticsError(
-        'Não foi possível limpar os registros da Anivexa.',
-      );
-    }
-  };
-
-  const runtimeStatusLabel = {
-    stopped: 'Parado',
-    starting: 'Iniciando',
-    ready: 'Ativo',
-    error: 'Falha',
-  }[anivexaDiagnostics.status];
 
   return (
     <section className="settings-page mx-auto grid w-full max-w-[1320px] grid-cols-[148px_minmax(0,1fr)] gap-4 sm:grid-cols-[168px_minmax(0,1fr)] sm:gap-6 xl:grid-cols-[200px_minmax(0,1fr)] xl:gap-8">
@@ -793,121 +739,9 @@ export function SettingsPage() {
           </section>
         </section>
 
-        <section
-          id="settings-panel-diagnostics"
-          role="tabpanel"
-          aria-labelledby="settings-tab-diagnostics"
-          tabIndex={0}
-          hidden={activeSettingsSection !== 'diagnostics'}
-          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
-        >
-          <header className="mb-6">
-            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
-              Integração
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Diagnóstico
-            </h1>
-            <p className="mt-2 text-sm leading-relaxed text-white/45">
-              Acompanhe o runtime da Anivexa e os eventos recentes desta sessão.
-            </p>
-          </header>
-
-          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.16)] sm:p-6">
-            <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#49d77a]/10 text-[#49d77a]">
-                <Activity size={17} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-sm font-bold">Diagnóstico da Anivexa</h2>
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                      anivexaDiagnostics.status === 'ready'
-                        ? 'border-[#49d77a]/20 bg-[#49d77a]/10 text-[#70e793]'
-                        : anivexaDiagnostics.status === 'error'
-                          ? 'border-red-300/20 bg-red-300/[0.08] text-red-200'
-                          : 'border-white/10 bg-white/[0.04] text-white/55'
-                    }`}
-                  >
-                    Runtime {runtimeStatusLabel}
-                  </span>
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-white/45">
-                  Eventos recentes do processo Anivexa e das chamadas feitas
-                  pelo app. Os últimos 100 ficam somente na memória desta
-                  sessão; URLs, headers, payloads e credenciais não são
-                  exibidos.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-white/40">
-                {anivexaDiagnostics.entries.length} de 100 eventos
-              </p>
-              <button
-                type="button"
-                disabled={anivexaDiagnostics.entries.length === 0}
-                onClick={() => void clearAnivexaDiagnostics()}
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/70 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Trash2 size={13} /> Limpar registros
-              </button>
-            </div>
-
-            {anivexaDiagnosticsError && (
-              <p role="alert" className="mt-3 text-xs text-red-200/80">
-                {anivexaDiagnosticsError}
-              </p>
-            )}
-
-            <ol
-              role="log"
-              aria-label="Registros recentes da Anivexa"
-              aria-relevant="additions"
-              className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-lg border border-white/[0.07] bg-black/15 p-3"
-            >
-              {anivexaDiagnostics.entries.length ? (
-                [...anivexaDiagnostics.entries].reverse().map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-white/[0.05] pb-2 last:border-0 last:pb-0"
-                  >
-                    <time
-                      dateTime={new Date(entry.timestamp).toISOString()}
-                      className="shrink-0 font-mono text-[11px] text-white/35"
-                    >
-                      {new Date(entry.timestamp).toLocaleTimeString('pt-BR')}
-                    </time>
-                    <span
-                      className={`shrink-0 text-[11px] font-bold uppercase ${
-                        entry.level === 'error'
-                          ? 'text-red-200'
-                          : entry.level === 'warning'
-                            ? 'text-amber-200'
-                            : 'text-[#70e793]'
-                      }`}
-                    >
-                      {entry.level === 'warning'
-                        ? 'Aviso'
-                        : entry.level === 'error'
-                          ? 'Erro'
-                          : 'Info'}
-                    </span>
-                    <span className="min-w-0 flex-1 break-words text-xs leading-relaxed text-white/70">
-                      {entry.message}
-                    </span>
-                  </li>
-                ))
-              ) : (
-                <li className="py-5 text-center text-xs text-white/35">
-                  Ainda não há eventos registrados nesta sessão.
-                </li>
-              )}
-            </ol>
-          </section>
-        </section>
+        <SettingsDebugPanel
+          isActive={activeSettingsSection === 'diagnostics'}
+        />
 
         {/* Caption settings are unavailable until configurable player controls exist.
         <section

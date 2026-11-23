@@ -2,9 +2,9 @@
 
 ## Scope and source
 
-This backlog catalogs the 35 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 36 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
-The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved separately through the local read-only Discord configuration after the owner requested it; other attachment content remains unreviewed.
+The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved through the local read-only Discord configuration after the owner requested it; the DISC-32 debug-panel reference image was also retrieved and reviewed for the selected request. Other attachment content remains unreviewed.
 
 This is an inventory, not an approved implementation plan. Estimates are relative: Low means a localized UI or behavior change; Medium means multiple renderer components or persisted preferences; High means substantial integration, data policy, or media/storage work; Very high means cross-product or platform scope. Defect reports are not treated as confirmed causes until reproduced.
 
@@ -210,7 +210,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 12:20.
 - Difficulty: Medium to High.
-- Current state: The reported IPC error is caused by an expected renderer `AbortSignal` cancellation: the preload sends `anivexa:cancel`, `AnivexaRuntime.cancel()` rejects the pending request, and the rejected promise reaches Electron's `ipcMain.handle` logger. The renderer has already aborted that request; this stack trace does not establish a runtime crash or increased response latency. Expected cancellations now return an internal HTTP 499 sentinel at the IPC boundary, while other errors still reject. F12 and the platform DevTools shortcut open detached DevTools only when the Vite development server is active. Changes are local on `fix/discord-disc-30-anivexa-runtime-cancellations`; runtime behavior has not yet been verified.
+- Current state: The reported IPC error is caused by an expected renderer `AbortSignal` cancellation: the preload sends `anivexa:cancel`, `AnivexaRuntime.cancel()` rejects the pending request, and the rejected promise reaches Electron's `ipcMain.handle` logger. The renderer has already aborted that request; this stack trace does not establish a runtime crash or increased response latency. Expected cancellations now return an internal HTTP 499 sentinel at the IPC boundary, while other errors still reject. F12 and the platform DevTools shortcut open detached DevTools only when the Vite development server is active. Changes are integrated locally into `dev` at `1596e97`; runtime behavior has not yet been verified.
 - Technical analysis: Preserve the renderer's abort as the source of cancellation and keep expected aborts separate from provider failures. Do not log sensitive request data. Restrict DevTools access to development builds and preserve the production security model.
 
 ## Application updates
@@ -221,6 +221,15 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Difficulty: Medium.
 - Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. The header places the update action beside an avatar-only profile link, the status indicator pulses while a package downloads or is ready, and the dialog browses versioned release notes from the app's existing release data. The requested Discord image was retrieved and reviewed after the owner asked for it.
 - Technical analysis: Place the update action beside an avatar-only profile control. Use the supplied compact header reference, preserve the existing update state and install flow, and add a restrained pulse only while a new package is downloading or ready, respecting reduced-motion preferences. Let users browse the existing versioned release notes as update history without adding another update service or persistence layer.
+
+## Debug settings
+
+### DISC-32 — Redesign the settings debug panel
+
+- Request date (Brasília): 2026-11-23, 16:23.
+- Difficulty: Medium.
+- Current state: Implemented and integrated locally into `dev`. Settings now has a Debug section with runtime status, severity counts and filters, and a readable list of current-session Anivexa events. Users can export the session records to JSON through a native save dialog or clear them. The export includes app version and timestamp and may contain provider and anime IDs; it excludes credentials, signed URLs, and payloads. Visual runtime validation has not been performed.
+- Technical analysis: Give the debug area a clear Settings destination with runtime status, event counts, readable recent entries, severity filters, and actions to export and clear the current session diagnostics. Keep exports limited to sanitized diagnostic data, use a native save dialog, and disclose that request summaries can contain provider and anime identifiers. Do not imply that logs persist between sessions or include credentials, signed URLs, or request payloads.
 
 ## Per-item branch and integration rule
 
