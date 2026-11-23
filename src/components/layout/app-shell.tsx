@@ -44,22 +44,87 @@ import {
   SHORTCUT_COMMANDS,
   SHORTCUT_PREFERENCE_KEY,
 } from '@/lib/keyboard-shortcuts';
+import {
+  DEFAULT_SIDEBAR_ROUTE_ORDER,
+  normalizeSidebarRouteOrder,
+  SIDEBAR_ORDER_PREFERENCE_KEY,
+} from '@/lib/sidebar-route-order';
 import { animeQueries } from '@/services/anime-queries';
 import './app-shell.css';
 
-const navItems = [
-  { label: 'Início', path: '/', icon: House, end: true },
-  { label: 'Explorar', path: '/search', icon: Compass, end: false },
-  { label: 'Agenda', path: '/schedule', icon: CalendarDays, end: false },
-  { label: 'Feed', path: '/activity', icon: Activity, end: false },
-  { label: 'Lançamentos', path: '/updates', icon: Sparkles, end: false },
+const pinnedNavItems = [
+  { id: 'home', label: 'Início', path: '/', icon: House, end: true },
+  {
+    id: 'search',
+    label: 'Explorar',
+    path: '/search',
+    icon: Compass,
+    end: false,
+  },
+] as const;
+
+const primaryNavItems = [
+  {
+    id: 'schedule',
+    label: 'Agenda',
+    path: '/schedule',
+    icon: CalendarDays,
+    end: false,
+  },
+  {
+    id: 'activity',
+    label: 'Feed',
+    path: '/activity',
+    icon: Activity,
+    end: false,
+  },
+  {
+    id: 'updates',
+    label: 'Lançamentos',
+    path: '/updates',
+    icon: Sparkles,
+    end: false,
+  },
 ] as const;
 
 const moreItems = [
-  { label: 'Em alta', icon: Flame, path: '/trending' },
-  { label: 'Continuar assistindo', icon: History, path: '/continue-watching' },
-  { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
+  {
+    id: 'trending',
+    label: 'Em alta',
+    icon: Flame,
+    path: '/trending',
+  },
+  {
+    id: 'continue-watching',
+    label: 'Continuar assistindo',
+    icon: History,
+    path: '/continue-watching',
+  },
+  {
+    id: 'watch-later',
+    label: 'Assistir Depois',
+    icon: Bookmark,
+    path: '/watch-later',
+  },
 ] as const;
+
+function orderSidebarItems<T extends { id: string }>(
+  items: readonly T[],
+  order: readonly string[],
+): T[] {
+  const byId = new Map(items.map((item) => [item.id, item] as const));
+  const orderedItems: T[] = [];
+  const included = new Set<string>();
+
+  for (const id of order) {
+    const item = byId.get(id);
+    if (!item || included.has(id)) continue;
+    orderedItems.push(item);
+    included.add(id);
+  }
+
+  return [...orderedItems, ...items.filter((item) => !included.has(item.id))];
+}
 
 function hasInAppHistory(router: ReturnType<typeof useRouter>): boolean {
   const historyIndex = router.history.location.state.__TSR_index;
@@ -178,10 +243,31 @@ export function AppShell() {
       SHORTCUT_PREFERENCE_KEY,
       DEFAULT_SHORTCUT_PREFERENCES,
     );
+  const { value: storedSidebarRouteOrder, loaded: sidebarRouteOrderLoaded } =
+    useLocalPreference<unknown>(
+      SIDEBAR_ORDER_PREFERENCE_KEY,
+      DEFAULT_SIDEBAR_ROUTE_ORDER,
+    );
   const shortcutPreferences = useMemo(
     () => normalizeShortcutPreferences(storedShortcuts),
     [storedShortcuts],
   );
+  const normalizedSidebarRouteOrder = useMemo(
+    () => normalizeSidebarRouteOrder(storedSidebarRouteOrder),
+    [storedSidebarRouteOrder],
+  );
+  const sidebarRouteOrder = sidebarRouteOrderLoaded
+    ? normalizedSidebarRouteOrder
+    : DEFAULT_SIDEBAR_ROUTE_ORDER;
+  const orderedPrimaryNavItems = useMemo(
+    () => orderSidebarItems(primaryNavItems, sidebarRouteOrder.primary),
+    [sidebarRouteOrder.primary],
+  );
+  const orderedMoreItems = useMemo(
+    () => orderSidebarItems(moreItems, sidebarRouteOrder.more),
+    [sidebarRouteOrder.more],
+  );
+  const navItems = [...pinnedNavItems, ...orderedPrimaryNavItems];
   const shouldReduceMotion = useReducedMotion() ?? false;
   const shellRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -190,7 +276,7 @@ export function AppShell() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const moreRouteActive = moreItems.some(
+  const moreRouteActive = orderedMoreItems.some(
     ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
   );
   const showMoreItems = moreExpanded || moreRouteActive;
@@ -387,8 +473,8 @@ export function AppShell() {
             className="app-sidebar__main-nav"
             aria-label="Navegação principal"
           >
-            {navItems.map(({ label, path, icon: Icon, end }) => (
-              <SidebarTooltip key={label} label={label}>
+            {navItems.map(({ id, label, path, icon: Icon, end }) => (
+              <SidebarTooltip key={id} label={label}>
                 <Link
                   to={path}
                   activeOptions={{ exact: end }}
@@ -435,19 +521,21 @@ export function AppShell() {
             className="app-sidebar__more-list"
           >
             <div className="app-sidebar__more-list-inner">
-              {moreItems.map(({ label, icon: Icon, path }, index) => (
-                <SidebarTooltip key={label} label={label}>
-                  <Link
-                    to={path}
-                    data-sidebar-link="true"
-                    aria-label={label}
-                    style={{ '--sidebar-index': index } as CSSProperties}
-                    className={`app-sidebar__nav-link app-sidebar__more-link ${pathname === path || pathname.startsWith(`${path}/`) ? 'is-active' : ''}`}
-                  >
-                    <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-                  </Link>
-                </SidebarTooltip>
-              ))}
+              {orderedMoreItems.map(
+                ({ id, label, icon: Icon, path }, index) => (
+                  <SidebarTooltip key={id} label={label}>
+                    <Link
+                      to={path}
+                      data-sidebar-link="true"
+                      aria-label={label}
+                      style={{ '--sidebar-index': index } as CSSProperties}
+                      className={`app-sidebar__nav-link app-sidebar__more-link ${pathname === path || pathname.startsWith(`${path}/`) ? 'is-active' : ''}`}
+                    >
+                      <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                    </Link>
+                  </SidebarTooltip>
+                ),
+              )}
             </div>
           </nav>
           <span className="app-sidebar__divider" aria-hidden="true" />

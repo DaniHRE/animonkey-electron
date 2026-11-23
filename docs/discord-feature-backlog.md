@@ -37,8 +37,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-05 — Reorderable sidebar
 
 - Difficulty: Medium.
-- Current state: Sidebar entries are fixed in source. Início and Explorar are already in the primary section.
-- Technical analysis: Persist an ordered list of stable route identifiers, keep Início and Explorar pinned, and provide defaults for newly added or removed routes. Do not persist arbitrary URLs or treat renderer-provided route strings as trusted navigation targets.
+- Current state: Settings can reorder the links within the primary and More sections using accessible up/down controls. Início and Explorar stay pinned. The order is stored as allow-listed stable identifiers in local preferences and included in backups; normalization removes unknown and duplicate identifiers and appends newly supported routes in their default order.
+- Technical analysis: Persist only stable identifiers from the renderer's route registry, keep Início and Explorar pinned, and supply defaults for newly added or removed destinations. Resolve every identifier through the static route registry; never persist arbitrary URLs or trust renderer-provided route strings as navigation targets.
 
 ### DISC-06 — Move title-language preference to Settings
 

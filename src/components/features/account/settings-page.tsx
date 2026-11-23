@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Bug,
   Cloud,
   Download,
@@ -27,6 +30,13 @@ import {
 } from '@/lib/keyboard-shortcuts';
 import type { ShortcutCommandId } from '@/lib/keyboard-shortcuts';
 import {
+  DEFAULT_SIDEBAR_ROUTE_ORDER,
+  moveSidebarRoute,
+  normalizeSidebarRouteOrder,
+  SIDEBAR_ORDER_PREFERENCE_KEY,
+} from '@/lib/sidebar-route-order';
+import type { SidebarRouteId } from '@/lib/sidebar-route-order';
+import {
   exportLocalBackup,
   importLocalBackup,
 } from '@/services/cache/local-db';
@@ -36,6 +46,7 @@ const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
   { id: 'preferences', label: 'Preferências', icon: Languages },
   { id: 'shortcuts', label: 'Atalhos', icon: Keyboard },
+  { id: 'navigation', label: 'Navegação', icon: ArrowUpDown },
   { id: 'diagnostics', label: 'Debug', icon: Bug },
   // Re-enable this section when caption controls are available in the player.
   // { id: 'captions', label: 'Legendas', icon: Captions },
@@ -43,6 +54,20 @@ const settingsSections = [
 ] as const;
 
 type SettingsSectionId = (typeof settingsSections)[number]['id'];
+
+const sidebarRouteLabels: Record<SidebarRouteId, string> = {
+  schedule: 'Agenda',
+  activity: 'Feed',
+  updates: 'Lançamentos',
+  trending: 'Em alta',
+  'continue-watching': 'Continuar assistindo',
+  'watch-later': 'Assistir Depois',
+};
+
+const sidebarOrderSections = [
+  { id: 'primary', title: 'Navegação principal' },
+  { id: 'more', title: 'Mais opções' },
+] as const;
 
 export function SettingsPage() {
   const {
@@ -65,13 +90,28 @@ export function SettingsPage() {
     SHORTCUT_PREFERENCE_KEY,
     DEFAULT_SHORTCUT_PREFERENCES,
   );
+  const {
+    value: storedSidebarRouteOrder,
+    update: updateStoredSidebarRouteOrder,
+    loaded: sidebarRouteOrderLoaded,
+  } = useLocalPreference<unknown>(
+    SIDEBAR_ORDER_PREFERENCE_KEY,
+    DEFAULT_SIDEBAR_ROUTE_ORDER,
+  );
   const shortcutPreferences = useMemo(
     () => normalizeShortcutPreferences(storedShortcuts),
     [storedShortcuts],
   );
+  const sidebarRouteOrder = useMemo(
+    () => normalizeSidebarRouteOrder(storedSidebarRouteOrder),
+    [storedSidebarRouteOrder],
+  );
   const [capturingShortcut, setCapturingShortcut] =
     useState<ShortcutCommandId | null>(null);
   const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null);
+  const [sidebarOrderFeedback, setSidebarOrderFeedback] = useState<
+    string | null
+  >(null);
   const platform = window.animonkey.platform;
   const backupInput = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
@@ -181,6 +221,27 @@ export function SettingsPage() {
     updateStoredShortcuts({ ...shortcutPreferences, [commandId]: null });
     setCapturingShortcut(null);
     setShortcutFeedback('Atalho desativado.');
+  };
+
+  const moveSidebarRouteItem = (
+    group: 'primary' | 'more',
+    routeId: SidebarRouteId,
+    direction: -1 | 1,
+  ) => {
+    const nextOrder = moveSidebarRoute(
+      sidebarRouteOrder[group],
+      routeId,
+      direction,
+    );
+    if (!nextOrder) return;
+
+    updateStoredSidebarRouteOrder({
+      ...sidebarRouteOrder,
+      [group]: nextOrder,
+    });
+    setSidebarOrderFeedback(
+      `${sidebarRouteLabels[routeId]} movido para ${direction === -1 ? 'cima' : 'baixo'}.`,
+    );
   };
 
   const handleSettingsTabKeyDown = (
@@ -1018,6 +1079,82 @@ export function SettingsPage() {
                 (platform === 'darwin'
                   ? 'Use ⌘ com outra tecla. Atalhos de edição e do sistema são reservados.'
                   : 'Use Ctrl com outra tecla. Atalhos de edição e do sistema são reservados.')}
+            </p>
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-navigation"
+          role="tabpanel"
+          aria-labelledby="settings-tab-navigation"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'navigation'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Aplicativo
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Navegação
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Início e Explorar permanecem fixos. Reordene os destinos dentro
+              das seções da barra lateral; a preferência fica neste dispositivo
+              e acompanha o backup local.
+            </p>
+          </header>
+
+          <section className="space-y-5 rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            {sidebarOrderSections.map(({ id, title }) => (
+              <fieldset key={id}>
+                <legend className="mb-3 text-base font-semibold">
+                  {title}
+                </legend>
+                <ol className="space-y-2">
+                  {sidebarRouteOrder[id].map((routeId, index, items) => (
+                    <li
+                      key={routeId}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/[0.12] p-3"
+                    >
+                      <span className="min-w-0 text-sm font-medium text-white/85">
+                        {sidebarRouteLabels[routeId]}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!sidebarRouteOrderLoaded || index === 0}
+                          aria-label={`Mover ${sidebarRouteLabels[routeId]} para cima`}
+                          onClick={() => moveSidebarRouteItem(id, routeId, -1)}
+                          className="grid size-9 place-items-center rounded-md border border-white/[0.08] text-white/55 transition hover:bg-white/[0.05] hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-default disabled:opacity-30"
+                        >
+                          <ArrowUp size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            !sidebarRouteOrderLoaded ||
+                            index === items.length - 1
+                          }
+                          aria-label={`Mover ${sidebarRouteLabels[routeId]} para baixo`}
+                          onClick={() => moveSidebarRouteItem(id, routeId, 1)}
+                          className="grid size-9 place-items-center rounded-md border border-white/[0.08] text-white/55 transition hover:bg-white/[0.05] hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-default disabled:opacity-30"
+                        >
+                          <ArrowDown size={16} aria-hidden="true" />
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </fieldset>
+            ))}
+            <p
+              className="min-h-5 text-xs leading-relaxed text-white/45"
+              role="status"
+              aria-live="polite"
+            >
+              {sidebarOrderFeedback ??
+                'Use os botões para mover cada destino dentro da sua seção.'}
             </p>
           </section>
         </section>
