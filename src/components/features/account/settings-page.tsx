@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import {
   Activity,
-  Captions,
   Cloud,
   Download,
   HardDrive,
@@ -10,6 +9,7 @@ import {
   RefreshCw,
   Trash2,
   Upload,
+  UserRound,
 } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
 import {
@@ -19,9 +19,10 @@ import {
 import type { AnivexaDiagnosticsSnapshot } from '@/types/anivexa';
 
 const settingsSections = [
-  { id: 'account', label: 'Conta', icon: Cloud },
+  { id: 'account', label: 'Conta', icon: UserRound },
   { id: 'diagnostics', label: 'Anivexa', icon: Activity },
-  { id: 'captions', label: 'Legendas', icon: Captions },
+  // Re-enable this section when caption controls are available in the player.
+  // { id: 'captions', label: 'Legendas', icon: Captions },
   { id: 'backup', label: 'Backup', icon: HardDrive },
 ] as const;
 
@@ -908,6 +909,7 @@ export function SettingsPage() {
           </section>
         </section>
 
+        {/* Caption settings are unavailable until configurable player controls exist.
         <section
           id="settings-panel-captions"
           role="tabpanel"
@@ -936,6 +938,7 @@ export function SettingsPage() {
             </p>
           </section>
         </section>
+        */}
 
         <section
           id="settings-panel-backup"

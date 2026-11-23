@@ -51,7 +51,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-07 — Redesign the Settings page
 
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. The existing account and sync, Anivexa diagnostics, caption guidance, and local backup areas now use a section navigation layout inspired by the reviewed Re:ANIME Settings page.
+- Current state: Implemented and integrated locally into `dev`. Account and sync, Anivexa diagnostics, and local backup use a section navigation layout inspired by the reviewed Re:ANIME Settings page. Caption guidance is temporarily commented out until the player exposes configurable caption controls.
 - Technical analysis: Adapt the reference's persistent settings navigation and clear section hierarchy to the Electron app's existing dark and green visual identity. Preserve local-data and account boundaries, loading/error/offline states, accessible labels, and current Anivexa diagnostics. Keep the redesign within the Electron repository.
 
 ### DISC-08 — Adult-content preference with SFW default
