@@ -151,8 +151,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-23 — Download episodes for offline playback
 
 - Difficulty: High.
-- Current state: Library, ratings, and progress support local/offline use; episode media download was not found.
-- Technical analysis: First determine which providers and stream types permit downloads. HLS/DASH downloads involve manifests, segments, headers, proxy transformations, storage limits, cancellation, integrity, cleanup, and offline playback selection. Preserve the existing media proxy and provider contracts; do not assume every stream can be downloaded.
+- Current state: Investigation found that the pinned Anivexa documentation describes HLS, DASH, embed, and direct playback URLs and shows optional provider-supplied `downloads` URLs, but does not define a download-permission contract. Anime-Dunya's official FAQ says episodes are streaming-only and offline downloads are unavailable; AnimeGG's terms require prior written authorization to copy or distribute website materials ([Anivexa API documentation](https://github.com/walterwhite-69/Anivexa-API), [Anime-Dunya FAQ](https://anime-dunya.com/pt/faq), [AnimeGG terms](https://www.animegg.org/terms-of-service)). The API response shape alone does not establish permission. No downloader has been implemented; a provider and stream-type allowlist with explicit authorization evidence is needed first.
+- Technical analysis: Enable downloads only for provider and stream combinations with explicit authorization, and distinguish provider-supplied download links from permission to create offline copies. HLS/DASH downloads involve manifests, segments, headers, proxy transformations, storage limits, cancellation, integrity, cleanup, and offline playback selection. Preserve the existing media proxy and provider contracts; do not infer permission from a playback URL or a `downloads` field.
 
 ### DISC-24 — Sync downloads with a mobile app
 
