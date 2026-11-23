@@ -75,8 +75,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-11 — Avoid accidental text selection
 
 - Difficulty: Low to Medium.
-- Current state: Text selection is disabled only on selected elements such as the brand mark; general text remains selectable.
-- Technical analysis: Scope any non-selectable styling to decorative shell controls. Preserve selection in fields and in readable content that users may need to copy. A blanket restriction can harm accessibility and usability, so the exact surfaces need agreement.
+- Current state: Sidebar navigation, sidebar visibility controls, header history controls, and window controls do not initiate text selection. Form fields and readable page content remain selectable.
+- Technical analysis: Scope non-selectable styling to navigation and window controls. Preserve selection in form fields and readable content that users may need to copy; do not apply a blanket restriction to the application.
 
 ### DISC-12 — Remove the “filters saved in URL” explanation
 

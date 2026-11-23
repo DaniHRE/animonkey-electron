@@ -120,6 +120,16 @@
     background-color 140ms ease;
 }
 
+.app-sidebar [data-sidebar-link],
+.app-sidebar__show-handle,
+.app-header__show-sidebar,
+.app-header__history-button,
+.app-window-titlebar__navigation-button,
+.app-window-controls__button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .app-sidebar [data-sidebar-link]:hover,
 .app-sidebar [data-sidebar-link]:focus-visible,
 .app-header__show-sidebar:hover,
