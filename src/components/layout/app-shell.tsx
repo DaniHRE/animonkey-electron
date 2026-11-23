@@ -481,7 +481,6 @@ export function AppShell() {
           </div>
 
           <div className="app-header__actions flex items-center gap-4">
-            <AppUpdateCenter />
             <button
               type="button"
               className="app-header__language"
@@ -501,20 +500,18 @@ export function AppShell() {
                 </span>
               ))}
             </button>
+            <AppUpdateCenter />
             <Link
               to="/settings"
-              className="app-header__account flex items-center gap-3 rounded-full border border-white/[0.07] bg-white/[0.03] py-1.5 pr-3 pl-1.5 text-left"
-              title="Configurações locais"
+              className="app-header__account"
+              aria-label={`Abrir perfil e configurações${session?.user.name ? ` de ${session.user.name}` : ''}`}
+              title="Perfil e configurações"
             >
               <ProfileAvatar
                 image={session?.user.image ?? null}
                 name={session?.user.name ?? null}
-                className="size-8 shrink-0 rounded-full object-cover text-xs"
+                className="app-header__account-avatar"
               />
-              <span className="max-w-32 truncate text-xs font-semibold">
-                {session?.user.name?.trim() || 'Perfil'}
-              </span>
-              <ChevronDown size={14} className="text-white/40" />
             </Link>
           </div>
         </header>

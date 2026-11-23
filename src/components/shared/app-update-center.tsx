@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  ArrowLeft,
   ArrowDownToLine,
   BookmarkCheck,
   CircleAlert,
   CircleCheck,
   Compass,
+  History,
   LoaderCircle,
   Play,
   RefreshCw,
@@ -31,6 +33,13 @@ interface ReleaseNotesEntry {
 }
 
 const releaseNotesByVersion = releaseNotes as Record<string, ReleaseNotesEntry>;
+const releaseVersions = Object.keys(releaseNotesByVersion).sort(
+  (first, second) =>
+    second.localeCompare(first, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+);
 const noteIcons = {
   discover: Compass,
   library: BookmarkCheck,
@@ -38,6 +47,7 @@ const noteIcons = {
   play: Play,
 } satisfies Record<ReleaseNoteIcon, LucideIcon>;
 const VERSION_STORAGE_KEY = 'animonkey:last-seen-app-version';
+type UpdateCenterPanel = 'update' | 'whats-new' | 'history';
 
 const updateCopy: Record<
   AppUpdateStatus,
@@ -109,10 +119,34 @@ function AppUpdateIcon({
   }
 }
 
+function ReleaseHighlights({ release }: { release: ReleaseNotesEntry }) {
+  return (
+    <ul className="app-update-dialog__highlights">
+      {release.highlights.map((highlight) => {
+        const Icon = noteIcons[highlight.icon];
+        return (
+          <li key={highlight.title}>
+            <span className="app-update-dialog__highlight-icon">
+              <Icon size={17} strokeWidth={1.8} aria-hidden="true" />
+            </span>
+            <span>
+              <strong>{highlight.title}</strong>
+              <span>{highlight.description}</span>
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function AppUpdateCenter() {
   const [snapshot, setSnapshot] = useState<AppUpdateSnapshot | null>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [panel, setPanel] = useState<'update' | 'whats-new'>('whats-new');
+  const [panel, setPanel] = useState<UpdateCenterPanel>('whats-new');
+  const [selectedHistoryVersion, setSelectedHistoryVersion] = useState<
+    string | null
+  >(null);
   const [bridgeError, setBridgeError] = useState(false);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const processedVersion = useRef<string | null>(null);
@@ -174,6 +208,13 @@ export function AppUpdateCenter() {
     ? 'Não foi possível acessar as atualizações. Tente novamente.'
     : updateCopy[status].detail;
   const release = releaseNotesByVersion[currentVersion];
+  const historyVersion = releaseVersions.includes(selectedHistoryVersion ?? '')
+    ? selectedHistoryVersion
+    : (releaseVersions[0] ?? null);
+  const historyRelease = historyVersion
+    ? releaseNotesByVersion[historyVersion]
+    : null;
+  const canBrowseHistory = releaseVersions.length > 1;
   const isBusy = status === 'checking' || status === 'downloading';
   const busyActionLabel =
     status === 'downloading' ? 'Baixando…' : 'Verificando…';
@@ -181,6 +222,15 @@ export function AppUpdateCenter() {
   const openCenter = () => {
     setPanel('update');
     setIsOpen(true);
+  };
+
+  const openHistory = () => {
+    setSelectedHistoryVersion(
+      releaseVersions.includes(currentVersion)
+        ? currentVersion
+        : (releaseVersions[0] ?? null),
+    );
+    setPanel('history');
   };
 
   const checkNow = () => {
@@ -303,6 +353,73 @@ export function AppUpdateCenter() {
                     Ver novidades da v{currentVersion}
                   </Button>
                 )}
+                {canBrowseHistory && (
+                  <Button variant="ghost" onClick={openHistory}>
+                    <History aria-hidden="true" />
+                    Histórico de versões
+                  </Button>
+                )}
+              </div>
+            </section>
+          ) : panel === 'history' ? (
+            <section className="app-update-dialog__content">
+              <p className="app-update-dialog__eyebrow">
+                HISTÓRICO DE ATUALIZAÇÕES
+              </p>
+              <h2 id="app-update-dialog-title">Novidades por versão</h2>
+              <p className="app-update-dialog__summary">
+                Consulte as mudanças incluídas nas versões anteriores do
+                Animonkey.
+              </p>
+
+              {historyRelease && historyVersion ? (
+                <div className="app-update-dialog__history-layout">
+                  <nav
+                    className="app-update-dialog__history-versions"
+                    aria-label="Versões com notas de atualização"
+                  >
+                    {releaseVersions.map((version) => (
+                      <button
+                        key={version}
+                        type="button"
+                        className="app-update-dialog__history-version"
+                        data-selected={historyVersion === version}
+                        aria-pressed={historyVersion === version}
+                        onClick={() => setSelectedHistoryVersion(version)}
+                      >
+                        <span>v{version}</span>
+                        <span>{releaseNotesByVersion[version].eyebrow}</span>
+                      </button>
+                    ))}
+                  </nav>
+                  <article
+                    className="app-update-dialog__history-entry"
+                    aria-live="polite"
+                  >
+                    <p className="app-update-dialog__eyebrow">
+                      {historyRelease.eyebrow}
+                    </p>
+                    <h3>{historyRelease.title}</h3>
+                    <p className="app-update-dialog__summary">
+                      {historyRelease.summary}
+                    </p>
+                    <ReleaseHighlights release={historyRelease} />
+                  </article>
+                </div>
+              ) : (
+                <p className="app-update-dialog__missing-notes">
+                  Ainda não há notas de versão disponíveis.
+                </p>
+              )}
+
+              <div className="app-update-dialog__actions">
+                <Button variant="ghost" onClick={() => setPanel('update')}>
+                  <ArrowLeft aria-hidden="true" />
+                  Estado da atualização
+                </Button>
+                <Button variant="ghost" onClick={() => setIsOpen(false)}>
+                  Fechar
+                </Button>
               </div>
             </section>
           ) : (
@@ -319,26 +436,7 @@ export function AppUpdateCenter() {
               </p>
 
               {release ? (
-                <ul className="app-update-dialog__highlights">
-                  {release.highlights.map((highlight) => {
-                    const Icon = noteIcons[highlight.icon];
-                    return (
-                      <li key={highlight.title}>
-                        <span className="app-update-dialog__highlight-icon">
-                          <Icon
-                            size={17}
-                            strokeWidth={1.8}
-                            aria-hidden="true"
-                          />
-                        </span>
-                        <span>
-                          <strong>{highlight.title}</strong>
-                          <span>{highlight.description}</span>
-                        </span>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <ReleaseHighlights release={release} />
               ) : (
                 <p className="app-update-dialog__missing-notes">
                   As notas serão exibidas assim que forem incluídas nesta
@@ -350,6 +448,12 @@ export function AppUpdateCenter() {
                 <Button variant="ghost" onClick={() => setPanel('update')}>
                   Estado da atualização
                 </Button>
+                {canBrowseHistory && (
+                  <Button variant="ghost" onClick={openHistory}>
+                    <History aria-hidden="true" />
+                    Histórico de versões
+                  </Button>
+                )}
                 <Button variant="ghost" onClick={() => setIsOpen(false)}>
                   Fechar
                 </Button>
