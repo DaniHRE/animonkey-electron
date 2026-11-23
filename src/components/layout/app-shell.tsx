@@ -28,6 +28,7 @@ import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
 import { AppUpdateCenter } from '@/components/shared/app-update-center';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
+import { WindowControls } from '@/components/layout/window-controls';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import './app-shell.css';
 
@@ -46,6 +47,7 @@ const moreItems = [
 ] as const;
 
 export function AppShell() {
+  const hasCustomWindowChrome = window.animonkey.platform === 'win32';
   const [search, setSearch] = useState('');
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
@@ -123,6 +125,7 @@ export function AppShell() {
   return (
     <div
       ref={shellRef}
+      data-custom-window-chrome={hasCustomWindowChrome}
       data-sidebar-visible={sidebarVisible}
       className="app-shell min-h-screen bg-[#0b0b0c] text-[#f5f5f5]"
     >
@@ -133,7 +136,7 @@ export function AppShell() {
         aria-hidden={!sidebarVisible}
         inert={!sidebarVisible}
         data-visible={sidebarVisible}
-        className="app-sidebar fixed top-[81px] bottom-0 left-0 z-30"
+        className="app-sidebar fixed bottom-0 left-0 z-30"
       >
         <div className="app-sidebar__nav-stack">
           <nav
@@ -260,7 +263,16 @@ export function AppShell() {
         >
           Pular para o conteúdo
         </a>
-        <header className="app-header fixed inset-x-0 top-0 z-40 h-[81px] pr-4 pl-6">
+        {hasCustomWindowChrome && (
+          <div className="app-window-titlebar">
+            <div
+              className="app-window-titlebar__drag-region"
+              aria-hidden="true"
+            />
+            <WindowControls />
+          </div>
+        )}
+        <header className="app-header fixed inset-x-0 z-40 h-[81px] pr-4 pl-6">
           <div
             className="app-header__edge app-header__edge--left"
             aria-hidden="true"
@@ -361,11 +373,7 @@ export function AppShell() {
           </div>
         </header>
 
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="min-h-[calc(100vh-81px)] w-full p-0 outline-none"
-        >
+        <main id="main-content" tabIndex={-1} className="app-shell-main">
           {useContentFrame ? (
             <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 2xl:px-10">
               <Outlet />
