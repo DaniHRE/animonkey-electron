@@ -2,7 +2,7 @@
 
 ## Scope and source
 
-This backlog catalogs the 36 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 38 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
 The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved through the local read-only Discord configuration after the owner requested it; the DISC-32 debug-panel reference image was also retrieved and reviewed for the selected request. Other attachment content remains unreviewed.
 
@@ -113,8 +113,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-17 — Search by screenshot using trace.moe
 
 - Difficulty: High.
-- Current state: The Search page accepts PNG, JPEG, or WebP images up to 10 MiB, previews the selected file locally, and uploads it only after the user selects “Enviar imagem e buscar.” A narrow IPC bridge sends the image to trace.moe; the app does not persist it. Returned IDs, scene times, episode values, and similarity scores are validated before matching the IDs to AniList results and applying the current adult-content filter. Search supports cancellation and presents service, timeout, and rate-limit errors.
-- Technical analysis: Keep the upload user-initiated and disclose the external transfer before submission. Limit formats, size, request duration, and response size; validate results before using catalog IDs; and handle rate limits, network failure, cancellation, and untrusted response data. trace.moe documents multipart image uploads and states that images uploaded to its search engine are deleted immediately ([API](https://github.com/soruly/trace.moe-api/blob/master/swagger.yaml), [terms](https://trace.moe/terms)).
+- Current state: Screenshot search is available from a header widget beside app updates rather than from the Discovery page. It accepts PNG, JPEG, or WebP images up to 10 MiB through file selection, drag-and-drop, or clipboard paste, previews the file locally, and uploads only after the user chooses “Buscar.” A narrow IPC bridge sends the image to trace.moe; the app does not persist it. Returned IDs, scene times, episode values, and similarity scores are validated before matching the IDs to AniList results and applying the global adult-content preference. Search supports cancellation and presents service, timeout, and rate-limit errors.
+- Technical analysis: Keep screenshot search in an accessible header popover/widget beside app updates. Support clipboard paste, drag-and-drop, and file selection through the same local preview and validation path. Keep the upload user-initiated and disclose the external transfer before submission. Limit formats, size, request duration, and response size; validate results before using catalog IDs; and handle rate limits, network failure, cancellation, and untrusted response data. trace.moe documents multipart image uploads and states that images uploaded to its search engine are deleted immediately ([API](https://github.com/soruly/trace.moe-api/blob/master/swagger.yaml), [terms](https://trace.moe/terms)).
 
 ### DISC-18 — Show continuation or recommendations at the finale
 

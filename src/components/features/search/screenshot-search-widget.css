@@ -1,0 +1,266 @@
+.screenshot-search-widget {
+  position: relative;
+  z-index: 70;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.screenshot-search-widget__trigger {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(214 219 225 / 72%);
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.screenshot-search-widget__trigger:hover,
+.screenshot-search-widget__trigger:focus-visible,
+.screenshot-search-widget__trigger[aria-expanded='true'] {
+  border-color: rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 6%);
+  color: #f5f5f5;
+}
+
+.screenshot-search-widget__trigger:focus-visible,
+.screenshot-search-widget__close:focus-visible,
+.screenshot-search-widget__secondary-button:focus-visible,
+.screenshot-search-widget__search-button:focus-visible,
+.screenshot-search-widget__dropzone:focus-visible {
+  outline: 2px solid #49d77a;
+  outline-offset: 3px;
+}
+
+.screenshot-search-widget__popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 120;
+  display: grid;
+  width: min(540px, calc(100vw - 24px));
+  max-height: min(78dvh, 760px);
+  gap: 14px;
+  overflow-y: auto;
+  padding: 18px;
+  border: 1px solid rgb(255 255 255 / 13%);
+  border-radius: 20px;
+  background:
+    radial-gradient(ellipse at 84% -8%, rgb(73 215 122 / 13%), transparent 38%),
+    linear-gradient(150deg, #17191c 0%, #111214 58%, #0f1012 100%);
+  box-shadow:
+    0 28px 86px rgb(0 0 0 / 68%),
+    0 0 0 1px rgb(255 255 255 / 3%);
+  color: #f5f5f5;
+}
+
+.screenshot-search-widget__heading,
+.screenshot-search-widget__actions,
+.screenshot-search-widget__results-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.screenshot-search-widget__heading h2 {
+  margin: 4px 0 0;
+  color: rgb(255 255 255 / 92%);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.screenshot-search-widget__eyebrow {
+  margin: 0;
+  color: #65e48e;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.16em;
+}
+
+.screenshot-search-widget__close {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
+  color: rgb(255 255 255 / 60%);
+  cursor: pointer;
+}
+
+.screenshot-search-widget__close:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+}
+
+.screenshot-search-widget__hint,
+.screenshot-search-widget__privacy,
+.screenshot-search-widget__drop-copy,
+.screenshot-search-widget__status {
+  margin: 0;
+  color: rgb(255 255 255 / 48%);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.screenshot-search-widget__dropzone {
+  display: flex;
+  min-height: 156px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  border: 1px dashed rgb(255 255 255 / 18%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 2%);
+  text-align: center;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.screenshot-search-widget__dropzone.is-dragging {
+  border-color: rgb(73 215 122 / 70%);
+  background: rgb(73 215 122 / 9%);
+}
+
+.screenshot-search-widget__drop-icon {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgb(73 215 122 / 20%);
+  border-radius: 12px;
+  background: rgb(73 215 122 / 8%);
+  color: #80e99f;
+}
+
+.screenshot-search-widget__drop-title {
+  color: rgb(255 255 255 / 82%);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.screenshot-search-widget__preview {
+  display: block;
+  max-width: 100%;
+  max-height: 112px;
+  object-fit: contain;
+}
+
+.screenshot-search-widget__file-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: rgb(255 255 255 / 72%);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screenshot-search-widget__actions {
+  flex-wrap: wrap;
+}
+
+.screenshot-search-widget__secondary-button,
+.screenshot-search-widget__search-button {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 650;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.screenshot-search-widget__secondary-button {
+  border: 1px solid rgb(255 255 255 / 10%);
+  background: rgb(255 255 255 / 3%);
+  color: rgb(255 255 255 / 72%);
+}
+
+.screenshot-search-widget__secondary-button:hover {
+  background: rgb(255 255 255 / 8%);
+  color: #fff;
+}
+
+.screenshot-search-widget__search-button {
+  margin-left: auto;
+  border: 1px solid transparent;
+  background: #49d77a;
+  color: #07120a;
+}
+
+.screenshot-search-widget__search-button:hover:not(:disabled) {
+  background: #63e38e;
+}
+
+.screenshot-search-widget__search-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.screenshot-search-widget__privacy {
+  padding-top: 2px;
+  border-top: 1px solid rgb(255 255 255 / 7%);
+  color: rgb(255 255 255 / 40%);
+}
+
+.screenshot-search-widget__error {
+  margin: 0;
+  padding: 9px 11px;
+  border: 1px solid rgb(248 113 113 / 14%);
+  border-radius: 9px;
+  background: rgb(248 113 113 / 5%);
+  color: rgb(254 202 202 / 90%);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.screenshot-search-widget__results {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+}
+
+.screenshot-search-widget__results-heading h3 {
+  margin: 0;
+  color: rgb(255 255 255 / 86%);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.screenshot-search-widget__results-heading span {
+  color: rgb(255 255 255 / 42%);
+  font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screenshot-search-widget__trigger,
+  .screenshot-search-widget__close,
+  .screenshot-search-widget__dropzone,
+  .screenshot-search-widget__secondary-button,
+  .screenshot-search-widget__search-button {
+    transition: none;
+  }
+}

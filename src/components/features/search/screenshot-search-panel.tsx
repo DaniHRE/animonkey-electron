@@ -6,8 +6,11 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type ClipboardEvent,
+  type DragEvent,
 } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useRouterState } from '@tanstack/react-router';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
@@ -15,6 +18,7 @@ import type {
   ScreenshotImageType,
   ScreenshotSearchMatch,
 } from '@/types/screenshot-search';
+import './screenshot-search-widget.css';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const SUPPORTED_IMAGE_TYPES = new Set<ScreenshotImageType>([
@@ -58,8 +62,17 @@ function matchDescription(match: ScreenshotSearchMatch): string {
 
 export function ScreenshotSearchPanel() {
   const { includeAdult } = useAdultContentPreference();
+  const routeLocation = useRouterState({
+    select: (state) => state.location.href,
+  });
+  const widgetRef = useRef<HTMLDivElement | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const dropZoneRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const activeRequestId = useRef<string | null>(null);
+  const previousLocation = useRef(routeLocation);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
   );
@@ -112,25 +125,83 @@ export function ScreenshotSearchPanel() {
     };
   }, [selectedImage?.previewUrl]);
 
+  useEffect(() => {
+    if (isOpen) dropZoneRef.current?.focus();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (previousLocation.current === routeLocation) return;
+    previousLocation.current = routeLocation;
+    setIsOpen(false);
+  }, [routeLocation]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const closeOnPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Node &&
+        widgetRef.current &&
+        !widgetRef.current.contains(target)
+      )
+        setIsOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    };
+    window.addEventListener('pointerdown', closeOnPointerDown);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('pointerdown', closeOnPointerDown);
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isOpen]);
+
+  const selectImage = useCallback(
+    (file: File | undefined) => {
+      if (!file) return;
+      cancelActiveSearch();
+      setMatches([]);
+      setStatus(null);
+      setError(null);
+      if (!SUPPORTED_IMAGE_TYPES.has(file.type as ScreenshotImageType)) {
+        setSelectedImage(null);
+        setError('Escolha uma imagem PNG, JPG ou WebP.');
+        return;
+      }
+      if (file.size === 0 || file.size > MAX_IMAGE_BYTES) {
+        setSelectedImage(null);
+        setError('A imagem precisa ter até 10 MB.');
+        return;
+      }
+      setSelectedImage({ file, previewUrl: URL.createObjectURL(file) });
+    },
+    [cancelActiveSearch],
+  );
+
   const onSelectImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.currentTarget.files?.[0];
     event.currentTarget.value = '';
+    selectImage(file);
+  };
+
+  const onPasteImage = (event: ClipboardEvent<HTMLElement>) => {
+    const file = Array.from(event.clipboardData.items)
+      .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
+      .map((item) => item.getAsFile())
+      .find((item): item is File => item !== null);
     if (!file) return;
-    cancelActiveSearch();
-    setMatches([]);
-    setStatus(null);
-    setError(null);
-    if (!SUPPORTED_IMAGE_TYPES.has(file.type as ScreenshotImageType)) {
-      setSelectedImage(null);
-      setError('Escolha uma imagem PNG, JPG ou WebP.');
-      return;
-    }
-    if (file.size === 0 || file.size > MAX_IMAGE_BYTES) {
-      setSelectedImage(null);
-      setError('A imagem precisa ter até 10 MB.');
-      return;
-    }
-    setSelectedImage({ file, previewUrl: URL.createObjectURL(file) });
+    event.preventDefault();
+    selectImage(file);
+  };
+
+  const onDropImage = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    selectImage(event.dataTransfer.files[0]);
   };
 
   const searchByImage = async () => {
@@ -166,6 +237,14 @@ export function ScreenshotSearchPanel() {
     }
   };
 
+  const clearSelectedImage = () => {
+    cancelActiveSearch();
+    setSelectedImage(null);
+    setMatches([]);
+    setError(null);
+    setStatus(null);
+  };
+
   const searchingCatalog = matches.length > 0 && catalogQuery.isPending;
   const catalogError = matches.length > 0 && catalogQuery.isError;
   const noVisibleMatches =
@@ -175,153 +254,217 @@ export function ScreenshotSearchPanel() {
     displayMatches.length === 0;
 
   return (
-    <section
-      aria-labelledby="screenshot-search-title"
-      className="mb-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(73,215,122,0.055),rgba(255,255,255,0.012)_55%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.14)] sm:p-5"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="max-w-2xl">
-          <p className="mb-2 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
-            <ImagePlus size={14} /> Busca por imagem
-          </p>
-          <h2
-            id="screenshot-search-title"
-            className="text-lg font-semibold text-white/90"
-          >
-            Descubra de qual anime é a cena
-          </h2>
-          <p className="mt-1 text-xs leading-relaxed text-white/45">
-            Selecione uma captura em PNG, JPG ou WebP de até 10 MB.
-          </p>
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          className="sr-only"
-          aria-label="Selecionar captura de anime"
-          onChange={onSelectImage}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 text-xs font-semibold text-white/75 transition hover:bg-white/[0.07] hover:text-white"
-        >
-          <ImagePlus size={15} />
-          Escolher imagem
-        </button>
-      </div>
+    <div ref={widgetRef} className="screenshot-search-widget">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="screenshot-search-widget__trigger"
+        aria-label="Buscar anime por screenshot"
+        aria-haspopup="dialog"
+        aria-expanded={isOpen}
+        title="Buscar anime por screenshot"
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        <ImagePlus size={18} strokeWidth={1.9} aria-hidden="true" />
+      </button>
 
-      <div className="mt-4 flex flex-col gap-4 border-t border-white/[0.07] pt-4 sm:flex-row sm:items-center">
-        {selectedImage && (
-          <div className="h-24 w-36 shrink-0 overflow-hidden rounded-lg border border-white/10 bg-black/30">
-            <img
-              src={selectedImage.previewUrl}
-              alt="Prévia local da captura selecionada"
-              className="size-full object-contain"
-            />
+      {isOpen && (
+        <section
+          id="screenshot-search-widget-popover"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="screenshot-search-widget-title"
+          className="screenshot-search-widget__popover"
+          onPaste={onPasteImage}
+        >
+          <header className="screenshot-search-widget__heading">
+            <div>
+              <p className="screenshot-search-widget__eyebrow">BUSCA VISUAL</p>
+              <h2 id="screenshot-search-widget-title">
+                Descubra de qual anime é a cena
+              </h2>
+            </div>
+            <button
+              type="button"
+              className="screenshot-search-widget__close"
+              aria-label="Fechar busca por screenshot"
+              onClick={() => {
+                setIsOpen(false);
+                triggerRef.current?.focus();
+              }}
+            >
+              <X size={17} aria-hidden="true" />
+            </button>
+          </header>
+
+          <p className="screenshot-search-widget__hint">
+            Cole uma imagem, solte um arquivo ou escolha uma captura PNG, JPG ou
+            WebP de até 10 MB.
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="sr-only"
+            aria-label="Selecionar captura de anime"
+            onChange={onSelectImage}
+          />
+
+          <div
+            ref={dropZoneRef}
+            role="group"
+            tabIndex={0}
+            aria-label="Área para colar ou soltar uma captura de anime"
+            className={`screenshot-search-widget__dropzone${isDragging ? ' is-dragging' : ''}`}
+            onDragEnter={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragOver={(event) => {
+              event.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={(event) => {
+              if (
+                event.relatedTarget instanceof Node &&
+                event.currentTarget.contains(event.relatedTarget)
+              )
+                return;
+              setIsDragging(false);
+            }}
+            onDrop={onDropImage}
+          >
+            {selectedImage ? (
+              <>
+                <img
+                  src={selectedImage.previewUrl}
+                  alt="Prévia local da captura selecionada"
+                  className="screenshot-search-widget__preview"
+                />
+                <span className="screenshot-search-widget__file-name">
+                  {selectedImage.file.name || 'Imagem da área de transferência'}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="screenshot-search-widget__drop-icon">
+                  <ImagePlus size={20} aria-hidden="true" />
+                </span>
+                <span className="screenshot-search-widget__drop-title">
+                  Cole ou solte sua captura aqui
+                </span>
+                <span className="screenshot-search-widget__drop-copy">
+                  A imagem fica neste dispositivo até você iniciar a busca.
+                </span>
+              </>
+            )}
           </div>
-        )}
-        <div className="min-w-0 flex-1">
-          {selectedImage ? (
-            <p className="truncate text-xs font-medium text-white/70">
-              {selectedImage.file.name}
-            </p>
-          ) : (
-            <p className="text-xs text-white/45">
-              A imagem fica neste dispositivo até você iniciar a busca.
-            </p>
-          )}
-          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-white/40">
+
+          <div className="screenshot-search-widget__actions">
+            <button
+              type="button"
+              className="screenshot-search-widget__secondary-button"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImagePlus size={14} aria-hidden="true" />
+              Escolher arquivo
+            </button>
+            {selectedImage && (
+              <button
+                type="button"
+                className="screenshot-search-widget__secondary-button"
+                aria-label="Remover imagem selecionada"
+                onClick={clearSelectedImage}
+              >
+                <X size={14} aria-hidden="true" />
+                Remover
+              </button>
+            )}
+            {isSearching && (
+              <button
+                type="button"
+                className="screenshot-search-widget__secondary-button"
+                onClick={cancelActiveSearch}
+              >
+                <X size={14} aria-hidden="true" /> Cancelar
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={!selectedImage || isSearching}
+              onClick={() => void searchByImage()}
+              className="screenshot-search-widget__search-button"
+            >
+              <Search size={14} aria-hidden="true" />
+              {isSearching ? 'Buscando…' : 'Buscar'}
+            </button>
+          </div>
+
+          <p className="screenshot-search-widget__privacy">
             Ao buscar, a imagem será enviada ao trace.moe para análise. A
             Animonkey não salva o arquivo; o trace.moe informa que imagens
             enviadas para busca são excluídas imediatamente.
           </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {isSearching && (
-            <button
-              type="button"
-              onClick={cancelActiveSearch}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/65 transition hover:bg-white/[0.05] hover:text-white"
-            >
-              <X size={14} /> Cancelar
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={!selectedImage || isSearching}
-            onClick={() => void searchByImage()}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#49d77a] px-3 text-xs font-bold text-[#07120a] transition hover:bg-[#63e38e] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Search size={14} />
-            {isSearching ? 'Buscando…' : 'Enviar imagem e buscar'}
-          </button>
-        </div>
-      </div>
 
-      {error && (
-        <p
-          role="alert"
-          className="mt-4 rounded-lg border border-red-300/10 bg-red-400/[0.04] px-3 py-2 text-xs text-red-200/85"
-        >
-          {error}
-        </p>
-      )}
-      {(status || searchingCatalog) && (
-        <p
-          role="status"
-          aria-live="polite"
-          className="mt-4 text-xs text-white/50"
-        >
-          {searchingCatalog
-            ? 'Carregando os dados dos títulos no AniList…'
-            : status}
-        </p>
-      )}
-      {catalogError && (
-        <p role="alert" className="mt-4 text-xs text-red-200/80">
-          A busca encontrou cenas, mas não foi possível carregar os títulos do
-          AniList.
-        </p>
-      )}
-      {noVisibleMatches && (
-        <p role="status" className="mt-4 text-xs text-white/50">
-          Nenhum resultado corresponde ao filtro de conteúdo adulto atual.
-        </p>
-      )}
-      {displayMatches.length > 0 && (
-        <div className="mt-5 border-t border-white/[0.07] pt-4">
-          <div className="mb-4 flex items-baseline justify-between gap-3">
-            <h3 className="text-sm font-semibold text-white/85">
-              Cenas correspondentes
-            </h3>
-            <p className="text-xs text-white/40">
-              {String(displayMatches.length)}{' '}
-              {displayMatches.length === 1 ? 'anime' : 'animes'}
+          {error && (
+            <p role="alert" className="screenshot-search-widget__error">
+              {error}
             </p>
-          </div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
-            {displayMatches.map(({ anime, match }) => (
-              <div
-                key={match.animeId}
-                role="group"
-                aria-label={
-                  'Correspondência de ' +
-                  String(Math.round(match.similarity * 100)) +
-                  ' por cento'
-                }
-                className="min-w-0"
-              >
-                <AnimeCard anime={anime} />
-                <p className="mt-2 px-0.5 text-[11px] leading-relaxed text-white/45">
-                  {matchDescription(match)}
-                </p>
+          )}
+          {(status || searchingCatalog) && (
+            <p
+              role="status"
+              aria-live="polite"
+              className="screenshot-search-widget__status"
+            >
+              {searchingCatalog ? 'Carregando títulos do AniList…' : status}
+            </p>
+          )}
+          {catalogError && (
+            <p role="alert" className="screenshot-search-widget__error">
+              A busca encontrou cenas, mas não foi possível carregar os títulos
+              do AniList.
+            </p>
+          )}
+          {noVisibleMatches && (
+            <p role="status" className="screenshot-search-widget__status">
+              Nenhum resultado corresponde à preferência de conteúdo adulto
+              atual.
+            </p>
+          )}
+          {displayMatches.length > 0 && (
+            <div className="screenshot-search-widget__results">
+              <div className="screenshot-search-widget__results-heading">
+                <h3>Cenas correspondentes</h3>
+                <span>
+                  {String(displayMatches.length)}{' '}
+                  {displayMatches.length === 1 ? 'anime' : 'animes'}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {displayMatches.map(({ anime, match }) => (
+                  <div
+                    key={match.animeId}
+                    role="group"
+                    aria-label={
+                      'Correspondência de ' +
+                      String(Math.round(match.similarity * 100)) +
+                      ' por cento'
+                    }
+                    className="min-w-0"
+                  >
+                    <AnimeCard anime={anime} />
+                    <p className="mt-2 px-0.5 text-[11px] leading-relaxed text-white/45">
+                      {matchDescription(match)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
       )}
-    </section>
+    </div>
   );
 }
