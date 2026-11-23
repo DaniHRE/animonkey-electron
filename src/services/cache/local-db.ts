@@ -607,7 +607,7 @@ export async function importLocalBackup(text: string): Promise<number> {
 
 export async function getCatalogCache<T>(
   cacheKey: string,
-): Promise<{ value: T; isFresh: boolean } | null> {
+): Promise<{ value: T; isFresh: boolean; expiresAt: number } | null> {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const request = database
@@ -619,7 +619,11 @@ export async function getCatalogCache<T>(
       const record = request.result as CacheRecord | undefined;
       resolve(
         record
-          ? { value: record.value as T, isFresh: record.expiresAt > Date.now() }
+          ? {
+              value: record.value as T,
+              isFresh: record.expiresAt > Date.now(),
+              expiresAt: record.expiresAt,
+            }
           : null,
       );
     };
@@ -631,6 +635,17 @@ export async function putCatalogCache<T>(
   value: T,
   ttlMs: number,
 ): Promise<void> {
+  return putCatalogCacheUntil(cacheKey, value, Date.now() + Math.max(0, ttlMs));
+}
+
+export async function putCatalogCacheUntil<T>(
+  cacheKey: string,
+  value: T,
+  expiresAt: number,
+): Promise<void> {
+  if (!Number.isFinite(expiresAt)) {
+    throw new Error('Cache expiration must be a finite timestamp.');
+  }
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(CATALOG_CACHE_STORE, 'readwrite');
@@ -649,7 +664,7 @@ export async function putCatalogCache<T>(
     store.put({
       cacheKey,
       value,
-      expiresAt: Date.now() + ttlMs,
+      expiresAt,
     } satisfies CacheRecord);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error);

@@ -2,7 +2,7 @@
 
 ## Scope and source
 
-This backlog catalogs the 32 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 34 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
 The reader returned attachment filenames for some messages, but not the attached image or video contents. Visual reports below are therefore based on message text and the current source tree; affected screens still need review when an item is selected.
 
@@ -145,8 +145,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-22 — Remember player preferences such as volume
 
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. Vidstack volume now loads from and saves to the existing IndexedDB-backed local preference store.
-- Technical analysis: Use `useLocalPreference` instead of a TanStack Query-only cache so volume survives app restarts. Restore the preference when Vidstack mounts, clamp finite numeric values to the supported 0–1 range, and use the existing full-volume default for invalid data. Do not persist signed source URLs or provider credentials.
+- Current state: Implemented and integrated locally into `dev`. Vidstack volume uses the IndexedDB-backed local preference store, and Anivexa episode lists use a persistent client-side cache with expiry driven by the next airing time and hourly retries when a scheduled episode is still missing.
+- Technical analysis: Store volume with `useLocalPreference` so it survives app restarts. Persist episode lists in the existing IndexedDB catalog cache and return cached data until its deadline. Use the AniList next-airing timestamp as the TTL; after that time, retry hourly while the expected episode is missing. Once it appears, expire at the following weekly slot, or in seven days when an ongoing series has no updated schedule. Keep completed series with a complete episode list for 30 days. A failed refresh serves the last cached list and retries in one hour. Do not persist signed source URLs or provider credentials; stream-link caching remains a separate decision.
 
 ### DISC-23 — Download episodes for offline playback
 
@@ -203,6 +203,15 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Difficulty: High; primarily a backend service task.
 - Current state: The desktop app has local Anivexa runtime diagnostics, but no scheduled provider health pipeline or shared Supabase status table was found. This is related to, but distinct from, client-side failure reports in DISC-15.
 - Technical analysis: Define which frequently used providers to probe, the check cadence, success criteria, retry policy, and freshness/expiry of stored results. Run probes in a trusted scheduled service and write sanitized status records through a restricted backend contract; do not expose provider credentials or probe secrets to Electron. Guard against transient network errors and false outage reports.
+
+## Runtime diagnostics
+
+### DISC-30 — Investigate Anivexa runtime cancellations and DevTools access
+
+- Request date (Brasília): 2026-11-23, 12:20.
+- Difficulty: Medium to High.
+- Current state: A Discord report shows repeated `Anivexa request cancelled` errors from the IPC handler and requests a way to open DevTools. The cancellation path has not been traced to determine whether these are expected aborts or leaked runtime errors.
+- Technical analysis: Reproduce and trace cancellation through the renderer, preload, IPC handler, and Anivexa runtime. Treat expected aborts separately from provider failures and avoid logging sensitive request data. Define a developer-only DevTools entry point that preserves the production security model; do not expose unrestricted DevTools access in release builds without a reviewed product decision.
 
 ## Per-item branch and integration rule
 
