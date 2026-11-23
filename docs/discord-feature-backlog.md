@@ -219,7 +219,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 12:47.
 - Difficulty: Medium.
-- Current state: `AppUpdateCenter` is rendered before the language selector and account control in the header. The account control includes the profile image, account name, and chevron. The update dialog shows the current update state and release notes for the current version; `release-notes.json` already contains entries for 1.0.0 through 1.0.2, but the UI does not browse older entries. The requested Discord image was retrieved and reviewed after the owner asked for it.
+- Current state: Implemented and integrated locally into `dev`. The header places the update action beside an avatar-only profile link, the status indicator pulses while a package downloads or is ready, and the dialog can browse existing release notes for versions 1.0.0 through 1.0.2. The requested Discord image was retrieved and reviewed after the owner asked for it.
 - Technical analysis: Place the update action beside an avatar-only profile control. Use the supplied compact header reference, preserve the existing update state and install flow, and add a restrained pulse only while a new package is downloading or ready, respecting reduced-motion preferences. Let users browse the existing versioned release notes as update history without adding another update service or persistence layer.
 
 ## Per-item branch and integration rule
