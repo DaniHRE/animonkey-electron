@@ -192,8 +192,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23.
 - Difficulty: Very high; the bot itself is outside the desktop app's scope.
-- Current state: No Discord bot or announcement service was found. The Electron app already registers the `app:` protocol and can open anime deep links by ID.
-- Technical analysis: Bot hosting, Discord credentials, announcement sources, deduplication, and scheduling belong in a separate trusted service. The desktop app can support the request by opening validated anime deep links; define the bot's link format against the existing protocol and route contract. Do not embed bot credentials or implement the bot inside the renderer.
+- Current state: Canceled by the owner on 2026-11-24 because no external hosting is available for the bot or its required services. No Discord bot or announcement service will be developed.
+- Technical analysis: The bot requires externally hosted infrastructure for Discord credentials, announcement sources, deduplication, and scheduling. This request is canceled until that hosting is available; do not implement bot services in the desktop app.
 
 ## Provider health monitoring
 
