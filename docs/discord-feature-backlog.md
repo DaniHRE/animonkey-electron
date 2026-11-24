@@ -2,7 +2,7 @@
 
 ## Scope and source
 
-This backlog catalogs the 38 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 40 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21, 2026-11-23, or 2026-11-24 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
 The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved through the local read-only Discord configuration after the owner requested it; the DISC-32 debug-panel reference image was also retrieved and reviewed for the selected request. Other attachment content remains unreviewed.
 
@@ -246,6 +246,22 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Difficulty: Medium.
 - Current state: This standalone request asks for a screenshot-search widget near the update action with clipboard paste, drag-and-drop, and file selection. Those flows are already implemented by DISC-17 in commit `038ecc5`: the header widget provides all three inputs, previews and validates the image locally, and sends it to trace.moe only after the user chooses to search. No additional code change is needed for this request.
 - Technical analysis: Keep the widget in the application header rather than Discovery. Route clipboard, dropped, and selected files through the same size/type validation and user-initiated upload path, and disclose the external transfer before search.
+
+## Recent interface requests
+
+### DISC-35 — Refine the header search interaction
+
+- Request date (Brasília): 2026-11-24, 16:25.
+- Difficulty: Medium.
+- Current state: Catalogued; not selected for implementation in this branch. The attached image filename was returned by Discord, but its contents have not been reviewed.
+- Technical analysis: Reduce the visual weight of the search field's focus ring while keeping a clear visible focus state. Add restrained pressed feedback and animate search suggestions as they appear, preserving keyboard selection, loading and empty states, and reduced-motion preferences. Refine the compact result rows without changing the AniList search contract.
+
+### DISC-36 — Toast feedback and persistent action history
+
+- Request date (Brasília): 2026-11-24, 18:35.
+- Difficulty: Medium.
+- Current state: Implemented on the local `feat/discord-disc-36-toast-feedback` branch as part of GitHub issue [#9](https://github.com/DaniHRE/animonkey-electron/issues/9). User actions produce clear success, warning, or error toasts; action records remain in the local notification center until the user deletes them. The center presents separate action, system, anime/episode, and update categories in a floating panel. Static checks and a development-runtime visual review passed; action interaction and packaged-app validation remain pending.
+- Technical analysis: Give meaningful user actions immediate, accessible feedback and preserve each action result in the local notification history. Distinguish action feedback from system notices, anime/episode alerts, and update alerts. Let users filter categories, mark entries read, and delete action history explicitly. Animate toast and panel transitions with Motion while respecting reduced-motion preferences. Keep native notification and remote-feed behavior independent.
 
 ## Per-item branch and integration rule
 

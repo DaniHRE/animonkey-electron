@@ -1,4 +1,56 @@
 {
+  "1.2.0": {
+    "eyebrow": "ATUALIZAÇÃO 1.2.0",
+    "title": "Feedbacks claros em cada etapa.",
+    "summary": "Receba confirmações imediatas para as ações do aplicativo e encontre todo o histórico em uma central de notificações reorganizada.",
+    "highlights": [
+      {
+        "icon": "library",
+        "title": "Ações confirmadas",
+        "description": "Saiba quando uma ação foi concluída, recusada ou precisa de atenção."
+      },
+      {
+        "icon": "sync",
+        "title": "Notificações organizadas",
+        "description": "Filtre avisos de ações, sistema, animes e atualizações."
+      },
+      {
+        "icon": "discover",
+        "title": "Histórico sob seu controle",
+        "description": "Reveja confirmações salvas e remova as que não quiser manter."
+      },
+      {
+        "icon": "play",
+        "title": "Animações acessíveis",
+        "description": "Avisos e painéis têm transições suaves que respeitam sua preferência por menos movimento."
+      }
+    ],
+    "githubRelease": {
+      "summary": "Animonkey 1.2.0 adds clear feedback to meaningful user actions and reorganizes local notifications into four independent categories.",
+      "sections": [
+        {
+          "title": "Action feedback",
+          "details": [
+            "Accessible success, warning, and error toasts report meaningful outcomes across Watch Later, followed anime, ratings, sharing, account forms, backups, and saved preferences.",
+            "Action results are retained in the local notification history until users explicitly delete them. Failed preference writes restore the previous value and report the failure."
+          ]
+        },
+        {
+          "title": "Notification center",
+          "details": [
+            "The notification center now opens as a floating, modeless panel and filters action feedback, system notices, anime and episode alerts, and update notifications independently.",
+            "Users can review unread items, mark notifications as read, open supported destinations, and delete action-history entries. Existing system and remote-feed behavior remains local-first and best effort."
+          ]
+        },
+        {
+          "title": "Motion and accessibility",
+          "details": [
+            "Toast stacks and the notification panel use Motion transitions based on opacity and transforms. Reduced-motion preferences are respected, toasts remain keyboard accessible, and the panel supports Escape and outside-click dismissal."
+          ]
+        }
+      ]
+    }
+  },
   "1.1.0": {
     "eyebrow": "ATUALIZAÇÃO 1.1.0",
     "title": "Mais recursos para descobrir e acompanhar seus animes.",
