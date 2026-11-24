@@ -26,4 +26,8 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 
 - [Technical debt index](technical-debt/README.md) — deferred issues with evidence and acceptance criteria.
 
+## Monitoring
+
+- [Anivexa provider health monitoring](anivexa-provider-health-monitoring.md) — scheduled provider probes, sanitized Supabase snapshots, status meanings, and workflow configuration.
+
 For repository structure, security rules, and local validation commands, see [AGENTS.md](../AGENTS.md). For branch and contribution practices, see [CONTRIBUTING.md](../CONTRIBUTING.md).

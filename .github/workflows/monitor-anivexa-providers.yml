@@ -1,0 +1,40 @@
+name: Monitor Anivexa providers
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anivexa-provider-health
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    name: Probe providers and update Supabase health
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository and pinned Anivexa API
+        uses: actions/checkout@v7.0.1
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.13.1
+
+      - name: Install pinned Anivexa API dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: vendor/anivexa-api
+
+      - name: Probe providers and write sanitized health snapshot
+        env:
+          SUPABASE_PROJECT_URL: ${{ vars.SUPABASE_PROJECT_URL }}
+          SUPABASE_SECRET_API_KEY: ${{ secrets.SUPABASE_SECRET_API_KEY }}
+        run: node scripts/monitor-anivexa-providers.mjs --write
