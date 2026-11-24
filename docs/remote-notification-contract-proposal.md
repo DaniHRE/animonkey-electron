@@ -6,9 +6,22 @@
 
 ## Goal and boundaries
 
-Extend the existing offline notification center with broadcast messages maintained by Animonkey. The feed may carry maintenance notices, curated provider-health notices, global moderation notices, spotlights, and trending-anime announcements.
+Extend the existing offline notification center with broadcast messages maintained by Animonkey. The feed may carry system maintenance, curated provider-health notices, global moderation notices, new-anime announcements, followed-anime spotlights, and global trending-anime announcements.
 
-Keep the feed separate from local episode and application-update events. The `anivexa_provider_health` table from DISC-29 remains an operational probe snapshot; it is not exposed to clients. Provider-health messages are manually reviewed before publication. The feed carries global policy or service notices only, not account-specific moderation decisions.
+Keep the feed separate from local episode and application-update events. The `anivexa_provider_health` table from DISC-29 remains an operational probe snapshot; it is not exposed to clients. Provider-health messages are manually reviewed before publication. The feed carries global policy or service notices only, not account-specific moderation decisions. Followed-anime spotlights are filtered against the local follow list; the app does not send follow data to Supabase.
+
+## Notification categories
+
+| Category          | Intended content                                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `maintenance`     | Planned maintenance and broad incidents or recovery notices for Animonkey services.                                         |
+| `provider_health` | Manually reviewed availability notices for an Anivexa provider; never raw probe results.                                    |
+| `moderation`      | Global moderation or platform-policy notices; never a notice about an individual account.                                   |
+| `new_anime`       | An editorial notice introducing a newly available anime title.                                                              |
+| `spotlight`       | An editorial highlight for a specific anime. The client shows it only when that anime is in the user's local followed list. |
+| `trending`        | A broadcast notice about an anime that is popular or seasonally relevant; not personalized.                                 |
+
+The local notification center already handles followed-anime episode alerts and application-update events. Those remain separate and are not duplicated in this feed.
 
 ## Delivery source
 
@@ -24,20 +37,20 @@ The read path does not call `desktop-api`, invoke an Edge Function, query applic
 
 The object contains only published messages that are active during the publication window. Uploading a new object publishes it; drafts are kept outside the public bucket.
 
-| Field                   | Contract                                                                           |
-| ----------------------- | ---------------------------------------------------------------------------------- |
-| `schemaVersion`         | Integer, initially `1`.                                                            |
-| `generatedAt`           | ISO 8601 UTC timestamp for the uploaded feed.                                      |
-| `id`                    | Stable UUID used for local read and dismissal state.                               |
-| `category`              | `maintenance`, `provider_health`, `moderation`, `spotlight`, or `trending`.        |
-| `severity`              | `info`, `warning`, or `critical`; a presentation hint, not incident verification.  |
-| `title`                 | Plain text, 1–120 characters.                                                      |
-| `message`               | Plain text, 1–300 characters.                                                      |
-| `priority`              | Integer from 0–100, default 0.                                                     |
-| `startsAt`, `expiresAt` | ISO 8601 UTC timestamps; `expiresAt` must be later than `startsAt`.                |
-| `providerId`            | Optional allowlisted Anivexa provider ID, only for `provider_health`.              |
-| `animeId`               | Optional positive AniList media ID, only for `spotlight` or `trending`.            |
-| `action`                | `{ "type": "none" }` or `{ "type": "anime" }`; an anime action requires `animeId`. |
+| Field                   | Contract                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`         | Integer, initially `1`.                                                                                       |
+| `generatedAt`           | ISO 8601 UTC timestamp for the uploaded feed.                                                                 |
+| `id`                    | Stable UUID used for local read and dismissal state.                                                          |
+| `category`              | `maintenance`, `provider_health`, `moderation`, `new_anime`, `spotlight`, or `trending`.                      |
+| `severity`              | `info`, `warning`, or `critical`; a presentation hint, not incident verification.                             |
+| `title`                 | Plain text, 1–120 characters.                                                                                 |
+| `message`               | Plain text, 1–300 characters.                                                                                 |
+| `priority`              | Integer from 0–100, default 0.                                                                                |
+| `startsAt`, `expiresAt` | ISO 8601 UTC timestamps; `expiresAt` must be later than `startsAt`.                                           |
+| `providerId`            | Optional allowlisted Anivexa provider ID, only for `provider_health`.                                         |
+| `animeId`               | Required positive AniList media ID for `new_anime`, `spotlight`, and `trending`; absent for other categories. |
+| `action`                | `{ "type": "none" }` or `{ "type": "anime" }`; an anime action requires `animeId`.                            |
 
 Limit the feed to 8 active messages and 4,096 UTF-8 bytes after JSON serialization. Reject unknown fields, categories, severities, invalid timestamps, non-allowlisted provider IDs, and invalid action shapes. The client validates the downloaded object again before display. Render title and message as text; do not store HTML, Markdown, external URLs, arbitrary routes, user IDs, diagnostics, raw provider errors, or private moderation details.
 
@@ -70,6 +83,7 @@ Example object:
 - Fetch only when the notification center opens and the local 48-hour attempt window plus random jitter has elapsed. Do not poll while the application is running or fetch on every open.
 - Cache the last valid feed locally for up to 48 hours. Show cached, unexpired messages offline; a network error must not hide local episode or update notifications.
 - Persist `readAt` and `dismissedAt` locally by remote UUID. Do not send these states to Supabase or sync them across devices.
+- For a `spotlight`, compare its `animeId` with the local followed-anime list before display. Never upload the follow list or use it to target a server response.
 - Ignore expired messages. Open only the existing typed anime route for an `anime` action; all other messages have no action.
 - Do not promise real-time or urgent delivery. A newly published notice may take several days to reach an offline client that recently fetched the feed.
 
@@ -81,11 +95,14 @@ At the 4 KiB response cap and one request per client profile every 48 hours, the
 
 | Active client profiles | Storage requests/month (maximum) | Feed egress/month (maximum) |
 | ---------------------: | -------------------------------: | --------------------------: |
+|                     20 |                              320 |   About 0.0013 GB (1.31 MB) |
 |                  1,000 |                           16,000 |               About 0.07 GB |
 |                 10,000 |                          160,000 |               About 0.66 GB |
 |                 20,000 |                          320,000 |               About 1.31 GB |
 
 These estimates count every response byte, including responses that the CDN may serve from cache. They exclude the project's existing Storage egress. At 20,000 active client profiles, the feed would use about one quarter of the Free plan's 5 GB cached-egress allowance before existing usage. The connected tooling does not expose the project's current monthly cached-egress usage, so an absolute no-overage guarantee is not available from the evidence collected. The CDN cache and delayed refresh reduce origin traffic and correlated checks, but do not provide a hard burst limit.
+
+The owner's rough estimate is about 20 users, modeled as 20 active client profiles; multiple installations per user would count separately. If all 20 profiles fetched at the maximum cadence, this feed would add at most 320 Storage/CDN reads and about 1.31 MB per month, roughly 0.03% of the Free plan's cached-egress allowance. This incremental volume is negligible at that audience size, although the project's existing egress remains outside this estimate.
 
 For comparison, the earlier six-hour `desktop-api` polling idea could add up to 120 Edge Function invocations per client profile per month, or 120,000 at 1,000 active profiles. The connected function logs showed 2,688 `desktop-api` events in the preceding 24 hours; this is a log-based estimate, not the billing usage report. A public Storage object avoids adding those function calls and application-table queries. At 10,000 active profiles, the revised feed estimate is at most 160,000 Storage/CDN requests and about 0.66 GB per month, with no added Edge Function invocations.
 
@@ -102,7 +119,7 @@ For comparison, the earlier six-hour `desktop-api` polling idea could add up to 
 1. Approve the feed as public broadcast content stored in Supabase Storage, with maintainers uploading the JSON object manually.
 2. Accept the 48-hour refresh window, up to 12 hours of jitter, and the absence of real-time delivery.
 3. Accept the 4 KiB payload and 8-message cap.
-4. Confirm the expected monthly active client-profile range and available cached-egress headroom. At 10,000 active profiles, this feed is estimated at about 0.66 GB/month before existing Storage egress.
+4. Treat approximately 20 monthly active users as a provisional planning estimate, not a hard cap. At that audience size, the feed is estimated at up to 320 reads and 1.31 MB/month before existing Storage egress; confirm the actual cached-egress headroom before enabling it.
 5. Keep provider-health notices manual until a separate rule for automating them from DISC-29 snapshots is agreed.
 
 After agreement, implementation can add the public Storage bucket and validated JSON contract, a fixed main-process fetch, local notification-state integration, and a focused DISC-14 runtime check. No database migration or Edge Function endpoint is needed for feed reads.
