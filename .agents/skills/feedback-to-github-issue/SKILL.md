@@ -41,11 +41,13 @@ Before showing a draft or sending it to GitHub, remove names, usernames, email a
   ---
 
   ### Feedback context
+
   - Type: Bug report | Suggestion
   - Functional area: <area>
   - Received: YYYY-MM-DD
   - Created by: Feedback automation
   - Feedback reference: `<uuid>`
+
   <!-- animonkey-feedback-id:<uuid> -->
   ```
 

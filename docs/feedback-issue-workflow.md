@@ -44,19 +44,19 @@ to share with repository collaborators.
 
 The feedback issue paths use these repository labels:
 
-| Feedback value | Label | Color | Description |
-| --- | --- | --- | --- |
-| `bug_report` | `Bug Report` | `#cf222e` | Reviewed bug report from Animonkey Desktop feedback. |
-| `suggestion` | `Product Suggestion` | `#1f883d` | Reviewed product suggestion from Animonkey Desktop feedback. |
-| `discovery` | `Discovery & Search` | `#1f6feb` | Feedback about finding anime, search, or discovery filters. |
-| `catalog` | `Catalog & Metadata` | `#8250df` | Feedback about anime catalog entries and metadata. |
-| `player` | `Player & Episodes` | `#bf3989` | Feedback about episode playback, subtitles, or providers. |
-| `library` | `Library & History` | `#2da44e` | Feedback about the saved library, watch lists, and history. |
-| `account` | `Account & Sync` | `#9a6700` | Feedback about profiles, sign-in, or account synchronization. |
-| `notifications` | `Notifications` | `#0969da` | Feedback about system or provider notifications. |
-| `interface` | `Interface & Navigation` | `#57606a` | Feedback about application layout, controls, or navigation. |
-| `other` | `General` | `#6e7781` | Feedback that does not fit another product area. |
-| Every feedback issue | `Automated` | `#6f42c1` | Created by the feedback-to-GitHub automation. |
+| Feedback value       | Label                    | Color     | Description                                                   |
+| -------------------- | ------------------------ | --------- | ------------------------------------------------------------- |
+| `bug_report`         | `Bug Report`             | `#cf222e` | Reviewed bug report from Animonkey Desktop feedback.          |
+| `suggestion`         | `Product Suggestion`     | `#1f883d` | Reviewed product suggestion from Animonkey Desktop feedback.  |
+| `discovery`          | `Discovery & Search`     | `#1f6feb` | Feedback about finding anime, search, or discovery filters.   |
+| `catalog`            | `Catalog & Metadata`     | `#8250df` | Feedback about anime catalog entries and metadata.            |
+| `player`             | `Player & Episodes`      | `#bf3989` | Feedback about episode playback, subtitles, or providers.     |
+| `library`            | `Library & History`      | `#2da44e` | Feedback about the saved library, watch lists, and history.   |
+| `account`            | `Account & Sync`         | `#9a6700` | Feedback about profiles, sign-in, or account synchronization. |
+| `notifications`      | `Notifications`          | `#0969da` | Feedback about system or provider notifications.              |
+| `interface`          | `Interface & Navigation` | `#57606a` | Feedback about application layout, controls, or navigation.   |
+| `other`              | `General`                | `#6e7781` | Feedback that does not fit another product area.              |
+| Every feedback issue | `Automated`              | `#6f42c1` | Created by the feedback-to-GitHub automation.                 |
 
 The feedback type and area each map to one label, and every automation-created
 issue receives `Automated`. The Actions workflow creates any missing labels
