@@ -22,6 +22,10 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 - [Discord feature and fix backlog](discord-feature-backlog.md) — requests from the project's private testers Discord, with current Electron coverage, relative difficulty, technical notes, and per-item branch guidance.
 - [Feedback-to-Issue workflow](feedback-issue-workflow.md) — maintainer review and GitHub Actions procedure for turning a Supabase feedback record into a categorized GitHub issue.
 
+## Notifications
+
+- [Remote notification delivery contract proposal](remote-notification-contract-proposal.md) — proposed public feed, payload, client state, and privacy boundaries for DISC-14; awaiting owner review.
+
 ## Technical debt
 
 - [Technical debt index](technical-debt/README.md) — deferred issues with evidence and acceptance criteria.
