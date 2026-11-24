@@ -1,5 +1,3 @@
-create extension if not exists pg_cron with schema pg_catalog;
-
 create table public.feedback_submissions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references next_auth.users (id) on delete cascade,
@@ -96,9 +94,6 @@ revoke all on function public.desktop_submit_feedback(
 grant execute on function public.desktop_submit_feedback(
   uuid, text, text, text, text, text
 ) to service_role;
-
-grant usage on schema cron to postgres;
-grant all privileges on all tables in schema cron to postgres;
 
 select cron.schedule(
   'desktop-feedback-retention',
