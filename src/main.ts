@@ -14,6 +14,7 @@ import { accountService } from './electron/account-service';
 import { anivexaRuntime, registerAnivexaIpc } from './electron/anivexa-runtime';
 import { registerScreenshotSearchIpc } from './electron/screenshot-search';
 import { registerDesktopNotificationIpc } from './electron/desktop-notifications';
+import { registerRemoteNotificationFeedIpc } from './electron/remote-notification-feed';
 import { getTaizenMetadata } from './electron/taizen-artwork';
 import type {
   AccountCredentials,
@@ -662,6 +663,7 @@ registerAccountIpc();
 registerAnimeArtworkIpc();
 registerScreenshotSearchIpc(assertTrustedIpcSender);
 registerDesktopNotificationIpc(assertTrustedIpcSender);
+registerRemoteNotificationFeedIpc(assertTrustedIpcSender);
 registerAnivexaIpc(assertTrustedIpcSender);
 
 app.on('before-quit', () => {

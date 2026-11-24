@@ -16,7 +16,11 @@ import {
   isProviderFailureReportingPreference,
   PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY,
 } from '@/lib/provider-failure-reporting';
-import { isAiringNotificationPreference } from '@/lib/airing-notifications';
+import {
+  AIRING_NOTIFICATION_PREFERENCE_KEYS,
+  isAiringNotificationPreference,
+  isFollowedAnimeList,
+} from '@/lib/airing-notifications';
 import {
   APP_NOTIFICATION_LIMIT,
   APP_NOTIFICATION_RETENTION_MS,
@@ -26,6 +30,7 @@ import {
 import type {
   AppNotification,
   NewAppNotification,
+  NewRemoteAppNotification,
 } from '@/lib/app-notifications';
 
 const DATABASE_NAME = 'animonkey-desktop';
@@ -397,6 +402,110 @@ export async function putPreference<T>(key: string, value: T): Promise<void> {
 
 export async function getAppNotifications(): Promise<AppNotification[]> {
   const database = await openDatabase();
+  const visibleNotifications = await new Promise<AppNotification[]>(
+    (resolve, reject) => {
+      const transaction = database.transaction(
+        APP_NOTIFICATION_STORE,
+        'readwrite',
+      );
+      const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+      const request = store.getAll();
+      let visibleNotifications: AppNotification[] = [];
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const cutoff = Date.now() - APP_NOTIFICATION_RETENTION_MS;
+        const now = Date.now();
+        const records = request.result as unknown[];
+        const retained = records.filter(
+          (value): value is AppNotification =>
+            isAppNotification(value) &&
+            value.createdAt >= cutoff &&
+            (value.kind !== 'remote' ||
+              (value.createdAt <= now && value.expiresAt > now)),
+        );
+        retained.sort((first, second) => {
+          const firstPriority = first.kind === 'remote' ? first.priority : 0;
+          const secondPriority = second.kind === 'remote' ? second.priority : 0;
+          return (
+            secondPriority - firstPriority || second.createdAt - first.createdAt
+          );
+        });
+        const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+        const retainedIds = new Set(
+          limited.map((notification) => notification.id),
+        );
+        for (const candidate of records) {
+          if (
+            typeof candidate === 'object' &&
+            candidate !== null &&
+            !Array.isArray(candidate)
+          ) {
+            const id = (candidate as Record<string, unknown>).id;
+            if (typeof id === 'string' && !retainedIds.has(id))
+              store.delete(id);
+          }
+        }
+        visibleNotifications = limited.filter(
+          (notification) => notification.dismissedAt === null,
+        );
+      };
+      transaction.oncomplete = () => resolve(visibleNotifications);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    },
+  );
+
+  if (
+    !visibleNotifications.some(
+      (notification) =>
+        notification.kind === 'remote' && notification.category === 'spotlight',
+    )
+  )
+    return visibleNotifications;
+
+  let followed: unknown = null;
+  try {
+    followed = await getPreference<unknown>(
+      AIRING_NOTIFICATION_PREFERENCE_KEYS.followedAnime,
+    );
+  } catch {
+    // A local follow-list read failure must not hide other notifications.
+  }
+  const followedIds = new Set(
+    isFollowedAnimeList(followed) ? followed.map((item) => item.animeId) : [],
+  );
+  return visibleNotifications.filter(
+    (notification) =>
+      notification.kind !== 'remote' ||
+      notification.category !== 'spotlight' ||
+      (notification.animeId !== undefined &&
+        followedIds.has(notification.animeId)),
+  );
+}
+
+export async function replaceRemoteAppNotifications(
+  values: NewRemoteAppNotification[],
+): Promise<void> {
+  if (values.length > 8) {
+    throw new Error('The remote notification feed exceeds its item limit.');
+  }
+
+  const now = Date.now();
+  const incoming = values.map((value) => ({
+    ...value,
+    readAt: null,
+    dismissedAt: null,
+  }));
+  if (
+    !incoming.every(
+      (notification) =>
+        notification.kind === 'remote' && isAppNotification(notification),
+    )
+  ) {
+    throw new Error('The remote notification feed contains invalid records.');
+  }
+
+  const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction(
       APP_NOTIFICATION_STORE,
@@ -404,35 +513,45 @@ export async function getAppNotifications(): Promise<AppNotification[]> {
     );
     const store = transaction.objectStore(APP_NOTIFICATION_STORE);
     const request = store.getAll();
-    let visibleNotifications: AppNotification[] = [];
-    request.onerror = () => reject(request.error);
+    request.onerror = () => transaction.abort();
     request.onsuccess = () => {
-      const cutoff = Date.now() - APP_NOTIFICATION_RETENTION_MS;
       const records = request.result as unknown[];
-      const retained = records.filter(
-        (value): value is AppNotification =>
-          isAppNotification(value) && value.createdAt >= cutoff,
+      const existing = new Map(
+        records
+          .filter(isAppNotification)
+          .filter((notification) => notification.kind === 'remote')
+          .map((notification) => [notification.id, notification] as const),
       );
-      retained.sort((first, second) => second.createdAt - first.createdAt);
-      const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
-      const retainedIds = new Set(
-        limited.map((notification) => notification.id),
-      );
-      for (const candidate of records) {
-        if (
-          typeof candidate === 'object' &&
-          candidate !== null &&
-          !Array.isArray(candidate)
-        ) {
-          const id = (candidate as Record<string, unknown>).id;
-          if (typeof id === 'string' && !retainedIds.has(id)) store.delete(id);
-        }
+      const retained: AppNotification[] = records
+        .filter(isAppNotification)
+        .filter(
+          (notification) =>
+            notification.kind !== 'remote' &&
+            notification.createdAt >= now - APP_NOTIFICATION_RETENTION_MS,
+        );
+      for (const notification of incoming) {
+        const prior = existing.get(notification.id);
+        retained.push({
+          ...notification,
+          readAt: prior?.readAt ?? null,
+          dismissedAt: prior?.dismissedAt ?? null,
+        });
       }
-      visibleNotifications = limited.filter(
-        (notification) => notification.dismissedAt === null,
-      );
+      retained.sort((first, second) => {
+        const firstPriority = first.kind === 'remote' ? first.priority : 0;
+        const secondPriority = second.kind === 'remote' ? second.priority : 0;
+        return (
+          secondPriority - firstPriority || second.createdAt - first.createdAt
+        );
+      });
+      const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+      store.clear();
+      for (const notification of limited) store.put(notification);
     };
-    transaction.oncomplete = () => resolve(visibleNotifications);
+    transaction.oncomplete = () => {
+      window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
     transaction.onerror = () => reject(transaction.error);
     transaction.onabort = () => reject(transaction.error);
   });

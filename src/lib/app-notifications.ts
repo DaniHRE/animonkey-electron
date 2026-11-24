@@ -1,43 +1,65 @@
+import { isAnivexaProviderId, type AnivexaProviderId } from '@/types/anivexa';
+import type {
+  RemoteNotificationCategory,
+  RemoteNotificationSeverity,
+} from '@/types/notifications';
+
 export const APP_NOTIFICATIONS_CHANGED_EVENT =
   'animonkey:app-notifications-changed';
+export const APP_NOTIFICATION_CENTER_OPEN_EVENT =
+  'animonkey:open-app-notification-center';
 export const APP_UPDATE_CENTER_OPEN_EVENT = 'animonkey:open-app-update-center';
 export const APP_NOTIFICATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const APP_NOTIFICATION_LIMIT = 100;
 
-export type AppNotificationKind =
-  'episode-ready' | 'update-ready' | 'update-installed';
-
-export interface AppNotification {
+interface StoredAppNotificationBase {
   id: string;
-  kind: AppNotificationKind;
   title: string;
   message: string;
   createdAt: number;
   readAt: number | null;
   dismissedAt: number | null;
+}
+
+export interface EpisodeAppNotification extends StoredAppNotificationBase {
+  kind: 'episode-ready';
   animeId?: string;
   episode?: number;
+}
+
+export interface UpdateAppNotification extends StoredAppNotificationBase {
+  kind: 'update-ready' | 'update-installed';
   version?: string;
 }
 
-export type NewAppNotification = Omit<
-  AppNotification,
-  'createdAt' | 'readAt' | 'dismissedAt'
-> &
-  (
-    | {
-        kind: 'episode-ready';
-        animeId: string;
-        episode: number;
-        version?: never;
-      }
-    | {
-        kind: 'update-ready' | 'update-installed';
-        animeId?: never;
-        episode?: never;
-        version: string;
-      }
-  );
+export interface RemoteAppNotification extends StoredAppNotificationBase {
+  kind: 'remote';
+  category: RemoteNotificationCategory;
+  severity: RemoteNotificationSeverity;
+  priority: number;
+  expiresAt: number;
+  action: 'none' | 'anime';
+  animeId?: string;
+  providerId?: AnivexaProviderId;
+}
+
+export type AppNotification =
+  EpisodeAppNotification | UpdateAppNotification | RemoteAppNotification;
+
+type WithoutStoredTimestamps<T> = T extends AppNotification
+  ? Omit<T, 'createdAt' | 'readAt' | 'dismissedAt'>
+  : never;
+
+type NewLocalAppNotification = WithoutStoredTimestamps<
+  Exclude<AppNotification, RemoteAppNotification>
+>;
+
+export type NewRemoteAppNotification = Omit<
+  RemoteAppNotification,
+  'readAt' | 'dismissedAt'
+>;
+
+export type NewAppNotification = NewLocalAppNotification;
 
 function isTimestamp(value: unknown): value is number {
   return (
@@ -88,6 +110,59 @@ export function isAppNotification(value: unknown): value is AppNotification {
       value.version.length > 0 &&
       value.version.length <= 40 &&
       value.id === `${value.kind}:${value.version}`
+    );
+  }
+
+  if (value.kind === 'remote') {
+    const allowedKeys = new Set([
+      'id',
+      'kind',
+      'title',
+      'message',
+      'createdAt',
+      'readAt',
+      'dismissedAt',
+      'category',
+      'severity',
+      'priority',
+      'expiresAt',
+      'action',
+      'animeId',
+      'providerId',
+    ]);
+    const hasAnimeId =
+      typeof value.animeId === 'string' && /^[1-9]\d{0,9}$/.test(value.animeId);
+    const hasProviderId = isAnivexaProviderId(value.providerId);
+    return (
+      Object.keys(value).every((key) => allowedKeys.has(key)) &&
+      Object.keys(value).length >= 12 &&
+      Object.keys(value).length <= 14 &&
+      /^remote:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        value.id,
+      ) &&
+      [
+        'maintenance',
+        'provider_health',
+        'moderation',
+        'new_anime',
+        'spotlight',
+        'trending',
+      ].includes(String(value.category)) &&
+      ['info', 'warning', 'critical'].includes(String(value.severity)) &&
+      typeof value.priority === 'number' &&
+      Number.isSafeInteger(value.priority) &&
+      value.priority >= 0 &&
+      value.priority <= 100 &&
+      isTimestamp(value.expiresAt) &&
+      value.expiresAt > value.createdAt &&
+      (value.action === 'none' || value.action === 'anime') &&
+      (value.animeId === undefined || hasAnimeId) &&
+      (value.providerId === undefined || hasProviderId) &&
+      ['new_anime', 'spotlight', 'trending'].includes(
+        String(value.category),
+      ) === hasAnimeId &&
+      (value.category === 'provider_health' || !hasProviderId) &&
+      (value.action !== 'anime' || hasAnimeId)
     );
   }
 

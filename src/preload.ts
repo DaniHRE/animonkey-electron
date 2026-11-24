@@ -19,7 +19,10 @@ import {
   type AnivexaBridge,
 } from './types/anivexa';
 import type { ScreenshotSearchBridge } from './types/screenshot-search';
-import type { DesktopNotificationsBridge } from './types/notifications';
+import {
+  isRemoteNotificationRefreshResult,
+  type DesktopNotificationsBridge,
+} from './types/notifications';
 import { isAppUpdateSnapshot, type AppUpdateBridge } from './types/updates';
 import {
   isWindowControlsState,
@@ -124,6 +127,15 @@ contextBridge.exposeInMainWorld('animonkey', {
     isSupported: () => ipcRenderer.invoke('notifications:is-supported'),
     showNewEpisode: (input) =>
       ipcRenderer.invoke('notifications:show-new-episode', input),
+    refreshRemoteFeed: async () => {
+      const value: unknown = await ipcRenderer.invoke(
+        'notifications:remote-feed:refresh',
+      );
+      if (!isRemoteNotificationRefreshResult(value)) {
+        return { status: 'disabled' };
+      }
+      return value;
+    },
   } satisfies DesktopNotificationsBridge,
   anivexa: {
     request: (request, requestId) =>

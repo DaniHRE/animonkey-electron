@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed for owner review.** This low-load revision uses a static JSON object in Supabase Storage and its CDN. It creates no database schema, Edge Function endpoint, bucket, or client behavior until approved. The proposed read path makes no Edge Function invocations or application-table queries.
+**The client implementation is complete locally.** It reads one static JSON object from Supabase Storage and its CDN. The feature creates no database schema or Edge Function endpoint and makes no application-table queries. The public bucket and feed object have not been provisioned, and no messages have been published.
 
 ## Goal and boundaries
 
@@ -114,12 +114,10 @@ For comparison, the earlier six-hour `desktop-api` polling idea could add up to 
 - Keep read/dismiss state on the device and preserve the existing 30-day, 100-item local notification retention behavior.
 - Treat the remote feed as best effort. A Storage error, quota response, or invalid feed must never block app startup, navigation, playback, local library data, account screens, or local notifications. Keep the last valid cache and enforce the retry delays above.
 
-## Decisions requested before implementation
+## Remaining operational setup
 
-1. Approve the feed as public broadcast content stored in Supabase Storage, with maintainers uploading the JSON object manually.
-2. Accept the six-hour refresh window, up to 30 minutes of jitter, and best-effort delivery without real-time guarantees.
-3. Accept the 4 KiB payload and 8-message cap.
-4. Treat approximately 20 monthly active users as a provisional planning estimate, not a hard cap. At that audience size, the feed is estimated at up to 2,500 reads and 10.24 MB/month before existing egress; confirm both cached and uncached egress headroom in the Supabase dashboard before enabling it.
-5. Keep provider-health notices manual until a separate rule for automating them from DISC-29 snapshots is agreed.
+The client treats a missing or unavailable feed as a non-fatal condition. To publish remote notices later, provision the `desktop-notifications` public-read bucket, configure the object cache lifetime to 3,600 seconds, and upload a validated `v1/feed.json`. Keep write access restricted to maintainers. Review current cached and uncached egress headroom in the Supabase dashboard before publishing; the estimates in this proposal cover only the incremental feed traffic, not total project usage.
+
+Keep provider-health notices manual until a separate rule for automating them from DISC-29 snapshots is agreed. No bucket, object, or remote message was created as part of the local client implementation.
 
 After agreement, implementation can add the public Storage bucket and validated JSON contract, a fixed main-process fetch, local notification-state integration, and a focused DISC-14 runtime check. No database migration or Edge Function endpoint is needed for feed reads.

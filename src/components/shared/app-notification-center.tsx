@@ -1,9 +1,21 @@
-import { Bell, CheckCheck, Download, Film, X } from 'lucide-react';
+import {
+  Bell,
+  CheckCheck,
+  Download,
+  Film,
+  Flame,
+  Radio,
+  ShieldAlert,
+  Sparkles,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import {
   APP_NOTIFICATIONS_CHANGED_EVENT,
+  APP_NOTIFICATION_CENTER_OPEN_EVENT,
   APP_UPDATE_CENTER_OPEN_EVENT,
   type AppNotification,
 } from '@/lib/app-notifications';
@@ -95,6 +107,15 @@ export function AppNotificationCenter() {
         });
         return;
       }
+      if (notification.kind === 'remote') {
+        if (notification.action === 'anime' && notification.animeId) {
+          void navigate({
+            to: '/anime/$id',
+            params: { id: notification.animeId },
+          });
+        }
+        return;
+      }
       window.dispatchEvent(new Event(APP_UPDATE_CENTER_OPEN_EVENT));
     } catch {
       setError('Não foi possível abrir esta notificação.');
@@ -115,6 +136,7 @@ export function AppNotificationCenter() {
   const openCenter = () => {
     setError(null);
     setIsOpen(true);
+    window.dispatchEvent(new Event(APP_NOTIFICATION_CENTER_OPEN_EVENT));
     void refresh();
   };
 
@@ -187,8 +209,9 @@ export function AppNotificationCenter() {
                   Notificações recentes
                 </h2>
                 <p>
-                  Avisos locais de episódios e atualizações. O histórico fica
-                  disponível offline por até 30 dias, limitado a 100 itens.
+                  Avisos de sistema, provedores, animes e eventos locais. O
+                  histórico fica disponível offline por até 30 dias, limitado a
+                  100 itens.
                 </p>
               </div>
               {unreadCount > 0 && (
@@ -221,7 +244,35 @@ export function AppNotificationCenter() {
               <ul className="app-notification-dialog__list">
                 {notifications.map((notification) => {
                   const isEpisode = notification.kind === 'episode-ready';
-                  const Icon = isEpisode ? Film : Download;
+                  const isRemote = notification.kind === 'remote';
+                  const hasAnimeAction =
+                    notification.kind === 'remote' &&
+                    notification.action === 'anime';
+                  const Icon = isRemote
+                    ? notification.category === 'maintenance'
+                      ? Wrench
+                      : notification.category === 'provider_health'
+                        ? Radio
+                        : notification.category === 'moderation'
+                          ? ShieldAlert
+                          : notification.category === 'new_anime'
+                            ? Sparkles
+                            : notification.category === 'spotlight'
+                              ? Film
+                              : Flame
+                    : isEpisode
+                      ? Film
+                      : Download;
+                  const categoryLabel = isRemote
+                    ? {
+                        maintenance: 'Sistema',
+                        provider_health: 'Provedor',
+                        moderation: 'Política',
+                        new_anime: 'Novo anime',
+                        spotlight: 'Destaque',
+                        trending: 'Em alta',
+                      }[notification.category]
+                    : null;
                   return (
                     <li
                       key={notification.id}
@@ -245,14 +296,33 @@ export function AppNotificationCenter() {
                             {formatCreatedAt(notification.createdAt)}
                           </time>
                         </div>
+                        {isRemote && (
+                          <div className="app-notification-dialog__labels">
+                            <span>{categoryLabel}</span>
+                            <span
+                              data-severity={notification.severity}
+                              className="app-notification-dialog__severity"
+                            >
+                              {notification.severity === 'critical'
+                                ? 'Crítico'
+                                : notification.severity === 'warning'
+                                  ? 'Atenção'
+                                  : 'Informativo'}
+                            </span>
+                          </div>
+                        )}
                         <p>{notification.message}</p>
-                        <button
-                          type="button"
-                          className="app-notification-dialog__action"
-                          onClick={() => void openNotification(notification)}
-                        >
-                          {isEpisode ? 'Abrir anime' : 'Abrir atualizações'}
-                        </button>
+                        {(!isRemote || hasAnimeAction) && (
+                          <button
+                            type="button"
+                            className="app-notification-dialog__action"
+                            onClick={() => void openNotification(notification)}
+                          >
+                            {isEpisode || hasAnimeAction
+                              ? 'Abrir anime'
+                              : 'Abrir atualizações'}
+                          </button>
+                        )}
                       </div>
                       <button
                         type="button"

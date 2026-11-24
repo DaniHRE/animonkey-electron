@@ -263,6 +263,28 @@
   line-height: 1.55;
 }
 
+.app-notification-dialog__labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  color: rgb(255 255 255 / 48%);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.app-notification-dialog__severity {
+  color: #9be9b0;
+}
+
+.app-notification-dialog__severity[data-severity='warning'] {
+  color: #f3cf80;
+}
+
+.app-notification-dialog__severity[data-severity='critical'] {
+  color: #ff9f9f;
+}
+
 .app-notification-dialog__action {
   padding: 0;
   border: 0;
