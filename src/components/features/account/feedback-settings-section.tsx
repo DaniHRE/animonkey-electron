@@ -53,7 +53,7 @@ export function FeedbackSettingsSection({
         area,
         title,
         description,
-        consentVersion: 'feedback-v1',
+        consentVersion: 'feedback-v2',
       });
       setTitle('');
       setDescription('');
@@ -182,10 +182,12 @@ export function FeedbackSettingsSection({
 
           <p className="text-xs leading-relaxed text-white/45">
             O envio guarda apenas o identificador da conta, tipo, área, título,
-            descrição e registro do consentimento. A equipe pode revisar o
-            conteúdo; os registros são apagados automaticamente após 180 dias.
-            Eles também aparecem na exportação da conta. Não inclua senhas,
-            tokens, dados pessoais nem URLs de streams.
+            descrição e registro do consentimento. A equipe pode revisar e
+            transformar o envio em uma Issue do projeto para planejar correções;
+            a Issue não inclui identificadores da sua conta e fica visível a
+            quem tem acesso ao repositório. Os registros são apagados após 180
+            dias e aparecem na exportação da conta. Não inclua senhas, tokens,
+            dados pessoais nem URLs de streams.
           </p>
 
           <label className="flex items-start gap-3 text-sm leading-relaxed text-white/70">
@@ -198,7 +200,8 @@ export function FeedbackSettingsSection({
             />
             <span>
               Concordo em enviar esses dados à equipe do Animonkey para análise
-              e triagem.
+              e triagem, incluindo a possibilidade de uma versão revisada ser
+              registrada como Issue no repositório do projeto.
             </span>
           </label>
 

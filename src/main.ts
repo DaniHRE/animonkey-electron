@@ -350,7 +350,7 @@ function isFeedbackSubmissionInput(
     typeof input.description === 'string' &&
     input.description.trim().length >= 1 &&
     input.description.trim().length <= 2000 &&
-    input.consentVersion === 'feedback-v1'
+    input.consentVersion === 'feedback-v2'
   );
 }
 

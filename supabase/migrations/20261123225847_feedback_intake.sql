@@ -21,7 +21,7 @@ create table public.feedback_submissions (
   description text not null
     check (char_length(btrim(description)) between 1 and 2000),
   consent_version text not null
-    check (consent_version = 'feedback-v1'),
+    check (consent_version = 'feedback-v2'),
   consented_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );

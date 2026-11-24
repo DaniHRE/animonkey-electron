@@ -1243,7 +1243,7 @@ async function feedbackSubmit(
       'interface',
       'other',
     ].includes(area) ||
-    consentVersion !== 'feedback-v1'
+    consentVersion !== 'feedback-v2'
   ) {
     throw new ApiError(400, 'invalid_feedback');
   }

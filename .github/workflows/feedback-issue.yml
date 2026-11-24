@@ -1,0 +1,61 @@
+name: Create GitHub issue from reviewed feedback
+
+on:
+  workflow_dispatch:
+    inputs:
+      feedback_id:
+        description: Supabase feedback record UUID
+        type: string
+        required: true
+      issue_title:
+        description: Reviewed issue title
+        type: string
+        required: true
+      issue_body:
+        description: Reviewed issue body without account or personal data
+        type: string
+        required: true
+      content_reviewed:
+        description: Confirm the issue text is appropriate for repository collaborators
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feedback-issue-${{ inputs.feedback_id }}
+  cancel-in-progress: false
+
+jobs:
+  create-issue:
+    if: inputs.content_reviewed
+    name: Publish reviewed feedback issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Check out the workflow source
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26.13.1
+
+      - name: Verify the feedback record and create its reviewed issue
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ github.token }}
+          INPUT_CONTENT_REVIEWED: ${{ inputs.content_reviewed }}
+          INPUT_FEEDBACK_ID: ${{ inputs.feedback_id }}
+          INPUT_ISSUE_BODY: ${{ inputs.issue_body }}
+          INPUT_ISSUE_TITLE: ${{ inputs.issue_title }}
+          SUPABASE_PROJECT_URL: ${{ vars.SUPABASE_PROJECT_URL }}
+          SUPABASE_SECRET_API_KEY: ${{ secrets.SUPABASE_SECRET_API_KEY }}
+        run: node scripts/create-feedback-issue.mjs

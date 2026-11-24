@@ -40,7 +40,7 @@ export interface FeedbackSubmissionInput {
   area: FeedbackFunctionalArea;
   title: string;
   description: string;
-  consentVersion: 'feedback-v1';
+  consentVersion: 'feedback-v2';
 }
 
 export type WatchLaterRemoteItem = WatchLaterItem & {
