@@ -3,7 +3,7 @@
   "productName": "Animonkey",
   "description": "Desktop anime discovery and personal library with offline tracking, optional account sync, and playback from available Anivexa sources",
   "author": "DaniHRE",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "main": ".vite/build/main.js",
   "private": true,
   "engines": {

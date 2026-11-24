@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import releaseNotes from '@/data/release-notes.json';
+import { APP_UPDATE_CENTER_OPEN_EVENT } from '@/lib/app-notifications';
+import { addAppNotification } from '@/services/cache/local-db';
 import type { AppUpdateSnapshot, AppUpdateStatus } from '@/types/updates';
 import './app-update-center.css';
 
@@ -168,6 +170,13 @@ export function AppUpdateCenter() {
           if (previousVersion && previousVersion !== next.currentVersion) {
             setPanel('overview');
             setIsOpen(true);
+            void addAppNotification({
+              id: `update-installed:${next.currentVersion}`,
+              kind: 'update-installed',
+              title: 'Atualização instalada',
+              message: `Animonkey ${next.currentVersion} está atualizado. Veja as novidades desta versão.`,
+              version: next.currentVersion,
+            }).catch(() => undefined);
           }
           window.localStorage.setItem(VERSION_STORAGE_KEY, next.currentVersion);
         } catch {
@@ -178,9 +187,23 @@ export function AppUpdateCenter() {
       if (next.status === 'ready' && previousStatus.current !== 'ready') {
         setPanel('overview');
         setIsOpen(true);
+        if (next.currentVersion) {
+          void addAppNotification({
+            id: `update-ready:${next.currentVersion}`,
+            kind: 'update-ready',
+            title: 'Atualização pronta',
+            message: 'Uma nova versão do Animonkey está pronta para instalar.',
+            version: next.currentVersion,
+          }).catch(() => undefined);
+        }
       }
       previousStatus.current = next.status;
     };
+    const openUpdateCenter = () => {
+      setPanel('overview');
+      setIsOpen(true);
+    };
+    window.addEventListener(APP_UPDATE_CENTER_OPEN_EVENT, openUpdateCenter);
     const unsubscribe = window.animonkey.updates.onStateChanged(applySnapshot);
     void window.animonkey.updates
       .getState()
@@ -192,6 +215,10 @@ export function AppUpdateCenter() {
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener(
+        APP_UPDATE_CENTER_OPEN_EVENT,
+        openUpdateCenter,
+      );
     };
   }, []);
 

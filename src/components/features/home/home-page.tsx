@@ -18,6 +18,7 @@ import {
   WatchLaterSection,
 } from '@/components/features/home/home-library-sections';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useWatchLater } from '@/hooks/use-watch-later';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { animeQueries, mergeAnimeMetadata } from '@/services/anime-queries';
@@ -42,8 +43,11 @@ function getHeroFormatLabel(format: string | undefined): string | undefined {
 
 export function HomePage() {
   const queryClient = useQueryClient();
-  const homeQuery = useQuery(animeQueries.home());
-  const scheduleQuery = useQuery(animeQueries.schedule(new Date()));
+  const { includeAdult } = useAdultContentPreference();
+  const homeQuery = useQuery(animeQueries.home(includeAdult));
+  const scheduleQuery = useQuery(
+    animeQueries.schedule(new Date(), includeAdult),
+  );
   const home = homeQuery.data;
   const spotlightQuery = useQuery({
     ...animeQueries.spotlight(queryClient, home?.banner ?? []),
@@ -311,23 +315,11 @@ export function HomePage() {
       ) : home ? (
         <main className="mx-auto w-full max-w-[1440px] px-6 py-8 2xl:px-10">
           <div className="grid grid-cols-1 gap-10 xl:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="min-w-0 space-y-10">
+            <div className="order-1 min-w-0 space-y-10 xl:order-none">
               <ContinueWatchingSection />
               <WatchLaterSection />
-              <AnimeRail
-                title="Atualizados Recentemente"
-                eyebrow="Temporada atual"
-                items={home.newReleases.slice(0, 6)}
-                link="/updates"
-                icon="new"
-              />
-              <HomeTabs
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                items={homeTabItems ?? []}
-              />
             </div>
-            <section>
+            <section className="order-3 xl:order-none xl:col-start-2 xl:row-start-1">
               <div className="mb-5 flex items-end justify-between">
                 <div>
                   <p className="mb-1.5 flex items-center gap-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
@@ -377,6 +369,20 @@ export function HomePage() {
                 </p>
               )}
             </section>
+            <div className="order-2 min-w-0 space-y-10 xl:order-none xl:col-span-2">
+              <AnimeRail
+                title="Atualizados Recentemente"
+                eyebrow="Temporada atual"
+                items={home.newReleases.slice(0, 6)}
+                link="/updates"
+                icon="new"
+              />
+              <HomeTabs
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                items={homeTabItems ?? []}
+              />
+            </div>
           </div>
         </main>
       ) : null}

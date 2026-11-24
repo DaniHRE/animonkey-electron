@@ -19,7 +19,7 @@
 
 Animonkey Desktop brings anime discovery and personal watch tracking into a desktop app. Explore the AniList catalog and schedule, keep your library on this device, and use the bundled Anivexa runtime to find episode sources supported by Vidstack.
 
-> **Release status:** Version 1.0 is in preparation. Windows x64 is the initial distribution target; there is no public installer yet. Support for other release platforms has not been confirmed.
+> **Release status:** Version 1.1.0 is prepared as a local release candidate. Windows x64 is the initial distribution target; there is no public installer yet.
 
 ## Home
 
@@ -65,6 +65,7 @@ The package prepares the pinned [`vendor/anivexa-api`](vendor/anivexa-api) submo
 ## Documentation
 
 - [Documentation index](docs/README.md)
+- [Supabase deployment and project status](docs/supabase-deployment.md)
 - [1.0 release closeout — v1.0.2 published](docs/releases/1.0-checklist.md)
 - [Archived original 1.0 roadmap](docs/archive/1.0-roadmap.md)
 - [Archived migration plan](docs/archive/MIGRATION_PLAN.md)

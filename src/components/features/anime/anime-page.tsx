@@ -1,6 +1,8 @@
 import {
   Bookmark,
   BookmarkCheck,
+  Bell,
+  BellRing,
   Check,
   Clapperboard,
   Clock,
@@ -20,6 +22,8 @@ import { AnimeRelationsGrid } from '@/components/features/anime/anime-relations-
 import { animeQueries } from '@/services/anime-queries';
 import { getAnimeImage, resolveAnimeTitle, stripHtml } from '@/lib/anime';
 import { useWatchLater } from '@/hooks/use-watch-later';
+import { useAiringNotificationPreferences } from '@/hooks/use-airing-notification-preferences';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useAnimeRating } from '@/hooks/use-anime-rating';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 
@@ -30,7 +34,10 @@ export function AnimePage() {
   const { titleLanguage } = useTitleLanguage();
   const { id } = animeRoute.useParams();
   const queryClient = useQueryClient();
-  const animeQuery = useQuery(animeQueries.detail(queryClient, id));
+  const { includeAdult } = useAdultContentPreference();
+  const animeQuery = useQuery(
+    animeQueries.detail(queryClient, id, includeAdult),
+  );
   const anime = animeQuery.data ?? null;
   const episodesQuery = useQuery({
     ...animeQueries.episodes(id, anime),
@@ -38,6 +45,8 @@ export function AnimePage() {
   });
   const loading = animeQuery.isPending;
   const { isInList, toggle } = useWatchLater();
+  const { isFollowing, toggleFollow, followedAnimeLoaded } =
+    useAiringNotificationPreferences();
   const userRating = useAnimeRating(id);
   const [currentTime, setCurrentTime] = useState(0);
   const [reviewDraft, setReviewDraft] = useState<string | null>(null);
@@ -259,6 +268,33 @@ export function AnimePage() {
                       )}
                     </button>
                   </div>
+                  <button
+                    type="button"
+                    disabled={!followedAnimeLoaded}
+                    onClick={() => {
+                      const result = toggleFollow(anime);
+                      setFeedback(
+                        result === 'limit'
+                          ? 'Você pode acompanhar até 50 animes neste dispositivo.'
+                          : result === 'added'
+                            ? 'Anime adicionado a Acompanhar.'
+                            : 'Anime removido de Acompanhar.',
+                      );
+                    }}
+                    aria-pressed={isFollowing(anime.id)}
+                    aria-label={
+                      isFollowing(anime.id)
+                        ? 'Parar de acompanhar episódios'
+                        : 'Acompanhar novos episódios'
+                    }
+                    className="inline-flex h-10 w-11 items-center justify-center rounded-md border border-white/15 bg-white/[0.06] text-white/80 transition hover:bg-white/[0.12] disabled:opacity-40"
+                  >
+                    {isFollowing(anime.id) ? (
+                      <BellRing size={16} />
+                    ) : (
+                      <Bell size={16} />
+                    )}
+                  </button>
                   <button
                     type="button"
                     aria-label={

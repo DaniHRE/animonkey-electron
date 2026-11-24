@@ -431,6 +431,8 @@ Do not invent publisher identities or imply that a package is digitally signed w
 
 Preserve the established Windows auto-update safeguards, including platform restrictions, startup timing, sanitized IPC status events, and controlled restart behavior.
 
+For every public build-time variable required by the packaged app, pass it explicitly to both the Windows CI package build and the stable release package build. Source public values from GitHub Actions repository variables, fail the production build when required values are missing, and do not rely on a developer's ignored `.env` file. Any new public `VITE_*` value used by the packaged app must be added to both workflow build environments. Never pass private keys or service-role credentials through Vite or into a distributed package.
+
 Maintain `src/data/release-notes.json` according to the existing release-note validation rules.
 
 Consult the active release documentation before changing packaging or release automation.

@@ -1,3 +1,58 @@
+export const ANIVEXA_PROVIDER_IDS = [
+  'reanime',
+  'anikoto',
+  'animegg',
+  'anineko',
+  'anibdapp',
+  '2dhive',
+  'anibd',
+  'aniwaves',
+  'senshi',
+  'anizone',
+  'animeonsen',
+  'animedunya',
+  'kaa',
+  'animenosub',
+  'mkissa',
+] as const;
+
+export type AnivexaProviderId = (typeof ANIVEXA_PROVIDER_IDS)[number];
+
+export const PROVIDER_FAILURE_HTTP_STATUSES = [502, 503, 504] as const;
+
+export type ProviderFailureHttpStatus =
+  (typeof PROVIDER_FAILURE_HTTP_STATUSES)[number];
+
+export interface ProviderFailureReportInput {
+  provider: AnivexaProviderId;
+  status: ProviderFailureHttpStatus;
+  consentVersion: 'provider-failure-v1';
+}
+
+export function isAnivexaProviderId(
+  value: unknown,
+): value is AnivexaProviderId {
+  return ANIVEXA_PROVIDER_IDS.some((provider) => provider === value);
+}
+
+export function isProviderFailureHttpStatus(
+  value: unknown,
+): value is ProviderFailureHttpStatus {
+  return PROVIDER_FAILURE_HTTP_STATUSES.some((status) => status === value);
+}
+
+export function isProviderFailureReportInput(
+  value: unknown,
+): value is ProviderFailureReportInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    isAnivexaProviderId(input.provider) &&
+    isProviderFailureHttpStatus(input.status) &&
+    input.consentVersion === 'provider-failure-v1'
+  );
+}
+
 export type AnivexaDesktopRequest =
   | { kind: 'episodes'; animeId: string }
   | {
@@ -27,6 +82,17 @@ export interface AnivexaDiagnosticsSnapshot {
   revision: number;
   status: AnivexaRuntimeStatus;
   entries: AnivexaDiagnosticEntry[];
+}
+
+export type AnivexaDiagnosticsExportResult =
+  { status: 'saved' } | { status: 'cancelled' };
+
+export function isAnivexaDiagnosticsExportResult(
+  value: unknown,
+): value is AnivexaDiagnosticsExportResult {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const result = value as Record<string, unknown>;
+  return result.status === 'saved' || result.status === 'cancelled';
 }
 
 export function isAnivexaDiagnosticsSnapshot(
@@ -66,6 +132,7 @@ export interface AnivexaBridge {
   cancel: (requestId: string) => void;
   getDiagnostics: () => Promise<AnivexaDiagnosticsSnapshot>;
   clearDiagnostics: () => Promise<AnivexaDiagnosticsSnapshot>;
+  exportDiagnostics: () => Promise<AnivexaDiagnosticsExportResult>;
   onDiagnosticsChanged: (
     callback: (snapshot: AnivexaDiagnosticsSnapshot) => void,
   ) => () => void;

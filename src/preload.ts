@@ -5,18 +5,31 @@ import type {
   AccountRegistration,
   ActivityFeedCursor,
   EpisodeProgressInput,
+  FeedbackSubmissionInput,
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeArtworkBridge, AnimeRating } from './types/anime';
 import {
+  isProviderFailureReportInput,
+  type ProviderFailureReportInput,
+} from './types/anivexa';
+import {
+  isAnivexaDiagnosticsExportResult,
   isAnivexaDiagnosticsSnapshot,
   type AnivexaBridge,
 } from './types/anivexa';
+import type { ScreenshotSearchBridge } from './types/screenshot-search';
+import {
+  isRemoteNotificationRefreshResult,
+  type DesktopNotificationsBridge,
+} from './types/notifications';
 import { isAppUpdateSnapshot, type AppUpdateBridge } from './types/updates';
 import {
   isWindowControlsState,
   type WindowControlsBridge,
 } from './types/window-controls';
+
+const MAX_SCREENSHOT_SEARCH_IMAGE_BYTES = 10 * 1024 * 1024;
 
 let pendingAnimeId: string | null = null;
 const animeRouteListeners = new Set<(animeId: string) => void>();
@@ -83,17 +96,62 @@ contextBridge.exposeInMainWorld('animonkey', {
         currentPassword,
         newPassword,
       }),
+    submitFeedback: (input: FeedbackSubmissionInput) =>
+      ipcRenderer.invoke('account:feedback:submit', input),
+    reportProviderFailure: (input: ProviderFailureReportInput) => {
+      if (!isProviderFailureReportInput(input)) {
+        return Promise.reject(new Error('Relatório de provedor inválido.'));
+      }
+      return ipcRenderer.invoke('account:provider-failure:report', input);
+    },
   } satisfies AccountBridge,
   artwork: {
     getMetadata: (identities) =>
       ipcRenderer.invoke('anime:artwork:metadata', identities),
   } satisfies AnimeArtworkBridge,
+  screenshotSearch: {
+    search: (input, requestId) => {
+      if (
+        !(input.bytes instanceof Uint8Array) ||
+        input.bytes.byteLength === 0 ||
+        input.bytes.byteLength > MAX_SCREENSHOT_SEARCH_IMAGE_BYTES ||
+        !['image/jpeg', 'image/png', 'image/webp'].includes(input.contentType)
+      )
+        return Promise.reject(new Error('Selecione uma imagem válida.'));
+      return ipcRenderer.invoke('screenshot-search:search', input, requestId);
+    },
+    cancel: (requestId) =>
+      ipcRenderer.send('screenshot-search:cancel', requestId),
+  } satisfies ScreenshotSearchBridge,
+  notifications: {
+    isSupported: () => ipcRenderer.invoke('notifications:is-supported'),
+    showNewEpisode: (input) =>
+      ipcRenderer.invoke('notifications:show-new-episode', input),
+    refreshRemoteFeed: async () => {
+      const value: unknown = await ipcRenderer.invoke(
+        'notifications:remote-feed:refresh',
+      );
+      if (!isRemoteNotificationRefreshResult(value)) {
+        return { status: 'disabled' };
+      }
+      return value;
+    },
+  } satisfies DesktopNotificationsBridge,
   anivexa: {
     request: (request, requestId) =>
       ipcRenderer.invoke('anivexa:request', { request, requestId }),
     cancel: (requestId) => ipcRenderer.send('anivexa:cancel', requestId),
     getDiagnostics: () => ipcRenderer.invoke('anivexa:diagnostics:get'),
     clearDiagnostics: () => ipcRenderer.invoke('anivexa:diagnostics:clear'),
+    exportDiagnostics: async () => {
+      const value: unknown = await ipcRenderer.invoke(
+        'anivexa:diagnostics:export',
+      );
+      if (!isAnivexaDiagnosticsExportResult(value)) {
+        throw new Error('Invalid Anivexa diagnostics export result.');
+      }
+      return value;
+    },
     onDiagnosticsChanged: (callback) => {
       const listener = (_event: IpcRendererEvent, value: unknown) => {
         if (isAnivexaDiagnosticsSnapshot(value)) callback(value);

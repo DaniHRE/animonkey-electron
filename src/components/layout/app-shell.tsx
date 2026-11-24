@@ -16,8 +16,8 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import type { CSSProperties, FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, FormEvent, KeyboardEvent } from 'react';
 import {
   Link,
   Outlet,
@@ -26,28 +26,111 @@ import {
   useRouterState,
 } from '@tanstack/react-router';
 import { motion, useReducedMotion } from 'motion/react';
+import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
+import { useContinueWatchingVisibilityPreference } from '@/hooks/use-watch-history-preferences';
+import { useAiringNotificationMonitor } from '@/hooks/use-airing-notification-monitor';
+import { useRemoteNotificationFeed } from '@/hooks/use-remote-notification-feed';
+import { useLocalPreference } from '@/hooks/use-local-preference';
+import { useTitleLanguage } from '@/hooks/use-title-language';
 import animonkeyLogoUrl from '@/assets/brand/animonkey-logo-navbar.svg';
+import { resolveAnimeTitle } from '@/lib/anime';
 import { ProfileAvatar } from '@/components/shared/profile-avatar';
+import { AppNotificationCenter } from '@/components/shared/app-notification-center';
 import { AppUpdateCenter } from '@/components/shared/app-update-center';
+import { ScreenshotSearchPanel } from '@/components/features/search/screenshot-search-panel';
 import { SidebarTooltip } from '@/components/layout/sidebar-tooltip';
 import { WindowControls } from '@/components/layout/window-controls';
-import { useTitleLanguage } from '@/hooks/use-title-language';
+import {
+  DEFAULT_SHORTCUT_PREFERENCES,
+  isShortcutEditableTarget,
+  matchesShortcut,
+  normalizeShortcutPreferences,
+  SHORTCUT_COMMANDS,
+  SHORTCUT_PREFERENCE_KEY,
+} from '@/lib/keyboard-shortcuts';
+import {
+  DEFAULT_SIDEBAR_ROUTE_ORDER,
+  normalizeSidebarRouteOrder,
+  SIDEBAR_ORDER_PREFERENCE_KEY,
+} from '@/lib/sidebar-route-order';
+import { animeQueries } from '@/services/anime-queries';
 import './app-shell.css';
 
-const navItems = [
-  { label: 'Início', path: '/', icon: House, end: true },
-  { label: 'Explorar', path: '/search', icon: Compass, end: false },
-  { label: 'Agenda', path: '/schedule', icon: CalendarDays, end: false },
-  { label: 'Feed', path: '/activity', icon: Activity, end: false },
-  { label: 'Lançamentos', path: '/updates', icon: Sparkles, end: false },
+const pinnedNavItems = [
+  { id: 'home', label: 'Início', path: '/', icon: House, end: true },
+  {
+    id: 'search',
+    label: 'Explorar',
+    path: '/search',
+    icon: Compass,
+    end: false,
+  },
+] as const;
+
+const primaryNavItems = [
+  {
+    id: 'schedule',
+    label: 'Agenda',
+    path: '/schedule',
+    icon: CalendarDays,
+    end: false,
+  },
+  {
+    id: 'activity',
+    label: 'Feed',
+    path: '/activity',
+    icon: Activity,
+    end: false,
+  },
+  {
+    id: 'updates',
+    label: 'Lançamentos',
+    path: '/updates',
+    icon: Sparkles,
+    end: false,
+  },
 ] as const;
 
 const moreItems = [
-  { label: 'Em alta', icon: Flame, path: '/trending' },
-  { label: 'Continuar assistindo', icon: History, path: '/continue-watching' },
-  { label: 'Assistir Depois', icon: Bookmark, path: '/watch-later' },
+  {
+    id: 'trending',
+    label: 'Em alta',
+    icon: Flame,
+    path: '/trending',
+  },
+  {
+    id: 'continue-watching',
+    label: 'Continuar assistindo',
+    icon: History,
+    path: '/continue-watching',
+  },
+  {
+    id: 'watch-later',
+    label: 'Assistir Depois',
+    icon: Bookmark,
+    path: '/watch-later',
+  },
 ] as const;
+
+function orderSidebarItems<T extends { id: string }>(
+  items: readonly T[],
+  order: readonly string[],
+): T[] {
+  const byId = new Map(items.map((item) => [item.id, item] as const));
+  const orderedItems: T[] = [];
+  const included = new Set<string>();
+
+  for (const id of order) {
+    const item = byId.get(id);
+    if (!item || included.has(id)) continue;
+    orderedItems.push(item);
+    included.add(id);
+  }
+
+  return [...orderedItems, ...items.filter((item) => !included.has(item.id))];
+}
 
 function hasInAppHistory(router: ReturnType<typeof useRouter>): boolean {
   const historyIndex = router.history.location.state.__TSR_index;
@@ -156,8 +239,51 @@ function useInAppHistory(router: ReturnType<typeof useRouter>) {
 export function AppShell() {
   const hasCustomWindowChrome = window.animonkey.platform === 'win32';
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchPreviewOpen, setSearchPreviewOpen] = useState(false);
+  const [activeSearchPreviewIndex, setActiveSearchPreviewIndex] = useState(-1);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [moreExpanded, setMoreExpanded] = useState(false);
+  const { enabled: showContinueWatching } =
+    useContinueWatchingVisibilityPreference();
+  useAiringNotificationMonitor();
+  useRemoteNotificationFeed();
+  const { value: storedShortcuts, loaded: shortcutsLoaded } =
+    useLocalPreference<unknown>(
+      SHORTCUT_PREFERENCE_KEY,
+      DEFAULT_SHORTCUT_PREFERENCES,
+    );
+  const { value: storedSidebarRouteOrder, loaded: sidebarRouteOrderLoaded } =
+    useLocalPreference<unknown>(
+      SIDEBAR_ORDER_PREFERENCE_KEY,
+      DEFAULT_SIDEBAR_ROUTE_ORDER,
+    );
+  const shortcutPreferences = useMemo(
+    () => normalizeShortcutPreferences(storedShortcuts),
+    [storedShortcuts],
+  );
+  const normalizedSidebarRouteOrder = useMemo(
+    () => normalizeSidebarRouteOrder(storedSidebarRouteOrder),
+    [storedSidebarRouteOrder],
+  );
+  const sidebarRouteOrder = sidebarRouteOrderLoaded
+    ? normalizedSidebarRouteOrder
+    : DEFAULT_SIDEBAR_ROUTE_ORDER;
+  const orderedPrimaryNavItems = useMemo(
+    () => orderSidebarItems(primaryNavItems, sidebarRouteOrder.primary),
+    [sidebarRouteOrder.primary],
+  );
+  const orderedMoreItems = useMemo(
+    () =>
+      orderSidebarItems(
+        showContinueWatching
+          ? moreItems
+          : moreItems.filter((item) => item.id !== 'continue-watching'),
+        sidebarRouteOrder.more,
+      ),
+    [showContinueWatching, sidebarRouteOrder.more],
+  );
+  const navItems = [...pinnedNavItems, ...orderedPrimaryNavItems];
   const shouldReduceMotion = useReducedMotion() ?? false;
   const shellRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -166,21 +292,45 @@ export function AppShell() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const moreRouteActive = moreItems.some(
+  const moreRouteActive = orderedMoreItems.some(
     ({ path }) => pathname === path || pathname.startsWith(`${path}/`),
   );
   const showMoreItems = moreExpanded || moreRouteActive;
   const router = useRouter();
   const navigate = useNavigate();
+  const platform = window.animonkey.platform;
   const { canGoBack, canGoForward } = useInAppHistory(router);
   const canNavigateBack = canGoBack || pathname !== '/';
   const backLabel = canGoBack ? 'Voltar' : 'Ir para o início';
   const { session } = useAccount();
-  const { titleLanguage, toggleTitleLanguage } = useTitleLanguage();
+  const { includeAdult } = useAdultContentPreference();
+  const { titleLanguage } = useTitleLanguage();
+  const searchPreviewQuery = useQuery({
+    ...animeQueries.search(debouncedSearch, 1, {}, includeAdult),
+    enabled:
+      pathname !== '/search' &&
+      searchPreviewOpen &&
+      debouncedSearch.trim().length >= 2,
+    select: (response) => response.results.slice(0, 5),
+  });
+  const searchPreviewResults =
+    search.trim() === debouncedSearch ? (searchPreviewQuery.data ?? []) : [];
+  const isSearchPreviewVisible =
+    pathname !== '/search' && searchPreviewOpen && search.trim().length > 0;
+  const isSearchPreviewLoading =
+    search.trim() !== debouncedSearch || searchPreviewQuery.isFetching;
   const useContentFrame =
     pathname !== '/' &&
     !pathname.startsWith('/anime/') &&
     !pathname.startsWith('/watch/');
+
+  useEffect(() => {
+    const timeout = window.setTimeout(
+      () => setDebouncedSearch(search.trim()),
+      300,
+    );
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   useEffect(() => {
     let frame: number | undefined;
@@ -224,13 +374,87 @@ export function AppShell() {
     previousSidebarVisibility.current = sidebarVisible;
   }, [sidebarVisible]);
 
+  useEffect(() => {
+    if (!shortcutsLoaded) return;
+
+    const handleShortcut = (event: globalThis.KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        isShortcutEditableTarget(event.target)
+      )
+        return;
+
+      const command = SHORTCUT_COMMANDS.find(({ id }) =>
+        matchesShortcut(event, shortcutPreferences[id], platform),
+      );
+      if (!command) return;
+
+      event.preventDefault();
+      switch (command.id) {
+        case 'toggleSidebar':
+          setSidebarVisible((visible) => !visible);
+          break;
+        case 'focusSearch':
+          if (pathname !== '/search') setSearchPreviewOpen(true);
+          document
+            .querySelector<HTMLInputElement>('[data-app-shortcut-search]')
+            ?.focus();
+          break;
+        case 'openSettings':
+          void navigate({ to: '/settings' });
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [navigate, pathname, platform, shortcutPreferences, shortcutsLoaded]);
+
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSearchPreviewOpen(false);
+    setActiveSearchPreviewIndex(-1);
     const query = search.trim();
     void navigate({
       to: '/search',
       search: query ? { q: query } : {},
     });
+  }
+
+  function openAnimePreviewResult(animeId: string) {
+    setSearchPreviewOpen(false);
+    setActiveSearchPreviewIndex(-1);
+    void navigate({ to: '/anime/$id', params: { id: animeId } });
+  }
+
+  function handleSearchPreviewKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setSearchPreviewOpen(false);
+      setActiveSearchPreviewIndex(-1);
+      return;
+    }
+
+    if (!isSearchPreviewVisible || searchPreviewResults.length === 0) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveSearchPreviewIndex((index) =>
+        index >= searchPreviewResults.length - 1 ? 0 : index + 1,
+      );
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveSearchPreviewIndex((index) =>
+        index <= 0 ? searchPreviewResults.length - 1 : index - 1,
+      );
+    } else if (
+      event.key === 'Enter' &&
+      searchPreviewResults[activeSearchPreviewIndex]
+    ) {
+      event.preventDefault();
+      openAnimePreviewResult(searchPreviewResults[activeSearchPreviewIndex].id);
+    }
   }
 
   function goBack() {
@@ -266,8 +490,8 @@ export function AppShell() {
             className="app-sidebar__main-nav"
             aria-label="Navegação principal"
           >
-            {navItems.map(({ label, path, icon: Icon, end }) => (
-              <SidebarTooltip key={label} label={label}>
+            {navItems.map(({ id, label, path, icon: Icon, end }) => (
+              <SidebarTooltip key={id} label={label}>
                 <Link
                   to={path}
                   activeOptions={{ exact: end }}
@@ -314,19 +538,21 @@ export function AppShell() {
             className="app-sidebar__more-list"
           >
             <div className="app-sidebar__more-list-inner">
-              {moreItems.map(({ label, icon: Icon, path }, index) => (
-                <SidebarTooltip key={label} label={label}>
-                  <Link
-                    to={path}
-                    data-sidebar-link="true"
-                    aria-label={label}
-                    style={{ '--sidebar-index': index } as CSSProperties}
-                    className={`app-sidebar__nav-link app-sidebar__more-link ${pathname === path || pathname.startsWith(`${path}/`) ? 'is-active' : ''}`}
-                  >
-                    <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
-                  </Link>
-                </SidebarTooltip>
-              ))}
+              {orderedMoreItems.map(
+                ({ id, label, icon: Icon, path }, index) => (
+                  <SidebarTooltip key={id} label={label}>
+                    <Link
+                      to={path}
+                      data-sidebar-link="true"
+                      aria-label={label}
+                      style={{ '--sidebar-index': index } as CSSProperties}
+                      className={`app-sidebar__nav-link app-sidebar__more-link ${pathname === path || pathname.startsWith(`${path}/`) ? 'is-active' : ''}`}
+                    >
+                      <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
+                    </Link>
+                  </SidebarTooltip>
+                ),
+              )}
             </div>
           </nav>
           <span className="app-sidebar__divider" aria-hidden="true" />
@@ -464,42 +690,154 @@ export function AppShell() {
               />
             )}
             {pathname !== '/search' && (
-              <form onSubmit={submitSearch} className="app-header__search">
+              <form
+                onSubmit={submitSearch}
+                className="app-header__search"
+                autoComplete="off"
+              >
                 <Search
                   size={20}
                   className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-gray-400"
                 />
                 <input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setActiveSearchPreviewIndex(-1);
+                    setSearchPreviewOpen(event.target.value.trim().length > 0);
+                  }}
+                  onFocus={() => {
+                    if (search.trim()) setSearchPreviewOpen(true);
+                  }}
+                  onBlur={() => {
+                    setSearchPreviewOpen(false);
+                    setActiveSearchPreviewIndex(-1);
+                  }}
+                  onKeyDown={handleSearchPreviewKeyDown}
                   placeholder="Buscar anime..."
                   aria-label="Buscar anime"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  data-app-shortcut-search="true"
+                  aria-haspopup="listbox"
+                  aria-expanded={isSearchPreviewVisible}
+                  aria-controls={
+                    isSearchPreviewVisible ? 'header-search-preview' : undefined
+                  }
+                  aria-activedescendant={
+                    isSearchPreviewVisible &&
+                    activeSearchPreviewIndex >= 0 &&
+                    activeSearchPreviewIndex < searchPreviewResults.length
+                      ? `header-search-option-${activeSearchPreviewIndex}`
+                      : undefined
+                  }
                   className="app-header__search-input"
                 />
+                {isSearchPreviewVisible && (
+                  <div
+                    id="header-search-preview"
+                    aria-busy={isSearchPreviewLoading}
+                    className="absolute top-full right-0 left-0 z-50 mt-2 max-h-[min(60vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#101113] py-2 shadow-[0_18px_48px_rgba(0,0,0,0.55)]"
+                  >
+                    {search.trim().length < 2 ? (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Digite pelo menos 2 caracteres para ver sugestões.
+                      </p>
+                    ) : isSearchPreviewLoading ? (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Buscando animes…
+                      </p>
+                    ) : searchPreviewQuery.error ? (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Não foi possível carregar as sugestões.
+                      </p>
+                    ) : searchPreviewResults.length > 0 ? (
+                      <>
+                        <div
+                          role="listbox"
+                          aria-label="Sugestões de anime"
+                          className="space-y-1 px-2"
+                        >
+                          {searchPreviewResults.map((anime, index) => (
+                            <button
+                              key={anime.id}
+                              id={`header-search-option-${index}`}
+                              type="button"
+                              role="option"
+                              aria-selected={activeSearchPreviewIndex === index}
+                              tabIndex={-1}
+                              onMouseDown={(event) => event.preventDefault()}
+                              onMouseEnter={() =>
+                                setActiveSearchPreviewIndex(index)
+                              }
+                              onClick={() => openAnimePreviewResult(anime.id)}
+                              className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${activeSearchPreviewIndex === index ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}
+                            >
+                              {anime.image ? (
+                                <img
+                                  src={anime.image}
+                                  alt=""
+                                  loading="lazy"
+                                  className="size-11 shrink-0 rounded-md object-cover"
+                                />
+                              ) : (
+                                <span className="grid size-11 shrink-0 place-items-center rounded-md bg-white/[0.05] text-white/30">
+                                  <Search size={16} aria-hidden="true" />
+                                </span>
+                              )}
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-semibold text-white/85">
+                                  {resolveAnimeTitle(
+                                    anime.title,
+                                    titleLanguage,
+                                  )}
+                                </span>
+                                <span className="mt-1 block text-xs text-white/40">
+                                  {anime.type ?? 'Anime'}
+                                </span>
+                              </span>
+                              {anime.isAdult && (
+                                <span className="shrink-0 rounded bg-red-400/10 px-1.5 py-1 text-[10px] font-bold text-red-200/75">
+                                  18+
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="submit"
+                          onMouseDown={(event) => event.preventDefault()}
+                          className="mt-2 w-full border-t border-white/[0.07] px-4 pt-3 text-left text-xs font-semibold text-[#77e898] hover:text-white"
+                        >
+                          Ver todos os resultados
+                        </button>
+                      </>
+                    ) : (
+                      <p
+                        role="status"
+                        className="px-4 py-3 text-sm text-white/45"
+                      >
+                        Nenhum anime encontrado.
+                      </p>
+                    )}
+                  </div>
+                )}
               </form>
             )}
           </div>
 
           <div className="app-header__actions flex items-center gap-4">
-            <button
-              type="button"
-              className="app-header__language"
-              onClick={toggleTitleLanguage}
-              aria-pressed={titleLanguage === 'jp'}
-              aria-label={`EN/JP: títulos em ${titleLanguage === 'jp' ? 'japonês (romaji). Mudar para inglês' : 'inglês. Mudar para japonês (romaji)'}`}
-              title={`Títulos em ${titleLanguage === 'jp' ? 'japonês (romaji)' : 'inglês'}`}
-            >
-              <span className="app-header__language-thumb" aria-hidden="true" />
-              {(['en', 'jp'] as const).map((language) => (
-                <span
-                  key={language}
-                  aria-hidden="true"
-                  className={`app-header__language-option ${titleLanguage === language ? 'is-active' : ''}`}
-                >
-                  {language.toUpperCase()}
-                </span>
-              ))}
-            </button>
+            <ScreenshotSearchPanel />
+            <AppNotificationCenter />
             <AppUpdateCenter />
             <Link
               to="/settings"

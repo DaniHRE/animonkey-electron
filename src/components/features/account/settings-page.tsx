@@ -1,32 +1,94 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent, KeyboardEvent } from 'react';
 import {
-  Activity,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Bell,
+  Bug,
+  Captions,
   Cloud,
   Download,
   HardDrive,
+  Keyboard,
+  Languages,
   LogOut,
+  MessageSquareText,
   RefreshCw,
+  Shield,
   Trash2,
   Upload,
   UserRound,
 } from 'lucide-react';
 import { useAccount } from '@/context/account-state';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
+import { useAiringNotificationPreferences } from '@/hooks/use-airing-notification-preferences';
+import { useLocalPreference } from '@/hooks/use-local-preference';
+import { useTitleLanguage } from '@/hooks/use-title-language';
+import {
+  useContinueWatchingVisibilityPreference,
+  useRecordWatchProgressPreference,
+  useSyncWatchProgressPreference,
+} from '@/hooks/use-watch-history-preferences';
+import {
+  DEFAULT_SUBTITLE_SIZE,
+  isSubtitleSize,
+  normalizeSubtitleSize,
+  SUBTITLE_SIZE_PREFERENCE_KEY,
+} from '@/lib/subtitle-appearance';
+import { PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY } from '@/lib/provider-failure-reporting';
+import {
+  createShortcutBinding,
+  DEFAULT_SHORTCUT_PREFERENCES,
+  findShortcutCollision,
+  formatShortcutBinding,
+  normalizeShortcutPreferences,
+  SHORTCUT_COMMANDS,
+  SHORTCUT_PREFERENCE_KEY,
+} from '@/lib/keyboard-shortcuts';
+import type { ShortcutCommandId } from '@/lib/keyboard-shortcuts';
+import {
+  DEFAULT_SIDEBAR_ROUTE_ORDER,
+  moveSidebarRoute,
+  normalizeSidebarRouteOrder,
+  SIDEBAR_ORDER_PREFERENCE_KEY,
+} from '@/lib/sidebar-route-order';
+import type { SidebarRouteId } from '@/lib/sidebar-route-order';
 import {
   exportLocalBackup,
   importLocalBackup,
 } from '@/services/cache/local-db';
-import type { AnivexaDiagnosticsSnapshot } from '@/types/anivexa';
+import { SettingsDebugPanel } from './settings-debug-panel';
+import { FeedbackSettingsSection } from './feedback-settings-section';
 
 const settingsSections = [
   { id: 'account', label: 'Conta', icon: UserRound },
-  { id: 'diagnostics', label: 'Anivexa', icon: Activity },
-  // Re-enable this section when caption controls are available in the player.
-  // { id: 'captions', label: 'Legendas', icon: Captions },
+  { id: 'feedback', label: 'Feedback', icon: MessageSquareText },
+  { id: 'privacy', label: 'Privacidade', icon: Shield },
+  { id: 'notifications', label: 'Notificações', icon: Bell },
+  { id: 'preferences', label: 'Preferências', icon: Languages },
+  { id: 'shortcuts', label: 'Atalhos', icon: Keyboard },
+  { id: 'navigation', label: 'Navegação', icon: ArrowUpDown },
+  { id: 'diagnostics', label: 'Debug', icon: Bug },
+  { id: 'captions', label: 'Legendas', icon: Captions },
   { id: 'backup', label: 'Backup', icon: HardDrive },
 ] as const;
 
 type SettingsSectionId = (typeof settingsSections)[number]['id'];
+
+const sidebarRouteLabels: Record<SidebarRouteId, string> = {
+  schedule: 'Agenda',
+  activity: 'Feed',
+  updates: 'Lançamentos',
+  trending: 'Em alta',
+  'continue-watching': 'Continuar assistindo',
+  'watch-later': 'Assistir Depois',
+};
+
+const sidebarOrderSections = [
+  { id: 'primary', title: 'Navegação principal' },
+  { id: 'more', title: 'Mais opções' },
+] as const;
 
 export function SettingsPage() {
   const {
@@ -40,6 +102,64 @@ export function SettingsPage() {
     importGuestLibrary,
     updateProfile,
   } = useAccount();
+  const { titleLanguage, setTitleLanguage } = useTitleLanguage();
+  const recordWatchProgress = useRecordWatchProgressPreference();
+  const continueWatchingVisibility = useContinueWatchingVisibilityPreference();
+  const syncWatchProgress = useSyncWatchProgressPreference();
+  const airingNotifications = useAiringNotificationPreferences();
+  const {
+    value: providerFailureReportingEnabled,
+    update: setProviderFailureReportingEnabled,
+    loaded: providerFailureReportingLoaded,
+  } = useLocalPreference(PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY, false);
+  const [notificationsSupported, setNotificationsSupported] = useState<
+    boolean | null
+  >(null);
+  const {
+    includeAdult,
+    setIncludeAdult,
+    loaded: adultPreferenceLoaded,
+  } = useAdultContentPreference();
+  const {
+    value: storedShortcuts,
+    update: updateStoredShortcuts,
+    loaded: shortcutsLoaded,
+  } = useLocalPreference<unknown>(
+    SHORTCUT_PREFERENCE_KEY,
+    DEFAULT_SHORTCUT_PREFERENCES,
+  );
+  const {
+    value: storedSidebarRouteOrder,
+    update: updateStoredSidebarRouteOrder,
+    loaded: sidebarRouteOrderLoaded,
+  } = useLocalPreference<unknown>(
+    SIDEBAR_ORDER_PREFERENCE_KEY,
+    DEFAULT_SIDEBAR_ROUTE_ORDER,
+  );
+  const {
+    value: storedSubtitleSize,
+    update: updateStoredSubtitleSize,
+    loaded: subtitlePreferenceLoaded,
+  } = useLocalPreference<unknown>(
+    SUBTITLE_SIZE_PREFERENCE_KEY,
+    DEFAULT_SUBTITLE_SIZE,
+  );
+  const shortcutPreferences = useMemo(
+    () => normalizeShortcutPreferences(storedShortcuts),
+    [storedShortcuts],
+  );
+  const sidebarRouteOrder = useMemo(
+    () => normalizeSidebarRouteOrder(storedSidebarRouteOrder),
+    [storedSidebarRouteOrder],
+  );
+  const subtitleSize = normalizeSubtitleSize(storedSubtitleSize);
+  const [capturingShortcut, setCapturingShortcut] =
+    useState<ShortcutCommandId | null>(null);
+  const [shortcutFeedback, setShortcutFeedback] = useState<string | null>(null);
+  const [sidebarOrderFeedback, setSidebarOrderFeedback] = useState<
+    string | null
+  >(null);
+  const platform = window.animonkey.platform;
   const backupInput = useRef<HTMLInputElement>(null);
   const avatarInput = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -56,15 +176,6 @@ export function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [anivexaDiagnostics, setAnivexaDiagnostics] =
-    useState<AnivexaDiagnosticsSnapshot>({
-      revision: -1,
-      status: 'stopped',
-      entries: [],
-    });
-  const [anivexaDiagnosticsError, setAnivexaDiagnosticsError] = useState<
-    string | null
-  >(null);
   const [name, setName] = useState('');
   const [profileDraft, setProfileDraft] = useState<{
     userId: string;
@@ -77,6 +188,108 @@ export function SettingsPage() {
   const activityPrivacy =
     privacy?.userId === session?.user.id ? (privacy?.value ?? null) : null;
   const sessionUserId = session?.user.id ?? null;
+
+  const captureShortcut = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    commandId: ShortcutCommandId,
+  ) => {
+    if (capturingShortcut !== commandId) return;
+
+    if (event.key === 'Tab') {
+      setCapturingShortcut(null);
+      setShortcutFeedback('Gravação do atalho cancelada.');
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setCapturingShortcut(null);
+      setShortcutFeedback('Gravação do atalho cancelada.');
+      return;
+    }
+
+    event.preventDefault();
+    const binding = createShortcutBinding(event.nativeEvent, platform);
+    if (!binding) {
+      setShortcutFeedback(
+        'Atalho inválido ou reservado. Use Ctrl/⌘ com uma tecla compatível.',
+      );
+      return;
+    }
+
+    const collision = findShortcutCollision(
+      binding,
+      shortcutPreferences,
+      commandId,
+    );
+    if (collision) {
+      const conflictingCommand = SHORTCUT_COMMANDS.find(
+        ({ id }) => id === collision,
+      );
+      setShortcutFeedback(
+        `Esse atalho já está atribuído a ${conflictingCommand?.label ?? 'outra ação'}.`,
+      );
+      return;
+    }
+
+    updateStoredShortcuts({
+      ...shortcutPreferences,
+      [commandId]: binding,
+    });
+    setCapturingShortcut(null);
+    setShortcutFeedback('Atalho atualizado.');
+  };
+
+  const restoreShortcut = (commandId: ShortcutCommandId) => {
+    const defaultBinding = DEFAULT_SHORTCUT_PREFERENCES[commandId];
+    const collision = findShortcutCollision(
+      defaultBinding,
+      shortcutPreferences,
+      commandId,
+    );
+    if (collision) {
+      const conflictingCommand = SHORTCUT_COMMANDS.find(
+        ({ id }) => id === collision,
+      );
+      setShortcutFeedback(
+        `Libere o atalho usado por ${conflictingCommand?.label ?? 'outra ação'} antes de restaurar este padrão.`,
+      );
+      return;
+    }
+
+    updateStoredShortcuts({
+      ...shortcutPreferences,
+      [commandId]: defaultBinding,
+    });
+    setShortcutFeedback('Atalho padrão restaurado.');
+  };
+
+  const disableShortcut = (commandId: ShortcutCommandId) => {
+    updateStoredShortcuts({ ...shortcutPreferences, [commandId]: null });
+    setCapturingShortcut(null);
+    setShortcutFeedback('Atalho desativado.');
+  };
+
+  const moveSidebarRouteItem = (
+    group: 'primary' | 'more',
+    routeId: SidebarRouteId,
+    direction: -1 | 1,
+  ) => {
+    const nextOrder = moveSidebarRoute(
+      sidebarRouteOrder[group],
+      routeId,
+      direction,
+    );
+    if (!nextOrder) return;
+
+    updateStoredSidebarRouteOrder({
+      ...sidebarRouteOrder,
+      [group]: nextOrder,
+    });
+    setSidebarOrderFeedback(
+      `${sidebarRouteLabels[routeId]} movido para ${direction === -1 ? 'cima' : 'baixo'}.`,
+    );
+  };
 
   const handleSettingsTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
@@ -101,32 +314,6 @@ export function SettingsPage() {
   };
 
   useEffect(() => {
-    let active = true;
-    const applySnapshot = (snapshot: AnivexaDiagnosticsSnapshot) => {
-      if (!active) return;
-      setAnivexaDiagnostics((current) =>
-        snapshot.revision >= current.revision ? snapshot : current,
-      );
-    };
-    const unsubscribe =
-      window.animonkey.anivexa.onDiagnosticsChanged(applySnapshot);
-    void window.animonkey.anivexa
-      .getDiagnostics()
-      .then(applySnapshot)
-      .catch(() => {
-        if (active) {
-          setAnivexaDiagnosticsError(
-            'Não foi possível carregar o diagnóstico da Anivexa.',
-          );
-        }
-      });
-    return () => {
-      active = false;
-      unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
     if (!sessionUserId) return;
     let active = true;
     void window.animonkey.account
@@ -139,6 +326,21 @@ export function SettingsPage() {
       active = false;
     };
   }, [sessionUserId]);
+
+  useEffect(() => {
+    let active = true;
+    void window.animonkey.notifications
+      .isSupported()
+      .then((supported) => {
+        if (active) setNotificationsSupported(supported);
+      })
+      .catch(() => {
+        if (active) setNotificationsSupported(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -383,25 +585,6 @@ export function SettingsPage() {
     }
   };
 
-  const clearAnivexaDiagnostics = async () => {
-    setAnivexaDiagnosticsError(null);
-    try {
-      const snapshot = await window.animonkey.anivexa.clearDiagnostics();
-      setAnivexaDiagnostics(snapshot);
-    } catch {
-      setAnivexaDiagnosticsError(
-        'Não foi possível limpar os registros da Anivexa.',
-      );
-    }
-  };
-
-  const runtimeStatusLabel = {
-    stopped: 'Parado',
-    starting: 'Iniciando',
-    ready: 'Ativo',
-    error: 'Falha',
-  }[anivexaDiagnostics.status];
-
   return (
     <section className="settings-page mx-auto grid w-full max-w-[1320px] grid-cols-[148px_minmax(0,1fr)] gap-4 sm:grid-cols-[168px_minmax(0,1fr)] sm:gap-6 xl:grid-cols-[200px_minmax(0,1fr)] xl:gap-8">
       <aside className="min-w-0">
@@ -581,29 +764,6 @@ export function SettingsPage() {
                       </button>
                     )}
                   </div>
-                </div>
-                <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/[0.07] pt-4">
-                  <div>
-                    <h3 className="text-xs font-semibold text-white/80">
-                      Privacidade da atividade
-                    </h3>
-                    <p className="mt-1 max-w-lg text-xs text-white/40">
-                      Quando ativada, atividades de episódios e avaliações podem
-                      aparecer no feed.
-                    </p>
-                  </div>
-                  <label className="flex shrink-0 items-center gap-2 text-xs text-white/65">
-                    <input
-                      type="checkbox"
-                      checked={activityPrivacy ?? false}
-                      disabled={activityPrivacy === null || accountBusy}
-                      onChange={(event) =>
-                        void toggleActivityPrivacy(event.target.checked)
-                      }
-                      className="accent-[#49d77a]"
-                    />
-                    Compartilhar
-                  </label>
                 </div>
                 <form
                   onSubmit={(event) => void changePassword(event)}
@@ -793,123 +953,551 @@ export function SettingsPage() {
           </section>
         </section>
 
+        <FeedbackSettingsSection
+          active={activeSettingsSection === 'feedback'}
+          session={session}
+          onOpenAccount={() => setActiveSettingsSection('account')}
+        />
+
         <section
-          id="settings-panel-diagnostics"
+          id="settings-panel-privacy"
           role="tabpanel"
-          aria-labelledby="settings-tab-diagnostics"
+          aria-labelledby="settings-tab-privacy"
           tabIndex={0}
-          hidden={activeSettingsSection !== 'diagnostics'}
+          hidden={activeSettingsSection !== 'privacy'}
           className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
         >
           <header className="mb-6">
             <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
-              Integração
+              Seus dados
             </p>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Diagnóstico
+              Privacidade
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-white/45">
-              Acompanhe o runtime da Anivexa e os eventos recentes desta sessão.
+              Controle separadamente a gravação, a exibição e a sincronização do
+              seu progresso. Desativar uma opção não apaga dados existentes.
             </p>
           </header>
 
-          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.16)] sm:p-6">
-            <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#49d77a]/10 text-[#49d77a]">
-                <Activity size={17} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-sm font-bold">Diagnóstico da Anivexa</h2>
-                  <span
-                    className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-                      anivexaDiagnostics.status === 'ready'
-                        ? 'border-[#49d77a]/20 bg-[#49d77a]/10 text-[#70e793]'
-                        : anivexaDiagnostics.status === 'error'
-                          ? 'border-red-300/20 bg-red-300/[0.08] text-red-200'
-                          : 'border-white/10 bg-white/[0.04] text-white/55'
-                    }`}
-                  >
-                    Runtime {runtimeStatusLabel}
+          <section className="space-y-5 rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <fieldset>
+              <legend className="text-sm font-semibold text-white/90">
+                Progresso neste dispositivo
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={recordWatchProgress.enabled}
+                  disabled={!recordWatchProgress.loaded}
+                  onChange={(event) =>
+                    recordWatchProgress.setEnabled(event.currentTarget.checked)
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/85">
+                    Salvar novos tempos assistidos
                   </span>
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-white/45">
-                  Eventos recentes do processo Anivexa e das chamadas feitas
-                  pelo app. Os últimos 100 ficam somente na memória desta
-                  sessão; URLs, headers, payloads e credenciais não são
-                  exibidos.
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desative para parar de gravar novos tempos neste
+                    dispositivo. O progresso já salvo permanece disponível para
+                    retomar episódios, aparecer no histórico e ser incluído no
+                    backup.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Exibição do histórico
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={continueWatchingVisibility.enabled}
+                  disabled={!continueWatchingVisibility.loaded}
+                  onChange={(event) =>
+                    continueWatchingVisibility.setEnabled(
+                      event.currentTarget.checked,
+                    )
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/85">
+                    Mostrar Continuar Assistindo
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desative para ocultar a seção da página inicial, a página do
+                    histórico e seu atalho na navegação. Os registros continuam
+                    salvos e voltam a aparecer quando reativar.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Sincronização da conta
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={syncWatchProgress.enabled}
+                  disabled={
+                    !syncWatchProgress.loaded || syncState === 'syncing'
+                  }
+                  onChange={(event) =>
+                    syncWatchProgress.setEnabled(event.currentTarget.checked)
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/85">
+                    Sincronizar progresso de episódios
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Quando ativada e conectado à conta, o progresso local pode
+                    ser enviado e o progresso da conta pode ser recebido.
+                    Desativar pausa essa troca sem remover os dados locais ou
+                    remotos.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Visibilidade da atividade
+              </legend>
+              <div className="mt-3 flex items-start justify-between gap-4">
+                <p className="max-w-xl text-xs leading-relaxed text-white/45">
+                  {session
+                    ? 'Controla se atividades de episódios e avaliações aparecem no feed. Desativar oculta a atividade sem apagar os registros da conta.'
+                    : 'Entre na sua conta para controlar se atividades de episódios e avaliações aparecem no feed.'}
                 </p>
+                <label className="flex shrink-0 items-center gap-2 text-xs text-white/65">
+                  <input
+                    type="checkbox"
+                    checked={activityPrivacy ?? false}
+                    disabled={activityPrivacy === null || accountBusy}
+                    onChange={(event) =>
+                      void toggleActivityPrivacy(event.currentTarget.checked)
+                    }
+                    className="accent-[#49d77a]"
+                  />
+                  Compartilhar
+                </label>
               </div>
-            </div>
+            </fieldset>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-white/40">
-                {anivexaDiagnostics.entries.length} de 100 eventos
-              </p>
-              <button
-                type="button"
-                disabled={anivexaDiagnostics.entries.length === 0}
-                onClick={() => void clearAnivexaDiagnostics()}
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/70 transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                <Trash2 size={13} /> Limpar registros
-              </button>
-            </div>
-
-            {anivexaDiagnosticsError && (
-              <p role="alert" className="mt-3 text-xs text-red-200/80">
-                {anivexaDiagnosticsError}
-              </p>
-            )}
-
-            <ol
-              role="log"
-              aria-label="Registros recentes da Anivexa"
-              aria-relevant="additions"
-              className="mt-3 max-h-72 space-y-2 overflow-y-auto rounded-lg border border-white/[0.07] bg-black/15 p-3"
-            >
-              {anivexaDiagnostics.entries.length ? (
-                [...anivexaDiagnostics.entries].reverse().map((entry) => (
-                  <li
-                    key={entry.id}
-                    className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-white/[0.05] pb-2 last:border-0 last:pb-0"
+            <fieldset className="border-t border-white/[0.07] pt-5">
+              <legend className="text-sm font-semibold text-white/90">
+                Relatórios de falha de provedores
+              </legend>
+              <div className="mt-3 flex items-start gap-3">
+                <input
+                  id="provider-failure-reporting-enabled"
+                  type="checkbox"
+                  checked={providerFailureReportingEnabled}
+                  disabled={
+                    !providerFailureReportingLoaded ||
+                    (!session && !providerFailureReportingEnabled)
+                  }
+                  onChange={(event) =>
+                    setProviderFailureReportingEnabled(
+                      event.currentTarget.checked,
+                    )
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <div className="min-w-0">
+                  <label
+                    htmlFor="provider-failure-reporting-enabled"
+                    className="block text-sm font-semibold text-white/85"
                   >
-                    <time
-                      dateTime={new Date(entry.timestamp).toISOString()}
-                      className="shrink-0 font-mono text-[11px] text-white/35"
+                    Compartilhar falhas de provedores
+                  </label>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Com a opção ativa e sua conta conectada, enviaremos somente
+                    o identificador do provedor e respostas HTTP 502, 503 ou 504
+                    ao consultar uma transmissão. Não enviamos anime, episódio,
+                    URL, cabeçalhos, resposta, mensagem de erro, timeout,
+                    cancelamento ou resposta 404. Cada conta pode enviar até 10
+                    relatórios por dia; o mesmo provedor é registrado no máximo
+                    uma vez por hora e os dados são removidos após 30 dias. O
+                    relato indica uma falha observada, não confirma uma
+                    indisponibilidade geral.
+                  </span>
+                  {!session && !providerFailureReportingEnabled ? (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSettingsSection('account')}
+                      className="mt-2 text-xs font-semibold text-[#65e48e] hover:underline"
                     >
-                      {new Date(entry.timestamp).toLocaleTimeString('pt-BR')}
-                    </time>
-                    <span
-                      className={`shrink-0 text-[11px] font-bold uppercase ${
-                        entry.level === 'error'
-                          ? 'text-red-200'
-                          : entry.level === 'warning'
-                            ? 'text-amber-200'
-                            : 'text-[#70e793]'
-                      }`}
-                    >
-                      {entry.level === 'warning'
-                        ? 'Aviso'
-                        : entry.level === 'error'
-                          ? 'Erro'
-                          : 'Info'}
-                    </span>
-                    <span className="min-w-0 flex-1 break-words text-xs leading-relaxed text-white/70">
-                      {entry.message}
-                    </span>
-                  </li>
-                ))
-              ) : (
-                <li className="py-5 text-center text-xs text-white/35">
-                  Ainda não há eventos registrados nesta sessão.
-                </li>
-              )}
-            </ol>
+                      Entre na conta para ativar
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+            </fieldset>
           </section>
         </section>
 
-        {/* Caption settings are unavailable until configurable player controls exist.
+        <section
+          id="settings-panel-notifications"
+          role="tabpanel"
+          aria-labelledby="settings-tab-notifications"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'notifications'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Agenda de episódios
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Notificações
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Acompanhe episódios novos dos animes que você escolher.
+            </p>
+          </header>
+          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <fieldset>
+              <legend className="text-base font-semibold">
+                Avisos de novos episódios
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={airingNotifications.notificationsEnabled}
+                  disabled={
+                    !airingNotifications.notificationsLoaded ||
+                    notificationsSupported !== true
+                  }
+                  onChange={(event) =>
+                    airingNotifications.setNotificationsEnabled(
+                      event.currentTarget.checked,
+                    )
+                  }
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/90">
+                    Notificar quando houver episódio novo
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desativado por padrão. Com o Animonkey aberto e conectado, a
+                    agenda é verificada a cada 15 minutos. Um aviso de
+                    recuperação pode mencionar o episódio mais recente após um
+                    período offline.
+                  </span>
+                </span>
+              </label>
+              {notificationsSupported === false && (
+                <p role="status" className="mt-4 text-xs text-white/45">
+                  Notificações do sistema não estão disponíveis neste ambiente.
+                </p>
+              )}
+              {notificationsSupported === null && (
+                <p role="status" className="mt-4 text-xs text-white/45">
+                  Verificando suporte a notificações do sistema…
+                </p>
+              )}
+              <p className="mt-4 border-t border-white/[0.07] pt-4 text-xs leading-relaxed text-white/45">
+                Acompanhar é independente de Assistir Depois. A lista fica
+                somente neste dispositivo, acompanha o backup local e não é
+                sincronizada com a conta. Os avisos mostram o título e o
+                episódio na notificação do sistema.
+              </p>
+              <p className="mt-2 text-xs text-white/40">
+                {airingNotifications.followedAnimeLoaded
+                  ? 'Animes acompanhados neste dispositivo: ' +
+                    String(airingNotifications.followedAnime.length) +
+                    ' de 50. Use o botão Acompanhar na página de cada anime para adicionar ou remover.'
+                  : 'Carregando animes acompanhados…'}
+              </p>
+            </fieldset>
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-preferences"
+          role="tabpanel"
+          aria-labelledby="settings-tab-preferences"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'preferences'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Aplicativo
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Preferências
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Personalize as informações exibidas pelo Animonkey.
+            </p>
+          </header>
+
+          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <fieldset>
+              <legend className="text-base font-semibold">
+                Idioma dos títulos
+              </legend>
+              <p className="mt-2 text-sm leading-relaxed text-white/45">
+                Escolha qual título deve aparecer primeiro nos cartões e nas
+                páginas de anime.
+              </p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    ['jp', 'Japonês (romaji)', 'Prioriza o título romanizado.'],
+                    ['en', 'Inglês', 'Prioriza o título em inglês.'],
+                  ] as const
+                ).map(([language, label, description]) => (
+                  <label
+                    key={language}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${titleLanguage === language ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.08]' : 'border-white/[0.08] bg-white/[0.015] hover:bg-white/[0.04]'}`}
+                  >
+                    <input
+                      type="radio"
+                      name="title-language"
+                      value={language}
+                      checked={titleLanguage === language}
+                      onChange={() => setTitleLanguage(language)}
+                      className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-white/90">
+                        {label}
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                        {description}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className="mt-6 border-t border-white/[0.07] pt-5">
+              <legend className="text-base font-semibold">
+                Conteúdo adulto
+              </legend>
+              <label className="mt-3 flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={includeAdult}
+                  disabled={!adultPreferenceLoaded}
+                  onChange={(event) => setIncludeAdult(event.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold text-white/90">
+                    Incluir conteúdo adulto na descoberta
+                  </span>
+                  <span className="mt-1 block text-xs leading-relaxed text-white/45">
+                    Desativado por padrão. Quando ativado, títulos marcados como
+                    adultos podem aparecer na busca, nos catálogos, na agenda e
+                    nas recomendações. O filtro da busca pode substituir esta
+                    preferência para uma pesquisa específica.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-shortcuts"
+          role="tabpanel"
+          aria-labelledby="settings-tab-shortcuts"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'shortcuts'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Aplicativo
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Atalhos
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Personalize os comandos do aplicativo. As alterações ficam neste
+              dispositivo e acompanham o backup local.
+            </p>
+          </header>
+
+          <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            <div className="space-y-3">
+              {SHORTCUT_COMMANDS.map(({ id, label, description }) => (
+                <div
+                  key={id}
+                  className="flex flex-col gap-3 rounded-lg border border-white/[0.07] bg-black/[0.12] p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold text-white/90">
+                      {label}
+                    </h2>
+                    <p className="mt-1 text-xs leading-relaxed text-white/45">
+                      {description}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={!shortcutsLoaded}
+                      aria-label={
+                        capturingShortcut === id
+                          ? `Pressione as teclas do atalho para ${label}`
+                          : `Alterar atalho para ${label}`
+                      }
+                      aria-pressed={capturingShortcut === id}
+                      onClick={() => {
+                        if (capturingShortcut === id) {
+                          setCapturingShortcut(null);
+                          setShortcutFeedback('Gravação do atalho cancelada.');
+                          return;
+                        }
+                        setCapturingShortcut(id);
+                        setShortcutFeedback(
+                          'Pressione Ctrl/⌘ e uma tecla. Esc cancela a gravação.',
+                        );
+                      }}
+                      onKeyDown={(event) => captureShortcut(event, id)}
+                      onBlur={() => {
+                        if (capturingShortcut === id)
+                          setCapturingShortcut(null);
+                      }}
+                      className="min-h-10 min-w-32 rounded-md border border-white/[0.12] bg-white/[0.04] px-3 text-xs font-semibold text-white/85 transition hover:bg-white/[0.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      {capturingShortcut === id
+                        ? 'Pressione as teclas…'
+                        : formatShortcutBinding(
+                            shortcutPreferences[id],
+                            platform,
+                          )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!shortcutsLoaded}
+                      aria-label={`Restaurar atalho padrão para ${label}`}
+                      onClick={() => restoreShortcut(id)}
+                      className="min-h-10 rounded-md border border-white/[0.08] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.05] hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Padrão
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!shortcutsLoaded}
+                      aria-label={`Desativar atalho para ${label}`}
+                      onClick={() => disableShortcut(id)}
+                      className="min-h-10 rounded-md border border-white/[0.08] px-3 text-xs font-medium text-white/55 transition hover:bg-white/[0.05] hover:text-white/85 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-wait disabled:opacity-50"
+                    >
+                      Desativar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p
+              className="mt-4 min-h-5 text-xs leading-relaxed text-white/45"
+              role="status"
+              aria-live="polite"
+            >
+              {shortcutFeedback ??
+                (platform === 'darwin'
+                  ? 'Use ⌘ com outra tecla. Atalhos de edição e do sistema são reservados.'
+                  : 'Use Ctrl com outra tecla. Atalhos de edição e do sistema são reservados.')}
+            </p>
+          </section>
+        </section>
+
+        <section
+          id="settings-panel-navigation"
+          role="tabpanel"
+          aria-labelledby="settings-tab-navigation"
+          tabIndex={0}
+          hidden={activeSettingsSection !== 'navigation'}
+          className="min-w-0 outline-none focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#49d77a]"
+        >
+          <header className="mb-6">
+            <p className="mb-2 text-[11px] font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+              Aplicativo
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+              Navegação
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-white/45">
+              Início e Explorar permanecem fixos. Reordene os destinos dentro
+              das seções da barra lateral; a preferência fica neste dispositivo
+              e acompanha o backup local.
+            </p>
+          </header>
+
+          <section className="space-y-5 rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
+            {sidebarOrderSections.map(({ id, title }) => (
+              <fieldset key={id}>
+                <legend className="mb-3 text-base font-semibold">
+                  {title}
+                </legend>
+                <ol className="space-y-2">
+                  {sidebarRouteOrder[id].map((routeId, index, items) => (
+                    <li
+                      key={routeId}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/[0.12] p-3"
+                    >
+                      <span className="min-w-0 text-sm font-medium text-white/85">
+                        {sidebarRouteLabels[routeId]}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!sidebarRouteOrderLoaded || index === 0}
+                          aria-label={`Mover ${sidebarRouteLabels[routeId]} para cima`}
+                          onClick={() => moveSidebarRouteItem(id, routeId, -1)}
+                          className="grid size-9 place-items-center rounded-md border border-white/[0.08] text-white/55 transition hover:bg-white/[0.05] hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-default disabled:opacity-30"
+                        >
+                          <ArrowUp size={16} aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            !sidebarRouteOrderLoaded ||
+                            index === items.length - 1
+                          }
+                          aria-label={`Mover ${sidebarRouteLabels[routeId]} para baixo`}
+                          onClick={() => moveSidebarRouteItem(id, routeId, 1)}
+                          className="grid size-9 place-items-center rounded-md border border-white/[0.08] text-white/55 transition hover:bg-white/[0.05] hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#49d77a] disabled:cursor-default disabled:opacity-30"
+                        >
+                          <ArrowDown size={16} aria-hidden="true" />
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </fieldset>
+            ))}
+            <p
+              className="min-h-5 text-xs leading-relaxed text-white/45"
+              role="status"
+              aria-live="polite"
+            >
+              {sidebarOrderFeedback ??
+                'Use os botões para mover cada destino dentro da sua seção.'}
+            </p>
+          </section>
+        </section>
+
+        <SettingsDebugPanel
+          isActive={activeSettingsSection === 'diagnostics'}
+        />
+
         <section
           id="settings-panel-captions"
           role="tabpanel"
@@ -926,19 +1514,43 @@ export function SettingsPage() {
               Legendas
             </h1>
             <p className="mt-2 text-sm leading-relaxed text-white/45">
-              Ajuste a aparência das legendas enquanto assiste a um episódio.
+              Escolha o tamanho do texto das legendas do player. A preferência é
+              salva neste dispositivo.
             </p>
           </header>
 
           <section className="rounded-xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_58%)] p-4 sm:p-6">
-            <h2 className="text-base font-semibold">Estilos de legenda</h2>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/45">
-              Durante a reprodução, ajuste o tamanho e a aparência em
-              Acessibilidade → Estilos de legenda no menu do Vidstack.
+            <label
+              htmlFor="settings-subtitle-size"
+              className="block text-sm font-semibold text-white/90"
+            >
+              Tamanho do texto
+            </label>
+            <p
+              id="settings-subtitle-size-description"
+              className="mt-1 max-w-xl text-xs leading-relaxed text-white/45"
+            >
+              A alteração vale para as legendas exibidas pelo player.
             </p>
+            <select
+              id="settings-subtitle-size"
+              aria-describedby="settings-subtitle-size-description"
+              value={subtitleSize}
+              disabled={!subtitlePreferenceLoaded}
+              onChange={(event) => {
+                const nextSize = event.currentTarget.value;
+                if (isSubtitleSize(nextSize))
+                  updateStoredSubtitleSize(nextSize);
+              }}
+              className="mt-4 min-h-11 w-full max-w-xs rounded-lg border border-white/10 bg-[#111113] px-3 text-sm text-white outline-none transition-colors focus-visible:border-[#49d77a] focus-visible:ring-2 focus-visible:ring-[#49d77a]/35 disabled:cursor-wait disabled:opacity-60"
+            >
+              <option value="small">Pequeno</option>
+              <option value="medium">Médio</option>
+              <option value="large">Grande</option>
+              <option value="xlarge">Extra grande</option>
+            </select>
           </section>
         </section>
-        */}
 
         <section
           id="settings-panel-backup"

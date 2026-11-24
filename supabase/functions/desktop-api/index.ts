@@ -6,6 +6,24 @@ const REFRESH_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_BODY_BYTES = 4 * 1024 * 1024;
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const encoder = new TextEncoder();
+const PROVIDER_FAILURE_IDS = new Set([
+  'reanime',
+  'anikoto',
+  'animegg',
+  'anineko',
+  'anibdapp',
+  '2dhive',
+  'anibd',
+  'aniwaves',
+  'senshi',
+  'anizone',
+  'animeonsen',
+  'animedunya',
+  'kaa',
+  'animenosub',
+  'mkissa',
+]);
+const PROVIDER_FAILURE_STATUSES = new Set([502, 503, 504]);
 
 type JsonObject = Record<string, unknown>;
 type UserRecord = {
@@ -869,26 +887,48 @@ async function profileUpdate(
 }
 
 async function accountExport(userId: string): Promise<Response> {
-  const [user, profileResult, watchLater, episodeProgress, ratings, activity] =
-    await Promise.all([
-      getUserById(userId),
-      admin
-        .from('users')
-        .select('display_name,show_activity')
-        .eq('id', userId)
-        .maybeSingle(),
-      admin.from('watch_later').select('*').eq('user_id', userId),
-      admin.from('episode_progress').select('*').eq('user_id', userId),
-      admin.from('anime_ratings').select('*').eq('user_id', userId),
-      admin.from('activity_feed').select('*').eq('user_id', userId),
-    ]);
+  const [
+    user,
+    profileResult,
+    watchLater,
+    episodeProgress,
+    ratings,
+    activity,
+    feedback,
+    providerFailureReports,
+  ] = await Promise.all([
+    getUserById(userId),
+    admin
+      .from('users')
+      .select('display_name,show_activity')
+      .eq('id', userId)
+      .maybeSingle(),
+    admin.from('watch_later').select('*').eq('user_id', userId),
+    admin.from('episode_progress').select('*').eq('user_id', userId),
+    admin.from('anime_ratings').select('*').eq('user_id', userId),
+    admin.from('activity_feed').select('*').eq('user_id', userId),
+    admin
+      .from('feedback_submissions')
+      .select(
+        'id,feedback_type,functional_area,title,description,consent_version,consented_at,created_at',
+      )
+      .eq('user_id', userId),
+    admin
+      .from('provider_failure_reports')
+      .select(
+        'id,provider_id,http_status,consent_version,consented_at,created_at',
+      )
+      .eq('user_id', userId),
+  ]);
   if (
     profileResult.error ||
     !profileResult.data ||
     watchLater.error ||
     episodeProgress.error ||
     ratings.error ||
-    activity.error
+    activity.error ||
+    feedback.error ||
+    providerFailureReports.error
   ) {
     throw new ApiError(503, 'service_unavailable');
   }
@@ -903,6 +943,8 @@ async function accountExport(userId: string): Promise<Response> {
     episodeProgress: episodeProgress.data ?? [],
     ratings: ratings.data ?? [],
     activity: activity.data ?? [],
+    feedback: feedback.data ?? [],
+    providerFailureReports: providerFailureReports.data ?? [],
   });
 }
 
@@ -1178,6 +1220,79 @@ async function upsertSyncTombstone(
   return timestamp;
 }
 
+async function feedbackSubmit(
+  userId: string,
+  body: JsonObject,
+): Promise<Response> {
+  const submission = asObject(body.submission);
+  const type = stringField(submission.type, 32);
+  const area = stringField(submission.area, 32);
+  const title = stringField(submission.title, 120);
+  const description = stringField(submission.description, 2000);
+  const consentVersion = stringField(submission.consentVersion, 40);
+
+  if (
+    !['suggestion', 'bug_report'].includes(type) ||
+    ![
+      'discovery',
+      'catalog',
+      'player',
+      'library',
+      'account',
+      'notifications',
+      'interface',
+      'other',
+    ].includes(area) ||
+    consentVersion !== 'feedback-v2'
+  ) {
+    throw new ApiError(400, 'invalid_feedback');
+  }
+
+  const { error } = await admin.rpc('desktop_submit_feedback', {
+    p_user_id: userId,
+    p_type: type,
+    p_area: area,
+    p_title: title,
+    p_description: description,
+    p_consent_version: consentVersion,
+  });
+  if (error?.message.includes('too_many_feedback_submissions')) {
+    throw new ApiError(429, 'too_many_feedback_submissions');
+  }
+  if (error) throw new ApiError(503, 'service_unavailable');
+  return response(201, { success: true });
+}
+
+async function providerFailureReport(
+  userId: string,
+  value: unknown,
+): Promise<Response> {
+  const report = asObject(value);
+  const provider = stringField(report.provider, 32);
+  const status = report.status;
+  const consentVersion = stringField(report.consentVersion, 40);
+  if (
+    !PROVIDER_FAILURE_IDS.has(provider) ||
+    typeof status !== 'number' ||
+    !PROVIDER_FAILURE_STATUSES.has(status) ||
+    consentVersion !== 'provider-failure-v1'
+  ) {
+    throw new ApiError(400, 'invalid_provider_report');
+  }
+
+  const { error } = await admin.rpc('desktop_report_provider_failure', {
+    p_user_id: userId,
+    p_provider_id: provider,
+    p_http_status: status,
+    p_consent_version: consentVersion,
+  });
+  if (error?.message.includes('too_many_provider_reports')) {
+    throw new ApiError(429, 'too_many_provider_reports');
+  }
+  if (error) throw new ApiError(503, 'service_unavailable');
+  return response(202, { success: true });
+}
+
 async function handle(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return response(204);
   if (request.method !== 'POST') return jsonError(405, 'method_not_allowed');
@@ -1196,6 +1311,10 @@ async function handle(request: Request): Promise<Response> {
 
   const auth = await authenticate(request);
   switch (action) {
+    case 'feedback.submit':
+      return await feedbackSubmit(auth.userId, body);
+    case 'provider-failure.report':
+      return await providerFailureReport(auth.userId, body.report);
     case 'avatar.upload':
       return await avatarUpload(auth.userId, body);
     case 'avatar.remove':

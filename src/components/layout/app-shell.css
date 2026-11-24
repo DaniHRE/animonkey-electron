@@ -120,6 +120,16 @@
     background-color 140ms ease;
 }
 
+.app-sidebar [data-sidebar-link],
+.app-sidebar__show-handle,
+.app-header__show-sidebar,
+.app-header__history-button,
+.app-window-titlebar__navigation-button,
+.app-window-controls__button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .app-sidebar [data-sidebar-link]:hover,
 .app-sidebar [data-sidebar-link]:focus-visible,
 .app-header__show-sidebar:hover,
@@ -274,8 +284,7 @@
 }
 
 .app-header__brand:focus-visible,
-.app-header__search input:focus-visible,
-.app-header__language:focus-visible {
+.app-header__search input:focus-visible {
   outline: 2px solid #49d77a;
   outline-offset: 3px;
 }
@@ -569,50 +578,6 @@
   background: rgb(0 0 0 / 60%);
 }
 
-.app-header__language {
-  position: relative;
-  display: grid;
-  width: 88px;
-  flex: 0 0 88px;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  padding: 2px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.app-header__language-thumb {
-  position: absolute;
-  inset-block: 2px;
-  left: 2px;
-  width: calc(50% - 2px);
-  border-radius: 4px;
-  background: rgb(255 255 255 / 16%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%);
-  transition: transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.app-header__language[aria-pressed='true'] .app-header__language-thumb {
-  transform: translateX(100%);
-}
-
-.app-header__language-option {
-  position: relative;
-  color: #9ca3af;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 32px;
-  letter-spacing: 0.08em;
-  text-shadow: 0 1px 2px rgb(0 0 0 / 60%);
-  transition: color 200ms ease;
-}
-
-.app-header__language-option.is-active {
-  color: #fff;
-}
-
 .app-hero-bleed {
   margin-top: calc(0px - var(--app-header-height));
   margin-left: calc(-1 * var(--app-rail-width));
@@ -636,11 +601,6 @@
 
   .app-header__navigation-actions {
     gap: 4px;
-  }
-
-  .app-header__language {
-    width: 68px;
-    flex-basis: 68px;
   }
 }
 
@@ -684,9 +644,7 @@
   .app-header__show-sidebar,
   .app-header__history-button,
   .app-window-titlebar__navigation-button,
-  .app-header__search-input,
-  .app-header__language-thumb,
-  .app-header__language-option {
+  .app-header__search-input {
     animation: none;
     transition: none;
   }

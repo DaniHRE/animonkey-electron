@@ -12,6 +12,7 @@ import type { AnimeInfo } from '@/types/anime';
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
 import { resolveAnimeTitle } from '@/lib/anime';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { useContinueWatchingVisibilityPreference } from '@/hooks/use-watch-history-preferences';
 
 interface ContinueItem {
   progress: EpisodeProgressRecord;
@@ -21,11 +22,15 @@ interface ContinueItem {
 export function ContinueWatchingPage() {
   const { titleLanguage } = useTitleLanguage();
   const queryClient = useQueryClient();
+  const { enabled: showContinueWatching, loaded: visibilityPreferenceLoaded } =
+    useContinueWatchingVisibilityPreference();
   const [items, setItems] = useState<ContinueItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!visibilityPreferenceLoaded) return;
+    if (!showContinueWatching) return;
     let active = true;
     let requestId = 0;
     const refresh = () => {
@@ -82,7 +87,7 @@ export function ContinueWatchingPage() {
       window.removeEventListener('animonkey:account-sync-applied', refresh);
       window.removeEventListener('animonkey:local-data-changed', refresh);
     };
-  }, [queryClient]);
+  }, [queryClient, showContinueWatching, visibilityPreferenceLoaded]);
 
   const dismiss = async (animeId: string) => {
     await removeAnimeFromWatching(animeId);
@@ -90,6 +95,30 @@ export function ContinueWatchingPage() {
       current.filter((item) => item.progress.animeId !== animeId),
     );
   };
+
+  if (visibilityPreferenceLoaded && !showContinueWatching)
+    return (
+      <section>
+        <p className="mb-2 text-xs font-bold tracking-[0.18em] text-[#65e48e] uppercase">
+          Minha biblioteca
+        </p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          Continuar assistindo
+        </h1>
+        <div className="mt-7 rounded-xl border border-white/10 bg-white/[0.02] p-8 text-center text-sm text-white/50">
+          <p>Esta seção está oculta nas configurações de privacidade.</p>
+          <Link
+            to="/settings"
+            className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-white/10 px-3 text-xs font-semibold text-white/70 transition hover:bg-white/[0.05] hover:text-white"
+          >
+            Abrir configurações
+          </Link>
+          <p className="mt-3 text-xs text-white/35">
+            O histórico existente continua salvo neste dispositivo.
+          </p>
+        </div>
+      </section>
+    );
 
   return (
     <section>

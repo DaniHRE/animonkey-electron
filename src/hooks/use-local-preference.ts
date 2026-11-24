@@ -22,11 +22,30 @@ export function useLocalPreference<T>(key: string, fallback: T) {
         });
     };
     const onImport = () => refresh(true);
+    const onPreferenceUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (typeof detail !== 'object' || detail === null) return;
+
+      const preference = detail as Record<string, unknown>;
+      if (preference.key !== key || !('value' in preference)) return;
+
+      changedByUser.current = true;
+      setValue(preference.value as T);
+      setLoaded(true);
+    };
     refresh();
     window.addEventListener('animonkey:local-data-imported', onImport);
+    window.addEventListener(
+      'animonkey:local-preference-updated',
+      onPreferenceUpdate,
+    );
     return () => {
       active = false;
       window.removeEventListener('animonkey:local-data-imported', onImport);
+      window.removeEventListener(
+        'animonkey:local-preference-updated',
+        onPreferenceUpdate,
+      );
     };
   }, [key]);
 
@@ -34,7 +53,15 @@ export function useLocalPreference<T>(key: string, fallback: T) {
     (next: T) => {
       changedByUser.current = true;
       setValue(next);
-      void putPreference(key, next).catch(() => undefined);
+      void putPreference(key, next)
+        .then(() => {
+          window.dispatchEvent(
+            new CustomEvent('animonkey:local-preference-updated', {
+              detail: { key, value: next },
+            }),
+          );
+        })
+        .catch(() => undefined);
     },
     [key],
   );

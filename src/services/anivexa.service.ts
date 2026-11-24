@@ -7,32 +7,36 @@ import type {
   EpisodeTimestamp,
 } from '@/types/player';
 import type {
+  AnivexaProviderId,
   AnivexaDesktopRequest,
   AnivexaDesktopResponse,
 } from '@/types/anivexa';
+import {
+  isAnivexaProviderId,
+  isProviderFailureHttpStatus,
+  ANIVEXA_PROVIDER_IDS,
+} from '@/types/anivexa';
+import { PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY } from '@/lib/provider-failure-reporting';
+import { getPreference } from '@/services/cache/local-db';
 
 const API_BASE = import.meta.env.DEV
   ? (import.meta.env.VITE_ANIVEXA_API_URL ?? '').replace(/\/$/, '')
   : '';
 const DEFAULT_REQUEST_TIMEOUT_MS = 25_000;
 const EPISODE_INDEX_TIMEOUT_MS = 120_000;
-const PROVIDER_PRIORITY = [
-  'reanime',
-  'anikoto',
-  'animegg',
-  'anineko',
-  'anibdapp',
-  '2dhive',
-  'anibd',
-  'aniwaves',
-  'senshi',
-  'anizone',
-  'animeonsen',
-  'animedunya',
-  'kaa',
-  'animenosub',
-  'mkissa',
-];
+const PROVIDER_PRIORITY: string[] = [...ANIVEXA_PROVIDER_IDS];
+
+class AnivexaHttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(
+      'O serviço de episódios está temporariamente indisponível. Tente novamente em instantes.',
+    );
+    this.name = 'AnivexaHttpError';
+    this.status = status;
+  }
+}
 
 interface ProviderEpisode {
   id?: string;
@@ -181,10 +185,7 @@ async function getJson<T>(
   if (!response.ok) {
     if (response.status === 404)
       throw new Error('Este episódio não está disponível no momento.');
-    if (response.status >= 500)
-      throw new Error(
-        'O serviço de episódios está temporariamente indisponível. Tente novamente em instantes.',
-      );
+    if (response.status >= 500) throw new AnivexaHttpError(response.status);
     throw new Error(
       'Não foi possível carregar este episódio. Tente outro servidor.',
     );
@@ -206,6 +207,22 @@ function getEpisodeIndex(animeId: string, signal?: AbortSignal) {
     signal,
     EPISODE_INDEX_TIMEOUT_MS,
   );
+}
+
+function queueProviderFailureReport(provider: string, status: number): void {
+  if (!isAnivexaProviderId(provider) || !isProviderFailureHttpStatus(status))
+    return;
+
+  void getPreference<unknown>(PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY)
+    .then(async (enabled) => {
+      if (enabled !== true) return;
+      await window.animonkey?.account.reportProviderFailure({
+        provider: provider as AnivexaProviderId,
+        status,
+        consentVersion: 'provider-failure-v1',
+      });
+    })
+    .catch(() => undefined);
 }
 
 function orderedProviders(index: EpisodeIndex): string[] {
@@ -528,8 +545,14 @@ export const AnivexaCatalog = {
           intro: asTimestamp(stream.intro ?? payload.intro),
           outro: asTimestamp(stream.outro ?? payload.outro),
         };
-      } catch {
+      } catch (cause) {
         if (signal?.aborted) throw signal.reason;
+        if (
+          cause instanceof AnivexaHttpError &&
+          isProviderFailureHttpStatus(cause.status)
+        ) {
+          queueProviderFailureReport(provider, cause.status);
+        }
         sourceLookupFailed = true;
       }
     }

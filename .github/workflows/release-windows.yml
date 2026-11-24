@@ -123,6 +123,9 @@ jobs:
         run: pnpm typecheck
 
       - name: Build Windows x64 Squirrel package
+        env:
+          VITE_DESKTOP_API_URL: ${{ vars.VITE_DESKTOP_API_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
         run: pnpm make --platform=win32 --arch=x64
 
       - name: Verify packaged application and Squirrel metadata

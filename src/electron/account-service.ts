@@ -14,10 +14,12 @@ import type {
   ActivityFeedPage,
   EpisodeProgressInput,
   EpisodeProgressSyncSnapshot,
+  FeedbackSubmissionInput,
   RemoteSyncTombstone,
   WatchLaterRemoteItem,
   WatchLaterSyncSnapshot,
 } from '../types/account';
+import type { ProviderFailureReportInput } from '../types/anivexa';
 import type { EpisodeProgressRecord } from '../services/cache/local-db';
 import type { AnimeRating } from '../types/anime';
 
@@ -89,6 +91,18 @@ function getFriendlyError(
   code: unknown,
   action: string,
 ): string {
+  if (code === 'too_many_feedback_submissions') {
+    return 'Você já enviou três mensagens nas últimas 24 horas. Tente novamente mais tarde.';
+  }
+  if (code === 'invalid_feedback') {
+    return 'Confira os campos do feedback e tente novamente.';
+  }
+  if (code === 'too_many_provider_reports') {
+    return 'O limite diário de relatos de falhas de provedores foi atingido.';
+  }
+  if (code === 'invalid_provider_report') {
+    return 'Não foi possível registrar esta falha de provedor.';
+  }
   if (status === 429 || code === 'too_many_attempts') {
     return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';
   }
@@ -662,6 +676,20 @@ class DesktopAccountService {
     await this.authenticatedRequest('password.change', {
       currentPassword,
       newPassword,
+    });
+  }
+
+  async submitFeedback(input: FeedbackSubmissionInput): Promise<void> {
+    await this.authenticatedRequest('feedback.submit', {
+      submission: input,
+    });
+  }
+
+  async reportProviderFailure(
+    input: ProviderFailureReportInput,
+  ): Promise<void> {
+    await this.authenticatedRequest('provider-failure.report', {
+      report: input,
     });
   }
 }

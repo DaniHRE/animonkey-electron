@@ -1,13 +1,47 @@
 import type { AnimeRating, AnimeTitle, WatchLaterItem } from '@/types/anime';
+import {
+  isSubtitleSize,
+  SUBTITLE_SIZE_PREFERENCE_KEY,
+} from '@/lib/subtitle-appearance';
+import {
+  isShortcutPreferences,
+  SHORTCUT_PREFERENCE_KEY,
+} from '@/lib/keyboard-shortcuts';
+import {
+  isSidebarRouteOrder,
+  SIDEBAR_ORDER_PREFERENCE_KEY,
+} from '@/lib/sidebar-route-order';
+import { isWatchHistoryPreference } from '@/lib/watch-history-preferences';
+import {
+  isProviderFailureReportingPreference,
+  PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY,
+} from '@/lib/provider-failure-reporting';
+import {
+  AIRING_NOTIFICATION_PREFERENCE_KEYS,
+  isAiringNotificationPreference,
+  isFollowedAnimeList,
+} from '@/lib/airing-notifications';
+import {
+  APP_NOTIFICATION_LIMIT,
+  APP_NOTIFICATION_RETENTION_MS,
+  APP_NOTIFICATIONS_CHANGED_EVENT,
+  isAppNotification,
+} from '@/lib/app-notifications';
+import type {
+  AppNotification,
+  NewAppNotification,
+  NewRemoteAppNotification,
+} from '@/lib/app-notifications';
 
 const DATABASE_NAME = 'animonkey-desktop';
-const DATABASE_VERSION = 6;
+const DATABASE_VERSION = 7;
 const WATCH_LATER_STORE = 'watch-later';
 const CATALOG_CACHE_STORE = 'catalog-cache';
 const EPISODE_PROGRESS_STORE = 'episode-progress';
 const PREFERENCES_STORE = 'preferences';
 const SYNC_TOMBSTONE_STORE = 'sync-tombstones';
 const ANIME_RATING_STORE = 'anime-ratings';
+const APP_NOTIFICATION_STORE = 'app-notifications';
 const CATALOG_CACHE_STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const GUEST_SCOPE_ID = 'guest';
 
@@ -171,6 +205,9 @@ function openDatabase(): Promise<IDBDatabase> {
           keyPath: ['scopeId', 'animeId'],
         });
         ratings.createIndex('updatedAt', 'updatedAt', { unique: false });
+      }
+      if (!database.objectStoreNames.contains(APP_NOTIFICATION_STORE)) {
+        database.createObjectStore(APP_NOTIFICATION_STORE, { keyPath: 'id' });
       }
     };
   });
@@ -363,6 +400,329 @@ export async function putPreference<T>(key: string, value: T): Promise<void> {
   });
 }
 
+export async function getAppNotifications(): Promise<AppNotification[]> {
+  const database = await openDatabase();
+  const visibleNotifications = await new Promise<AppNotification[]>(
+    (resolve, reject) => {
+      const transaction = database.transaction(
+        APP_NOTIFICATION_STORE,
+        'readwrite',
+      );
+      const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+      const request = store.getAll();
+      let visibleNotifications: AppNotification[] = [];
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const cutoff = Date.now() - APP_NOTIFICATION_RETENTION_MS;
+        const now = Date.now();
+        const records = request.result as unknown[];
+        const retained = records.filter(
+          (value): value is AppNotification =>
+            isAppNotification(value) &&
+            value.createdAt >= cutoff &&
+            (value.kind !== 'remote' ||
+              (value.createdAt <= now && value.expiresAt > now)),
+        );
+        retained.sort((first, second) => {
+          const firstPriority = first.kind === 'remote' ? first.priority : 0;
+          const secondPriority = second.kind === 'remote' ? second.priority : 0;
+          return (
+            secondPriority - firstPriority || second.createdAt - first.createdAt
+          );
+        });
+        const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+        const retainedIds = new Set(
+          limited.map((notification) => notification.id),
+        );
+        for (const candidate of records) {
+          if (
+            typeof candidate === 'object' &&
+            candidate !== null &&
+            !Array.isArray(candidate)
+          ) {
+            const id = (candidate as Record<string, unknown>).id;
+            if (typeof id === 'string' && !retainedIds.has(id))
+              store.delete(id);
+          }
+        }
+        visibleNotifications = limited.filter(
+          (notification) => notification.dismissedAt === null,
+        );
+      };
+      transaction.oncomplete = () => resolve(visibleNotifications);
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    },
+  );
+
+  if (
+    !visibleNotifications.some(
+      (notification) =>
+        notification.kind === 'remote' && notification.category === 'spotlight',
+    )
+  )
+    return visibleNotifications;
+
+  let followed: unknown = null;
+  try {
+    followed = await getPreference<unknown>(
+      AIRING_NOTIFICATION_PREFERENCE_KEYS.followedAnime,
+    );
+  } catch {
+    // A local follow-list read failure must not hide other notifications.
+  }
+  const followedIds = new Set(
+    isFollowedAnimeList(followed) ? followed.map((item) => item.animeId) : [],
+  );
+  return visibleNotifications.filter(
+    (notification) =>
+      notification.kind !== 'remote' ||
+      notification.category !== 'spotlight' ||
+      (notification.animeId !== undefined &&
+        followedIds.has(notification.animeId)),
+  );
+}
+
+export async function replaceRemoteAppNotifications(
+  values: NewRemoteAppNotification[],
+): Promise<void> {
+  if (values.length > 8) {
+    throw new Error('The remote notification feed exceeds its item limit.');
+  }
+
+  const now = Date.now();
+  const incoming = values.map((value) => ({
+    ...value,
+    readAt: null,
+    dismissedAt: null,
+  }));
+  if (
+    !incoming.every(
+      (notification) =>
+        notification.kind === 'remote' && isAppNotification(notification),
+    )
+  ) {
+    throw new Error('The remote notification feed contains invalid records.');
+  }
+
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.getAll();
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const records = request.result as unknown[];
+      const existing = new Map(
+        records
+          .filter(isAppNotification)
+          .filter((notification) => notification.kind === 'remote')
+          .map((notification) => [notification.id, notification] as const),
+      );
+      const retained: AppNotification[] = records
+        .filter(isAppNotification)
+        .filter(
+          (notification) =>
+            notification.kind !== 'remote' &&
+            notification.createdAt >= now - APP_NOTIFICATION_RETENTION_MS,
+        );
+      for (const notification of incoming) {
+        const prior = existing.get(notification.id);
+        retained.push({
+          ...notification,
+          readAt: prior?.readAt ?? null,
+          dismissedAt: prior?.dismissedAt ?? null,
+        });
+      }
+      retained.sort((first, second) => {
+        const firstPriority = first.kind === 'remote' ? first.priority : 0;
+        const secondPriority = second.kind === 'remote' ? second.priority : 0;
+        return (
+          secondPriority - firstPriority || second.createdAt - first.createdAt
+        );
+      });
+      const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+      store.clear();
+      for (const notification of limited) store.put(notification);
+    };
+    transaction.oncomplete = () => {
+      window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function addAppNotification(
+  value: NewAppNotification,
+): Promise<void> {
+  const notification: AppNotification = {
+    ...value,
+    createdAt: Date.now(),
+    readAt: null,
+    dismissedAt: null,
+  };
+  if (!isAppNotification(notification)) {
+    throw new Error('The notification record is invalid.');
+  }
+
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.getAll();
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const records = request.result as unknown[];
+      const cutoff = notification.createdAt - APP_NOTIFICATION_RETENTION_MS;
+      const validRecords = records.filter(isAppNotification);
+      const existing = validRecords.find(
+        (record) => record.id === notification.id && record.createdAt >= cutoff,
+      );
+      const candidates = validRecords.filter(
+        (record) => record.createdAt >= cutoff,
+      );
+      if (!existing) candidates.push(notification);
+      candidates.sort((first, second) => second.createdAt - first.createdAt);
+      const retained = candidates.slice(0, APP_NOTIFICATION_LIMIT);
+      const retainedIds = new Set(retained.map((record) => record.id));
+
+      for (const candidate of records) {
+        if (
+          typeof candidate === 'object' &&
+          candidate !== null &&
+          !Array.isArray(candidate)
+        ) {
+          const id = (candidate as Record<string, unknown>).id;
+          if (typeof id === 'string' && !retainedIds.has(id)) {
+            store.delete(id);
+            changed = true;
+          }
+        }
+      }
+
+      if (!existing && retainedIds.has(notification.id)) {
+        store.put(notification);
+        changed = true;
+      }
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function markAppNotificationRead(id: string): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.get(id);
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const notification = request.result as unknown;
+      if (
+        !isAppNotification(notification) ||
+        notification.readAt !== null ||
+        notification.dismissedAt !== null
+      )
+        return;
+      store.put({
+        ...notification,
+        readAt: Date.now(),
+      } satisfies AppNotification);
+      changed = true;
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function markAllAppNotificationsRead(): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.getAll();
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      for (const value of request.result as unknown[]) {
+        if (
+          !isAppNotification(value) ||
+          value.readAt !== null ||
+          value.dismissedAt !== null
+        )
+          continue;
+        store.put({ ...value, readAt: Date.now() } satisfies AppNotification);
+        changed = true;
+      }
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function dismissAppNotification(id: string): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    const store = transaction.objectStore(APP_NOTIFICATION_STORE);
+    const request = store.get(id);
+    let changed = false;
+    request.onerror = () => transaction.abort();
+    request.onsuccess = () => {
+      const notification = request.result as unknown;
+      if (!isAppNotification(notification) || notification.dismissedAt !== null)
+        return;
+      store.put({
+        ...notification,
+        dismissedAt: Date.now(),
+      } satisfies AppNotification);
+      changed = true;
+    };
+    transaction.oncomplete = () => {
+      if (changed)
+        window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
 export async function exportLocalBackup(): Promise<LocalBackup> {
   const database = await openDatabase();
   const readStore = <T>(storeName: string): Promise<T[]> =>
@@ -408,6 +768,42 @@ export async function exportLocalBackup(): Promise<LocalBackup> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isLocalPreference(value: unknown): value is LocalPreference {
+  if (
+    !isRecord(value) ||
+    typeof value.key !== 'string' ||
+    typeof value.updatedAt !== 'number' ||
+    !Number.isFinite(value.updatedAt)
+  )
+    return false;
+
+  if (value.key === SUBTITLE_SIZE_PREFERENCE_KEY)
+    return isSubtitleSize(value.value);
+  if (value.key === SHORTCUT_PREFERENCE_KEY)
+    return isShortcutPreferences(value.value);
+  if (value.key === SIDEBAR_ORDER_PREFERENCE_KEY)
+    return isSidebarRouteOrder(value.value);
+  if (value.key === 'player.volume')
+    return (
+      typeof value.value === 'number' &&
+      Number.isFinite(value.value) &&
+      value.value >= 0 &&
+      value.value <= 1
+    );
+  if (value.key === 'ui.title-language')
+    return value.value === 'en' || value.value === 'jp';
+  if (value.key === 'adult-content-enabled-v1')
+    return typeof value.value === 'boolean';
+  if (value.key === PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY)
+    return isProviderFailureReportingPreference(value.value);
+  if (
+    value.key === 'notifications.new-episodes-v1' ||
+    value.key === 'notifications.followed-anime-v1'
+  )
+    return isAiringNotificationPreference(value.key, value.value);
+  return isWatchHistoryPreference(value.key, value.value);
 }
 
 function isAnimeTitle(value: unknown): value is AnimeTitle {
@@ -521,14 +917,7 @@ export async function importLocalBackup(text: string): Promise<number> {
     !Array.isArray(ratings) ||
     !ratings.every(isAnimeRating) ||
     !Array.isArray(preferences) ||
-    !preferences.every(
-      (item) =>
-        isRecord(item) &&
-        item.key === 'player.subtitle-size' &&
-        ['small', 'medium', 'large', 'xlarge'].includes(String(item.value)) &&
-        typeof item.updatedAt === 'number' &&
-        Number.isFinite(item.updatedAt),
-    )
+    !preferences.every(isLocalPreference)
   ) {
     throw new Error(
       'O backup contém registros inválidos. Nenhum dado foi importado.',

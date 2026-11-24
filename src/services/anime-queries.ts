@@ -2,6 +2,7 @@ import { queryOptions, type QueryClient } from '@tanstack/react-query';
 import { AnivexaCatalog } from '@/services/anivexa.service';
 import { AniListCatalog } from '@/services/anilist.service';
 import type {
+  AnimeAiringInfo,
   AnimeArtworkIdentity,
   AnimeArtworkMetadataResponse,
   AnimeInfo,
@@ -135,7 +136,7 @@ async function loadTaizen(
 }
 
 export const animeQueryKeys = {
-  home: ['catalog', 'home'] as const,
+  home: (includeAdult = false) => ['catalog', 'home', includeAdult] as const,
   spotlight: (identities: AnimeArtworkIdentity[]) =>
     [
       'anime',
@@ -145,17 +146,27 @@ export const animeQueryKeys = {
         ...identity.expectedTitles,
       ]),
     ] as const,
-  schedule: (date: string) => ['catalog', 'schedule', date] as const,
-  list: (sort: string[], status: string | undefined, page: number) =>
-    ['catalog', 'list', sort, status ?? null, page] as const,
-  searchOptions: ['catalog', 'search-options'] as const,
+  schedule: (date: string, includeAdult = false) =>
+    ['catalog', 'schedule', date, includeAdult] as const,
+  list: (
+    sort: string[],
+    status: string | undefined,
+    page: number,
+    includeAdult = false,
+  ) => ['catalog', 'list', sort, status ?? null, page, includeAdult] as const,
+  searchOptions: (includeAdult = false) =>
+    ['catalog', 'search-options', includeAdult] as const,
   search: (
     keyword: string,
     page: number,
     filters: AnimeSearchFilters | undefined,
   ) => ['catalog', 'search', keyword.trim(), page, filters ?? null] as const,
-  detail: (id: string) => ['anime', 'detail', id] as const,
-  anilistDetail: (id: string) => ['anime', 'anilist', id] as const,
+  detail: (id: string, includeAdult = false) =>
+    ['anime', 'detail', id, includeAdult] as const,
+  anilistDetail: (id: string, includeAdult = false) =>
+    ['anime', 'anilist', id, includeAdult] as const,
+  airingEpisodes: (ids: string[], includeAdult = false) =>
+    ['catalog', 'airing-notifications', ids, includeAdult] as const,
   taizen: (id: string) => ['anime', 'taizen', id] as const,
   episodes: (id: string) => ['anivexa', 'episodes', id] as const,
   servers: (episodeId: string) => ['anivexa', 'servers', episodeId] as const,
@@ -164,12 +175,12 @@ export const animeQueryKeys = {
 };
 
 export const animeQueries = {
-  home() {
+  home(includeAdult = false) {
     return queryOptions({
-      queryKey: animeQueryKeys.home,
+      queryKey: animeQueryKeys.home(includeAdult),
       staleTime: 30 * MINUTE,
       gcTime: 2 * DAY,
-      queryFn: ({ signal }) => AniListCatalog.home(signal),
+      queryFn: ({ signal }) => AniListCatalog.home(signal, includeAdult),
     });
   },
   spotlight(client: QueryClient, candidates: AnimeResult[]) {
@@ -214,42 +225,55 @@ export const animeQueries = {
       refetchIntervalInBackground: false,
     });
   },
-  schedule(date: Date) {
+  schedule(date: Date, includeAdult = false) {
     const key = dateKey(date);
     return queryOptions({
-      queryKey: animeQueryKeys.schedule(key),
+      queryKey: animeQueryKeys.schedule(key, includeAdult),
       staleTime: 5 * MINUTE,
       gcTime: DAY,
-      queryFn: ({ signal }) => AniListCatalog.schedule(date, signal),
+      queryFn: ({ signal }) =>
+        AniListCatalog.schedule(date, signal, includeAdult),
     });
   },
   list(
     sort: string[],
     status: 'FINISHED' | 'RELEASING' | undefined,
     page: number,
+    includeAdult = false,
   ) {
     return queryOptions({
-      queryKey: animeQueryKeys.list(sort, status, page),
-      staleTime: 6 * 60 * MINUTE,
-      gcTime: DAY,
-      queryFn: ({ signal }) => AniListCatalog.list(sort, status, page, signal),
-    });
-  },
-  searchOptions() {
-    return queryOptions({
-      queryKey: animeQueryKeys.searchOptions,
-      staleTime: DAY,
-      gcTime: 7 * DAY,
-      queryFn: ({ signal }) => AniListCatalog.searchOptions(signal),
-    });
-  },
-  search(keyword: string, page: number, filters: AnimeSearchFilters) {
-    return queryOptions({
-      queryKey: animeQueryKeys.search(keyword, page, filters),
+      queryKey: animeQueryKeys.list(sort, status, page, includeAdult),
       staleTime: 6 * 60 * MINUTE,
       gcTime: DAY,
       queryFn: ({ signal }) =>
-        AniListCatalog.search(keyword, page, signal, filters),
+        AniListCatalog.list(sort, status, page, signal, includeAdult),
+    });
+  },
+  searchOptions(includeAdult = false) {
+    return queryOptions({
+      queryKey: animeQueryKeys.searchOptions(includeAdult),
+      staleTime: DAY,
+      gcTime: 7 * DAY,
+      queryFn: ({ signal }) =>
+        AniListCatalog.searchOptions(signal, includeAdult),
+    });
+  },
+  search(
+    keyword: string,
+    page: number,
+    filters: AnimeSearchFilters,
+    includeAdult = false,
+  ) {
+    const effectiveFilters = {
+      ...filters,
+      adultMode: filters.adultMode ?? (includeAdult ? 'include' : 'exclude'),
+    } satisfies AnimeSearchFilters;
+    return queryOptions({
+      queryKey: animeQueryKeys.search(keyword, page, effectiveFilters),
+      staleTime: 6 * 60 * MINUTE,
+      gcTime: DAY,
+      queryFn: ({ signal }) =>
+        AniListCatalog.search(keyword, page, signal, effectiveFilters),
     });
   },
   taizen(identity: AnimeArtworkIdentity) {
@@ -260,28 +284,40 @@ export const animeQueries = {
       queryFn: () => loadTaizen(identity),
     });
   },
-  anilistDetail(id: string) {
+  anilistDetail(id: string, includeAdult = false) {
     return queryOptions({
-      queryKey: animeQueryKeys.anilistDetail(id),
+      queryKey: animeQueryKeys.anilistDetail(id, includeAdult),
       staleTime: DAY,
       gcTime: 7 * DAY,
       retry: false,
-      queryFn: ({ signal }) => AniListCatalog.getAnime(id, signal),
+      queryFn: ({ signal }) =>
+        AniListCatalog.getAnime(id, signal, includeAdult),
     });
   },
-  detail(client: QueryClient, id: string) {
+  airingEpisodes(ids: string[], includeAdult = false) {
+    const sortedIds = [...new Set(ids)].sort();
     return queryOptions({
-      queryKey: animeQueryKeys.detail(id),
+      queryKey: animeQueryKeys.airingEpisodes(sortedIds, includeAdult),
+      staleTime: 10 * MINUTE,
+      gcTime: DAY,
+      queryFn: ({ signal }): Promise<AnimeAiringInfo[]> =>
+        AniListCatalog.airingEpisodes(sortedIds, signal, includeAdult),
+    });
+  },
+  detail(client: QueryClient, id: string, includeAdult = false) {
+    return queryOptions({
+      queryKey: animeQueryKeys.detail(id, includeAdult),
       staleTime: DAY,
       gcTime: 7 * DAY,
       retry: false,
       queryFn: async ({ signal }): Promise<AnimeInfo | null> => {
         const anime = await client.fetchQuery({
-          ...animeQueries.anilistDetail(id),
+          ...animeQueries.anilistDetail(id, includeAdult),
           queryFn: ({ signal: nestedSignal }) =>
             AniListCatalog.getAnime(
               id,
               AbortSignal.any([signal, nestedSignal]),
+              includeAdult,
             ),
         });
         if (!anime) return null;
@@ -290,7 +326,7 @@ export const animeQueries = {
         try {
           const home = client.getQueryData<
             Awaited<ReturnType<typeof AniListCatalog.home>>
-          >(animeQueryKeys.home);
+          >(animeQueryKeys.home(includeAdult));
           const spotlight = home?.banner.slice(0, 6) ?? [];
           const isSpotlight = spotlight.some(
             (candidate) => candidate.id === anime.id,

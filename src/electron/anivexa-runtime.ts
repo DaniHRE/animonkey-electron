@@ -1,12 +1,14 @@
 import {
   BrowserWindow,
   app,
+  dialog,
   ipcMain,
   utilityProcess,
   type IpcMainInvokeEvent,
   type UtilityProcess,
 } from 'electron';
 import { randomUUID } from 'node:crypto';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type {
   AnivexaDiagnosticEntry,
@@ -21,6 +23,7 @@ const STARTUP_TIMEOUT_MS = 15_000;
 const MAX_PENDING_REQUESTS = 24;
 const MAX_DIAGNOSTIC_ENTRIES = 100;
 const REQUEST_ID_PATTERN = /^[0-9a-f-]{36}$/i;
+const REQUEST_CANCELLED_MESSAGE = 'Anivexa request cancelled.';
 
 interface PendingRequest {
   resolve: (response: AnivexaDesktopResponse) => void;
@@ -239,7 +242,7 @@ class AnivexaRuntime {
 
   cancel(
     requestId: string,
-    reason = new Error('Anivexa request cancelled.'),
+    reason = new Error(REQUEST_CANCELLED_MESSAGE),
   ): void {
     if (!this.pending.has(requestId)) return;
     this.child?.postMessage({ type: 'cancel', requestId });
@@ -395,7 +398,7 @@ class AnivexaRuntime {
           `${pending.summary} excedeu o tempo limite após ${durationMs} ms.`,
         );
       } else if (
-        error.message !== 'Anivexa request cancelled.' &&
+        error.message !== REQUEST_CANCELLED_MESSAGE &&
         error.message !== 'Anivexa runtime stopped.'
       ) {
         this.recordDiagnostic(
@@ -471,10 +474,56 @@ export function registerAnivexaIpc(
     assertTrustedSender(event);
     return anivexaRuntime.clearDiagnostics();
   });
+  ipcMain.handle('anivexa:diagnostics:export', async (event) => {
+    assertTrustedSender(event);
+    const parentWindow = BrowserWindow.fromWebContents(event.sender);
+    const exportedAt = new Date();
+    const fileName =
+      'animonkey-debug-' +
+      exportedAt.toISOString().replace(/[:.]/g, '-') +
+      '.json';
+    const options = {
+      title: 'Export Animonkey diagnostics',
+      defaultPath: fileName,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    };
+    const result = parentWindow
+      ? await dialog.showSaveDialog(parentWindow, options)
+      : await dialog.showSaveDialog(options);
+    if (result.canceled || !result.filePath) return { status: 'cancelled' };
+
+    const snapshot = anivexaRuntime.getDiagnostics();
+    const data = {
+      schemaVersion: 1,
+      exportedAt: exportedAt.toISOString(),
+      application: { name: app.getName(), version: app.getVersion() },
+      runtimeStatus: snapshot.status,
+      entries: snapshot.entries,
+    };
+    try {
+      await writeFile(result.filePath, JSON.stringify(data, null, 2) + '\n', {
+        encoding: 'utf8',
+      });
+    } catch {
+      throw new Error('The diagnostics file could not be saved.');
+    }
+    return { status: 'saved' };
+  });
   ipcMain.handle('anivexa:request', (event, value: unknown) => {
     assertTrustedSender(event);
     const parsed = parseRequest(value);
-    return anivexaRuntime.request(parsed.requestId, parsed.request);
+    return anivexaRuntime
+      .request(parsed.requestId, parsed.request)
+      .catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          error.message === REQUEST_CANCELLED_MESSAGE
+        ) {
+          // The renderer's AbortSignal owns cancellation; avoid rejecting invoke IPC.
+          return { status: 499, body: '' } satisfies AnivexaDesktopResponse;
+        }
+        throw error;
+      });
   });
   ipcMain.on('anivexa:cancel', (event, requestId: unknown) => {
     try {

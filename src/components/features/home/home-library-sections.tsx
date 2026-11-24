@@ -13,6 +13,7 @@ import { useWatchLater } from '@/hooks/use-watch-later';
 import type { AnimeInfo, WatchLaterItem } from '@/types/anime';
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { useContinueWatchingVisibilityPreference } from '@/hooks/use-watch-history-preferences';
 
 interface ContinueItem {
   progress: EpisodeProgressRecord;
@@ -23,8 +24,12 @@ export function ContinueWatchingSection() {
   const [items, setItems] = useState<ContinueItem[]>([]);
   const { titleLanguage } = useTitleLanguage();
   const queryClient = useQueryClient();
+  const { enabled: showContinueWatching, loaded: visibilityPreferenceLoaded } =
+    useContinueWatchingVisibilityPreference();
 
   useEffect(() => {
+    if (!visibilityPreferenceLoaded) return;
+    if (!showContinueWatching) return;
     let active = true;
     let requestId = 0;
 
@@ -57,9 +62,10 @@ export function ContinueWatchingSection() {
       window.removeEventListener('animonkey:account-sync-applied', refresh);
       window.removeEventListener('animonkey:local-data-changed', refresh);
     };
-  }, [queryClient]);
+  }, [queryClient, showContinueWatching, visibilityPreferenceLoaded]);
 
-  if (!items.length) return null;
+  if (!visibilityPreferenceLoaded || !showContinueWatching || !items.length)
+    return null;
 
   async function dismiss(animeId: string) {
     await removeAnimeFromWatching(animeId);

@@ -27,6 +27,11 @@ import {
   normalizeSubtitleLanguage,
 } from '@/lib/subtitle';
 import { useLocalPreference } from '@/hooks/use-local-preference';
+import {
+  DEFAULT_SUBTITLE_SIZE,
+  normalizeSubtitleSize,
+  SUBTITLE_SIZE_PREFERENCE_KEY,
+} from '@/lib/subtitle-appearance';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
 import './vidstack-video-player.css';
@@ -149,6 +154,11 @@ export function VidstackVideoPlayer({
     DEFAULT_PLAYER_VOLUME,
   );
   const playerVolume = normalizePlayerVolume(savedVolume);
+  const { value: savedSubtitleSize } = useLocalPreference<unknown>(
+    SUBTITLE_SIZE_PREFERENCE_KEY,
+    DEFAULT_SUBTITLE_SIZE,
+  );
+  const subtitleSize = normalizeSubtitleSize(savedSubtitleSize);
   const volumePreferenceReady = useRef(false);
   const sourceKey =
     sourceId ??
@@ -336,7 +346,10 @@ export function VidstackVideoPlayer({
   const showOverlay = loading || mediaLoading || Boolean(playerError);
 
   return (
-    <div className="vidstack-player relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+    <div
+      className="vidstack-player relative aspect-video w-full overflow-hidden rounded-xl bg-black"
+      data-subtitle-size={subtitleSize}
+    >
       {showOverlay && (
         <div
           className={`absolute inset-0 z-20 grid place-items-center bg-black/55 backdrop-blur-[2px]${playerError ? '' : ' pointer-events-none'}`}

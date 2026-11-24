@@ -8,6 +8,7 @@ import type {
   AccountSession,
 } from '@/types/account';
 import { reconcileAccountData } from '@/services/account-sync';
+import { WATCH_HISTORY_PREFERENCE_KEYS } from '@/lib/watch-history-preferences';
 import {
   setActiveLocalDataScope,
   mergeGuestLibraryIntoActiveScope,
@@ -137,14 +138,32 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         timer = window.setTimeout(() => void syncNow(), 900);
       }
     };
+    const scheduleSyncForPreference = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const detail = event.detail as { key?: unknown } | null;
+      if (detail?.key !== WATCH_HISTORY_PREFERENCE_KEYS.syncProgress) return;
+
+      window.clearTimeout(timer);
+      window.clearTimeout(maxTimer);
+      maxTimer = undefined;
+      timer = window.setTimeout(() => void syncNow(), 900);
+    };
     window.addEventListener('animonkey:local-data-changed', scheduleSync);
     window.addEventListener('animonkey:local-data-imported', scheduleSync);
+    window.addEventListener(
+      'animonkey:local-preference-updated',
+      scheduleSyncForPreference,
+    );
     window.addEventListener('online', scheduleSync);
     return () => {
       window.clearTimeout(timer);
       window.clearTimeout(maxTimer);
       window.removeEventListener('animonkey:local-data-changed', scheduleSync);
       window.removeEventListener('animonkey:local-data-imported', scheduleSync);
+      window.removeEventListener(
+        'animonkey:local-preference-updated',
+        scheduleSyncForPreference,
+      );
       window.removeEventListener('online', scheduleSync);
     };
   }, [session, syncNow]);

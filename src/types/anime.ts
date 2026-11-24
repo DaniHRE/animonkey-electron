@@ -50,10 +50,7 @@ export interface AnimeResult {
 }
 
 export interface AnimeSearchResponse {
-  currentPage: number;
   hasNextPage: boolean;
-  totalPages: number;
-  totalResults: number;
   results: AnimeResult[];
 }
 
@@ -189,6 +186,12 @@ export interface AnimeInfo extends AnimeResult {
   characters: AnimeCharacter[];
   relations: Array<AnimeResult & { relationType: string }>;
   recommendations: AnimeResult[];
+}
+
+export interface AnimeAiringInfo {
+  id: string;
+  title: AnimeTitle;
+  nextAiringEpisode?: { airingAt: number; episode: number };
 }
 
 export interface WatchLaterItem {

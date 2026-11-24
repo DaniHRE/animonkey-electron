@@ -12,6 +12,7 @@ import { getRouteApi, useNavigate } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
 import type {
   AnimeFormat,
@@ -30,8 +31,10 @@ const formats: Array<[AnimeFormat, string]> = [
   ['SPECIAL', 'Especial'],
   ['OVA', 'OVA'],
   ['ONA', 'ONA'],
-  ['MUSIC', 'Música'],
 ];
+const supportedFormatValues = new Set<string>(
+  formats.map(([format]) => format),
+);
 const statuses: Array<[string, string]> = [
   ['RELEASING', 'Em exibição'],
   ['FINISHED', 'Finalizado'],
@@ -267,6 +270,12 @@ function listParam(value: string | null): string[] {
     .filter(Boolean);
 }
 
+function formatListParam(value: string | null): AnimeFormat[] {
+  return listParam(value).filter((format): format is AnimeFormat =>
+    supportedFormatValues.has(format),
+  );
+}
+
 function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
   const filters: AnimeSearchFilters = {};
   const numericMap: Record<string, keyof AnimeSearchFilters> = {
@@ -293,13 +302,16 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
       Object.assign(filters, { [key]: number });
   }
   for (const key of multiKeys) {
-    const value = listParam(params.get(key));
-    if (value.length)
+    const values =
+      key === 'formatIn' || key === 'formatNotIn'
+        ? formatListParam(params.get(key))
+        : listParam(params.get(key));
+    if (values.length)
       Object.assign(filters, {
         [key]:
           key.endsWith('IdIn') || key.startsWith('ids')
-            ? value.map(Number).filter(Number.isSafeInteger)
-            : value,
+            ? values.map(Number).filter(Number.isSafeInteger)
+            : values,
       });
   }
   const stringMap: Array<[keyof AnimeSearchFilters, string]> = [
@@ -307,7 +319,6 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
     ['startDateLike', 'startDateLike'],
     ['countryOfOrigin', 'countryOfOrigin'],
     ['source', 'source'],
-    ['adultMode', 'adultMode'],
     ['sort', 'sort'],
   ];
   for (const [key, param] of stringMap) {
@@ -321,13 +332,16 @@ function filtersFromParams(params: URLSearchParams): AnimeSearchFilters {
 }
 
 export function SearchPage() {
+  const { includeAdult } = useAdultContentPreference();
   const params = searchRoute.useSearch();
   const navigate = useNavigate({ from: '/search' });
   const searchString = new URLSearchParams(params).toString();
   const query = params.q ?? '';
   const requestedPage = Number(params.page ?? 1);
   const page =
-    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
   const filters = useMemo(
     () => filtersFromParams(new URLSearchParams(searchString)),
     [searchString],
@@ -340,9 +354,9 @@ export function SearchPage() {
     );
     return () => window.clearTimeout(timeout);
   }, [query]);
-  const optionsQuery = useQuery(animeQueries.searchOptions());
+  const optionsQuery = useQuery(animeQueries.searchOptions(includeAdult));
   const searchQuery = useQuery({
-    ...animeQueries.search(debouncedQuery, page, filters),
+    ...animeQueries.search(debouncedQuery, page, filters, includeAdult),
     enabled: debouncedQuery === query,
   });
   const options = optionsQuery.data ?? {
@@ -365,6 +379,7 @@ export function SearchPage() {
     update(key, values.join(','));
   const goToPage = (nextPage: number) => {
     void navigate({
+      resetScroll: false,
       search: (previous) => {
         const next = { ...previous };
         if (nextPage > 1) next.page = String(nextPage);
@@ -378,7 +393,22 @@ export function SearchPage() {
   const loading = debouncedQuery !== query || searchQuery.isPending;
   const result = loading ? null : searchQuery.data;
   const error = searchQuery.error?.message;
-  const selected = (key: string) => listParam(params[key] ?? null);
+
+  useEffect(() => {
+    if (!result || page <= 1 || result.results.length > 0) return;
+    void navigate({
+      search: (previous) => {
+        const next = { ...previous };
+        delete next.page;
+        return next;
+      },
+    });
+  }, [navigate, page, result]);
+
+  const selected = (key: string) =>
+    key === 'formatIn' || key === 'formatNotIn'
+      ? formatListParam(params[key] ?? null)
+      : listParam(params[key] ?? null);
   const renderMulti = (
     title: string,
     key: string,
@@ -429,9 +459,12 @@ export function SearchPage() {
   const categories = [...new Set(options.tags.map((tag) => tag.category))]
     .sort()
     .map((category) => [category, category] as [string, string]);
-  const activeFilterCount = Object.keys(params).filter(
-    (key) => !['q', 'page', 'sort'].includes(key),
-  ).length;
+  const activeFilterCount = Object.keys(params).filter((key) => {
+    if (['q', 'page', 'sort', 'adultMode'].includes(key)) return false;
+    if (key === 'formatIn' || key === 'formatNotIn')
+      return formatListParam(params[key] ?? null).length > 0;
+    return true;
+  }).length;
 
   return (
     <section>
@@ -443,8 +476,7 @@ export function SearchPage() {
           {query ? `Resultados para “${query}”` : 'Buscar animes'}
         </h1>
         <p className="mt-2 text-xs text-white/40">
-          Combine filtros avançados do catálogo de anime AniList. Os critérios
-          ficam salvos na URL.
+          Combine filtros avançados para encontrar animes no catálogo AniList.
         </p>
       </div>
       <div className="mb-8 overflow-visible rounded-2xl border border-white/[0.08] bg-[linear-gradient(135deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012)_55%)] p-4 shadow-[0_16px_50px_rgba(0,0,0,0.18)] sm:p-5">
@@ -481,6 +513,7 @@ export function SearchPage() {
               />
               <input
                 className={`${inputClass} w-full pl-9`}
+                data-app-shortcut-search="true"
                 value={query}
                 placeholder="Buscar anime..."
                 onChange={(event) => update('q', event.target.value)}
@@ -503,34 +536,6 @@ export function SearchPage() {
               ))}
             </select>
           </label>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-xs font-medium text-white/40">
-              Conteúdo:
-            </span>
-            {[
-              ['include', 'Todos'],
-              ['exclude', 'Sem adulto'],
-              ['only', 'Adulto'],
-            ].map(([value, label]) => {
-              const active = (params.adultMode ?? 'include') === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => update('adultMode', value)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${active ? 'border-[#49d77a]/35 bg-[#49d77a]/[0.11] text-[#91ecad]' : 'border-white/[0.08] text-white/45 hover:border-white/20 hover:text-white/75'}`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-          <span className="text-xs text-white/30">
-            Os filtros selecionados ficam salvos na URL
-          </span>
         </div>
 
         <details className="group mt-4 border-t border-white/[0.07] pt-1">
@@ -704,7 +709,7 @@ export function SearchPage() {
       ) : result?.results.length ? (
         <>
           <div className="mb-4 text-xs text-white/35">
-            {result.totalResults.toLocaleString('pt-BR')} títulos
+            {result.results.length} títulos nesta página
           </div>
           <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
             {result.results.map((anime: AnimeResult) => (
@@ -721,7 +726,7 @@ export function SearchPage() {
               <ArrowLeft size={14} /> Anterior
             </button>
             <span className="text-xs tabular-nums text-white/45">
-              Página {page} de {result.totalPages}
+              Página {page}
             </span>
             <button
               type="button"

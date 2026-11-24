@@ -12,17 +12,22 @@ import started from 'electron-squirrel-startup';
 import { installMediaProxy, registerMediaScheme } from './electron/media-proxy';
 import { accountService } from './electron/account-service';
 import { anivexaRuntime, registerAnivexaIpc } from './electron/anivexa-runtime';
+import { registerScreenshotSearchIpc } from './electron/screenshot-search';
+import { registerDesktopNotificationIpc } from './electron/desktop-notifications';
+import { registerRemoteNotificationFeedIpc } from './electron/remote-notification-feed';
 import { getTaizenMetadata } from './electron/taizen-artwork';
 import type {
   AccountCredentials,
   ActivityFeedCursor,
   AccountRegistration,
   EpisodeProgressInput,
+  FeedbackSubmissionInput,
   WatchLaterRemoteItem,
 } from './types/account';
 import type { AnimeRating, AnimeTitle } from './types/anime';
 import type { WindowControlsState } from './types/window-controls';
 import type { AppUpdateSnapshot, AppUpdateStatus } from './types/updates';
+import { isProviderFailureReportInput } from './types/anivexa';
 
 registerMediaScheme();
 
@@ -323,6 +328,33 @@ function parseRegistration(value: unknown): AccountRegistration {
   return { ...credentials, name: input.name as string | undefined };
 }
 
+function isFeedbackSubmissionInput(
+  value: unknown,
+): value is FeedbackSubmissionInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as Record<string, unknown>;
+  return (
+    ['suggestion', 'bug_report'].includes(String(input.type)) &&
+    [
+      'discovery',
+      'catalog',
+      'player',
+      'library',
+      'account',
+      'notifications',
+      'interface',
+      'other',
+    ].includes(String(input.area)) &&
+    typeof input.title === 'string' &&
+    input.title.trim().length >= 1 &&
+    input.title.trim().length <= 120 &&
+    typeof input.description === 'string' &&
+    input.description.trim().length >= 1 &&
+    input.description.trim().length <= 2000 &&
+    input.consentVersion === 'feedback-v2'
+  );
+}
+
 function registerAccountIpc(): void {
   ipcMain.handle('account:register', (event, value: unknown) => {
     assertTrustedIpcSender(event);
@@ -339,6 +371,20 @@ function registerAccountIpc(): void {
   ipcMain.handle('account:get-session', (event) => {
     assertTrustedIpcSender(event);
     return accountService.getSession();
+  });
+  ipcMain.handle('account:feedback:submit', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    if (!isFeedbackSubmissionInput(value)) {
+      throw new Error('Feedback inválido.');
+    }
+    return accountService.submitFeedback(value);
+  });
+  ipcMain.handle('account:provider-failure:report', (event, value: unknown) => {
+    assertTrustedIpcSender(event);
+    if (!isProviderFailureReportInput(value)) {
+      throw new Error('Relatório de provedor inválido.');
+    }
+    return accountService.reportProviderFailure(value);
   });
   ipcMain.handle('account:watch-later:list', (event) => {
     assertTrustedIpcSender(event);
@@ -548,6 +594,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      devTools: Boolean(MAIN_WINDOW_VITE_DEV_SERVER_URL),
     },
   });
 
@@ -555,6 +602,27 @@ const createWindow = () => {
     mainWindow.setMenuBarVisibility(false);
     mainWindow.removeMenu();
   }
+
+  const devToolsWindow = mainWindow;
+  if (devToolsWindow && MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    devToolsWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      const key = input.key.toLowerCase();
+      const isDevToolsShortcut =
+        key === 'f12' ||
+        (key === 'i' &&
+          ((input.control && input.shift) || (input.meta && input.alt)));
+      if (!isDevToolsShortcut) return;
+
+      event.preventDefault();
+      if (devToolsWindow.webContents.isDevToolsOpened()) {
+        devToolsWindow.webContents.closeDevTools();
+      } else {
+        devToolsWindow.webContents.openDevTools({ mode: 'detach' });
+      }
+    });
+  }
+
   mainWindow.on('maximize', publishWindowControlsState);
   mainWindow.on('unmaximize', publishWindowControlsState);
 
@@ -593,6 +661,9 @@ registerUpdateIpc();
 registerWindowControlsIpc();
 registerAccountIpc();
 registerAnimeArtworkIpc();
+registerScreenshotSearchIpc(assertTrustedIpcSender);
+registerDesktopNotificationIpc(assertTrustedIpcSender);
+registerRemoteNotificationFeedIpc(assertTrustedIpcSender);
 registerAnivexaIpc(assertTrustedIpcSender);
 
 app.on('before-quit', () => {

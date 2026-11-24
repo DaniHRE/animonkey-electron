@@ -12,6 +12,22 @@
   isolation: isolate;
 }
 
+.vidstack-player[data-subtitle-size='small'] {
+  --media-user-font-size: 0.75;
+}
+
+.vidstack-player[data-subtitle-size='medium'] {
+  --media-user-font-size: 1;
+}
+
+.vidstack-player[data-subtitle-size='large'] {
+  --media-user-font-size: 1.25;
+}
+
+.vidstack-player[data-subtitle-size='xlarge'] {
+  --media-user-font-size: 1.5;
+}
+
 .vidstack-player .vds-player,
 .vidstack-player .vds-video-layout {
   width: 100%;

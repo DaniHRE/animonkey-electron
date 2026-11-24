@@ -1,4 +1,5 @@
 import type { EpisodeProgressRecord } from '@/services/cache/local-db';
+import type { ProviderFailureReportInput } from '@/types/anivexa';
 import type { AnimeRating, AnimeTitle, WatchLaterItem } from '@/types/anime';
 
 export interface AccountUser {
@@ -20,6 +21,26 @@ export interface AccountCredentials {
 
 export interface AccountRegistration extends AccountCredentials {
   name?: string;
+}
+
+export type FeedbackSubmissionType = 'suggestion' | 'bug_report';
+
+export type FeedbackFunctionalArea =
+  | 'discovery'
+  | 'catalog'
+  | 'player'
+  | 'library'
+  | 'account'
+  | 'notifications'
+  | 'interface'
+  | 'other';
+
+export interface FeedbackSubmissionInput {
+  type: FeedbackSubmissionType;
+  area: FeedbackFunctionalArea;
+  title: string;
+  description: string;
+  consentVersion: 'feedback-v2';
 }
 
 export type WatchLaterRemoteItem = WatchLaterItem & {
@@ -58,6 +79,8 @@ export interface AccountDataExport {
   episodeProgress: Record<string, unknown>[];
   ratings: Record<string, unknown>[];
   activity: Record<string, unknown>[];
+  feedback: Record<string, unknown>[];
+  providerFailureReports: Record<string, unknown>[];
 }
 
 export type ActivityType =
@@ -113,4 +136,6 @@ export interface AccountBridge {
     limit: number,
   ): Promise<ActivityFeedPage>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  submitFeedback(input: FeedbackSubmissionInput): Promise<void>;
+  reportProviderFailure(input: ProviderFailureReportInput): Promise<void>;
 }

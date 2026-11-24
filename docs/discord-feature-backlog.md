@@ -2,9 +2,9 @@
 
 ## Scope and source
 
-This backlog catalogs the 35 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 38 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
-The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved separately through the local read-only Discord configuration after the owner requested it; other attachment content remains unreviewed.
+The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved through the local read-only Discord configuration after the owner requested it; the DISC-32 debug-panel reference image was also retrieved and reviewed for the selected request. Other attachment content remains unreviewed.
 
 This is an inventory, not an approved implementation plan. Estimates are relative: Low means a localized UI or behavior change; Medium means multiple renderer components or persisted preferences; High means substantial integration, data policy, or media/storage work; Very high means cross-product or platform scope. Defect reports are not treated as confirmed causes until reproduced.
 
@@ -13,146 +13,146 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 ### DISC-01 — Custom navigation bar appearance
 
 - Difficulty: Medium.
-- Current state: Implemented locally on `dev`: Windows uses a frameless window with a hidden native menu and compact application controls in a transparent 32-pixel strip. The packaged Windows build passed, but the window was not visually checked at runtime. Other platforms retain native window chrome.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Windows uses a frameless window with a hidden native menu and compact application controls in a transparent 32-pixel strip. The packaged Windows build passed, but the window was not visually checked at runtime. Other platforms retain native window chrome.
 - Technical analysis: On Windows, use a frameless BrowserWindow and remove its menu. Place compact, accessible application controls in a 32-pixel draggable strip above the existing navigation header. Keep native window chrome on other platforms and preserve resizing, maximize/restore, minimize, close, and the existing router.
 
 ### DISC-02 — Restore the last visited page
 
 - Difficulty: Medium.
-- Current state: Implemented locally. The renderer stores the last successfully resolved, allow-listed hash route in versioned local storage and restores it when startup begins at the default home route. An explicit app-protocol anime deep link takes precedence. Invalid routes or parameters leave startup at home; existing route error states and shell navigation remain available when content cannot load.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. The renderer stores the last successfully resolved, allow-listed hash route in versioned local storage and restores it when startup begins at the default home route. An explicit app-protocol anime deep link takes precedence. Invalid routes or parameters leave startup at home; existing route error states and shell navigation remain available when content cannot load.
 - Technical analysis: Persist only validated internal routes and supported parameters. Restore them through the existing hash history, while allowing explicit deep links to take precedence. Keep local data and home navigation available when a stored route is invalid or its data is unavailable.
 
 ### DISC-03 — Application-level back button
 
 - Difficulty: Low to Medium.
-- Current state: Implemented locally on `feature/disc-03-application-back-button`. Back and forward controls sit in Windows' custom title bar beside the window controls; platforms with native title bars keep them in the app header. Back uses TanStack's in-app history index. Without a valid in-app entry it returns non-home routes to Início and is disabled on Início. Forward is enabled only for an in-app entry observed during the current session. Navigation preserves hash routes and query state, including the episode parameter.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Back and forward controls sit in Windows' custom title bar beside the window controls; platforms with native title bars keep them in the app header. Back uses TanStack's in-app history index. Without a valid in-app entry it returns non-home routes to Início and is disabled on Início. Forward is enabled only for an in-app entry observed during the current session. Navigation preserves hash routes and query state, including the episode parameter.
 - Technical analysis: Add a shell control that uses TanStack Router history and handles an empty or external-entry history safely. Preserve hash routes, browser back/forward behavior, and the episode query parameter.
 
 ### DISC-04 — Common and configurable keyboard shortcuts
 
 - Difficulty: Medium.
-- Current state: The watch page describes a few player shortcuts. There is no application-level Ctrl+B action or shortcut editor.
-- Technical analysis: Define a small typed command registry in the renderer, then add shortcut preferences and collision validation. Avoid handling shortcuts while the user is typing in an input or editable control. Keep playback shortcuts owned by Vidstack where possible, and account for platform-specific modifier keys and accessibility.
+- Current state: Settings provides editable, locally persisted shortcuts for toggling the sidebar, focusing search, and opening Settings. The command registry uses Ctrl on Windows/Linux and Command on macOS, reserves common editing, window, browser, and developer-tools shortcuts, rejects collisions, and ignores key events from editable controls. Preferences are included in local backups.
+- Technical analysis: Keep application commands in a typed renderer registry and persist only validated shortcut bindings. Reject reserved combinations and collisions before saving, normalize imported preference values, and do not handle shortcuts while the user is typing in an input or editable control. Keep playback shortcuts owned by Vidstack where possible.
 
 ### DISC-05 — Reorderable sidebar
 
 - Difficulty: Medium.
-- Current state: Sidebar entries are fixed in source. Início and Explorar are already in the primary section.
-- Technical analysis: Persist an ordered list of stable route identifiers, keep Início and Explorar pinned, and provide defaults for newly added or removed routes. Do not persist arbitrary URLs or treat renderer-provided route strings as trusted navigation targets.
+- Current state: Settings can reorder the links within the primary and More sections using accessible up/down controls. Início and Explorar stay pinned. The order is stored as allow-listed stable identifiers in local preferences and included in backups; normalization removes unknown and duplicate identifiers and appends newly supported routes in their default order.
+- Technical analysis: Persist only stable identifiers from the renderer's route registry, keep Início and Explorar pinned, and supply defaults for newly added or removed destinations. Resolve every identifier through the static route registry; never persist arbitrary URLs or trust renderer-provided route strings as navigation targets.
 
 ### DISC-06 — Move title-language preference to Settings
 
 - Difficulty: Low.
-- Current state: The EN/JP title toggle is in the header. Its provider initializes in memory and does not persist the selection.
-- Technical analysis: Move the control into local application preferences and persist it with the existing local preference mechanism. Preserve the current title resolution behavior and make the selected language visible to the user.
+- Current state: The title-language control is in Settings > Preferências. Its selection is stored in the existing local preference store and included in local preference backups; the default remains Japanese (romaji), and invalid imported values fall back to that default.
+- Technical analysis: Keep the EN/JP selection in local application preferences and expose it in Settings rather than the header. Preserve the current title resolution behavior and make the selected language visible to the user.
 
 ## Settings, privacy, and interaction
 
 ### DISC-07 — Redesign the Settings page
 
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. Account and sync, Anivexa diagnostics, and local backup use a section navigation layout inspired by the reviewed Re:ANIME Settings page. Caption guidance is temporarily commented out until the player exposes configurable caption controls.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Account and sync, Anivexa diagnostics, and local backup use a section navigation layout inspired by the reviewed Re:ANIME Settings page. Caption guidance is temporarily commented out until the player exposes configurable caption controls.
 - Technical analysis: Adapt the reference's persistent settings navigation and clear section hierarchy to the Electron app's existing dark and green visual identity. Preserve local-data and account boundaries, loading/error/offline states, accessible labels, and current Anivexa diagnostics. Keep the redesign within the Electron repository.
 
 ### DISC-08 — Adult-content preference with SFW default
 
 - Difficulty: Medium.
-- Current state: Search exposes adult-content filters, but the current service default is include. No global Settings preference was found.
-- Technical analysis: Add a persisted preference defaulting to exclude adult content, then apply it consistently to catalog queries and relevant discovery surfaces. Define behavior for existing installations and imported backups. Preserve the ability to opt in and validate AniList adult flags at the data boundary.
+- Current state: Settings has a local “include adult content in discovery” preference that defaults to off for existing installations and backups without the key. The preference applies to search and its header preview, Home and catalog lists, airing schedules, relations, recommendations, and adult search tags. Anime discovery uses this global setting without per-search content mode controls. Invalid AniList anime/adult flags are excluded from discovery results; direct title links and user-owned library items remain accessible.
+- Technical analysis: Persist a validated boolean with a fail-closed default. Apply the setting through query keys, AniList requests, and recommendation mapping so changing it refreshes the affected surfaces. Keep discovery behavior controlled by the global setting, default missing or invalid imports to exclude, and do not silently remove existing library or progress data.
 
 ### DISC-09 — Adult-content privacy controls
 
 - Difficulty: High.
-- Current state: No per-category privacy controls were found for continue-watching history, activity, or sync.
-- Technical analysis: Define each data flow separately: local progress, visible Continue Watching entries, account sync, and activity records. Decide whether controls prevent future recording, hide existing records, or also delete them. Keep local-first access, backup semantics, and optional sync consistent; do not silently discard existing user data.
+- Current state: Settings has separate controls for recording new local episode progress, showing Continue Watching on Home and in navigation, syncing episode progress with an account, and sharing activity in the account feed. Controls default to the current behavior. Disabling them stops future writes, pauses progress sync, or hides entries without deleting existing local or remote records. Privacy preferences are included in local backups and validated on import.
+- Technical analysis: Keep local progress recording, Continue Watching visibility, episode-progress sync, and account activity visibility independent. Sync opt-out skips only episode-progress reconciliation; library and rating sync continue. Preserve existing local and remote data while disabled, keep local backups valid for all supported preferences, and restore normal behavior when each control is re-enabled.
 
 ### DISC-10 — Configure caption appearance in Settings
 
 - Difficulty: Medium.
-- Current state: Vidstack exposes caption appearance controls during playback. Settings currently points users to those controls but does not edit or persist them.
-- Technical analysis: Identify which caption style values Vidstack supports, persist only supported values locally, and apply them to the existing Vidstack player. Do not infer caption availability or language, and do not add a second player framework.
+- Current state: Settings has a caption section for selecting small, medium, large, or extra-large text. The validated `player.subtitle-size` preference is stored locally, included in backups, and applied to Vidstack's caption font-size multiplier. The existing player remains responsible for track selection and playback.
+- Technical analysis: Keep the preference limited to supported size values, default missing or invalid stored values to medium, and use Vidstack's existing caption style variable. Do not infer caption availability or language, and do not add a second player framework.
 
 ### DISC-11 — Avoid accidental text selection
 
 - Difficulty: Low to Medium.
-- Current state: Text selection is disabled only on selected elements such as the brand mark; general text remains selectable.
-- Technical analysis: Scope any non-selectable styling to decorative shell controls. Preserve selection in fields and in readable content that users may need to copy. A blanket restriction can harm accessibility and usability, so the exact surfaces need agreement.
+- Current state: Sidebar navigation, sidebar visibility controls, header history controls, and window controls do not initiate text selection. Form fields and readable page content remain selectable.
+- Technical analysis: Scope non-selectable styling to navigation and window controls. Preserve selection in form fields and readable content that users may need to copy; do not apply a blanket restriction to the application.
 
 ### DISC-12 — Remove the “filters saved in URL” explanation
 
 - Difficulty: Low.
-- Current state: The search page explicitly says its criteria are saved in the URL. Search state is represented by internal TanStack hash-route parameters; the desktop window has no normal browser address bar.
-- Technical analysis: Remove or rewrite the explanatory copy while retaining internal search parameters unless the request explicitly asks to change filter persistence. Preserving route state supports back/forward navigation and reopening a search.
+- Current state: The search page describes AniList filtering without exposing internal URL persistence. Search state remains in TanStack hash-route parameters, preserving back/forward navigation and reopening a search.
+- Technical analysis: Remove copy that explains filters are saved in the URL. Keep the underlying search route parameters because they support back/forward navigation and reopening a search.
 
 ## Discovery, notifications, and catalog defects
 
 ### DISC-13 — Follow airing anime and notify on new episodes
 
 - Difficulty: High.
-- Current state: The app displays a general airing schedule and has a Watch Later list, but no followed-anime notification preference was found.
-- Technical analysis: Define whether following is a separate list or reuses an existing list. Store it locally and decide whether it participates in optional account sync. Detect new episodes from AniList schedule data without aggressive polling, and handle time zones, duplicate alerts, offline periods, and missed-airing changes.
+- Current state: Anime pages can add or remove a separate local “Acompanhar” entry, independent of Assistir Depois. Up to 50 followed anime are stored in local preferences and included in local backups; they do not sync with the account. Native new-episode notifications are opt-in and off by default; successfully shown alerts also appear in the local notification center. While the app is open and online, AniList airing data is checked every 15 minutes; successful alerts are deduplicated by episode, and a catch-up alert can cover the latest missed episode. Settings explains that the notification exposes the title and episode to the operating system.
+- Technical analysis: Keep following separate from Watch Later and local-only until account sync is explicitly designed. Require an opt-in for system notifications, avoid polling while offline or disabled, use AniList airing data with a bounded cadence, and deduplicate alerts. On reconnect, report at most the latest missed episode rather than generating a notification burst.
 
 ### DISC-14 — General notification center
 
 - Difficulty: High.
-- Current state: The app has an update center for application updates, but no general inbox for anime, maintenance, provider, or moderation messages.
-- Technical analysis: Separate notification sources and define retention, read/dismiss state, delivery timing, and offline behavior. Moderation messaging and live service status require an agreed backend contract; they are not supplied by the current desktop application. Keep update notifications working independently.
+- Current state: The header has a local notification center for followed-anime episode alerts and application update-ready/installed events. The local feature also supports a validated static Storage/CDN feed for maintenance, curated provider-health, global moderation, new-anime, followed-anime spotlight, and trending messages. Feed reads are best-effort, capped at 4 KiB and 8 messages, and throttled to one request per client profile every six hours with jitter; HTTP 402/429 responses trigger a 24-hour backoff. Remote entries are cached locally, retain read/dismiss state, and do not block local notifications or app startup. The estimated 20 active profiles add at most 2,500 reads and about 10.24 MB/month before existing project egress. The `desktop-notifications` bucket is provisioned public-read for JSON up to 4 KiB. Its only object is the empty `v1/feed.json`; a public GET returned HTTP 200 with JSON content and a one-hour cache header. No remote messages are published.
+- Technical analysis: Keep local notification sources independent from remote feeds, use stable event IDs, and bound local retention. Preserve offline access, read/dismiss state, and the existing update flow. Keep spotlight filtering on the device; never upload follow lists or read/dismiss state. Publish only reviewed broadcast content and keep the DISC-29 provider-health table private. Review total project egress headroom before publishing the public feed.
 
 ### DISC-15 — Report unavailable providers automatically
 
 - Difficulty: High.
-- Current state: Local Anivexa runtime diagnostics exist, but no provider health reporting or outbound failure report was found.
-- Technical analysis: Distinguish a confirmed provider outage from a transient network error, unsupported stream, or user cancellation. Any report sent off-device needs an endpoint, consent and retention rules, rate limiting, and strict redaction of signed stream URLs, authorization headers, and personal data.
+- Current state: The desktop client can optionally report an authenticated provider lookup response with HTTP 502, 503, or 504. Reporting is off by default and available from Settings > Privacy. Reports contain an allowlisted provider ID, status, consent version/time, account association, and creation time; they exclude anime/episode identifiers, titles, URLs, headers, response bodies, raw errors, timeouts, cancellations, and 404 responses. The backend limits accepted reports to 10 per account per 24 hours, deduplicates by provider for one hour, and deletes reports after 30 days. Reports are included in the account data export. The provider-reporting schema is applied to the connected Supabase project, and `desktop-api` v10 is active. Packaged-client runtime validation remains outstanding.
+- Technical analysis: Treat these as client-observed provider-route failures, not confirmed provider outages. Keep reporting opt-in, authenticated, allowlisted, rate-limited, deduplicated, and redacted. Do not infer a general outage from an individual client report; independent scheduled probes are unavailable while Anivexa runs only as an embedded local runtime (DISC-29).
 
 ### DISC-16 — Search preview with five results
 
 - Difficulty: Medium.
-- Current state: The header search submits a query; it does not show a result preview while typing.
-- Technical analysis: Reuse the AniList search query and cache, debounce input, limit the preview to five results, and provide a “view more” route. Implement accessible combobox keyboard behavior, loading/empty/error states, request cancellation, and protection from stale results.
+- Current state: The header search now shows up to five debounced AniList results with poster, title, type, and an adult-content indicator. Users can open a title, use arrow keys and Enter to select suggestions, or submit the query to the full search page. Loading, empty, and error states are exposed to assistive technology; the shared query cache and abort signal handle reuse and stale requests.
+- Technical analysis: Reuse the AniList search query and cache, debounce input, limit the preview to five results, and provide a “view more” action. Implement accessible combobox keyboard behavior, loading/empty/error states, request cancellation, and protection from stale results.
 
 ### DISC-17 — Search by screenshot using trace.moe
 
 - Difficulty: High.
-- Current state: No screenshot search or trace.moe integration was found.
-- Technical analysis: Define accepted image formats and size limits, explain that image data is sent to an external service, and make that action explicit. Validate returned matches and map confirmed catalog IDs back to AniList metadata. Handle rate limits, network failure, cancellation, and untrusted response data.
+- Current state: Screenshot search is available from a header widget beside app updates rather than from the Discovery page. It accepts PNG, JPEG, or WebP images up to 10 MiB through file selection, drag-and-drop, or clipboard paste, previews the file locally, and uploads only after the user chooses “Buscar.” A narrow IPC bridge sends the image to trace.moe; the app does not persist it. Returned IDs, scene times, episode values, and similarity scores are validated before matching the IDs to AniList results and applying the global adult-content preference. Search supports cancellation and presents service, timeout, and rate-limit errors.
+- Technical analysis: Keep screenshot search in an accessible header popover/widget beside app updates. Support clipboard paste, drag-and-drop, and file selection through the same local preview and validation path. Keep the upload user-initiated and disclose the external transfer before submission. Limit formats, size, request duration, and response size; validate results before using catalog IDs; and handle rate limits, network failure, cancellation, and untrusted response data. trace.moe documents multipart image uploads and states that images uploaded to its search engine are deleted immediately ([API](https://github.com/soruly/trace.moe-api/blob/master/swagger.yaml), [terms](https://trace.moe/terms)).
 
 ### DISC-18 — Show continuation or recommendations at the finale
 
 - Difficulty: Medium.
-- Current state: The watch page already shows relations and recommendations on every episode; it does not condition their presentation on the final episode.
-- Technical analysis: Detect a finale only when the current episode and known episode count provide reliable evidence. Prefer continuation relations when available, then show recommendations if no continuation exists. Avoid claiming a series has ended when it is ongoing or the provider's episode list is incomplete.
+- Current state: On a confirmed final episode, the watch page highlights AniList sequel relations, or recommendations when no sequel relation exists. Finale detection requires a finished catalog status, a positive known episode count, and a complete contiguous provider episode list that matches that count.
+- Technical analysis: Treat the finale as confirmed only when catalog status, total episode count, provider episode sequence, and current episode all agree. Prefer sequel relations, then recommendations if no continuation exists. Keep the existing related titles and recommendation sections on other episodes; do not classify ongoing series or incomplete provider lists as finished.
 
 ### DISC-19 — Search reports too many pages
 
 - Difficulty: Medium.
-- Current state: The search UI displays totalPages returned by the catalog service. The service derives this from AniList pageInfo; it also merges adult and non-adult results in include mode.
-- Technical analysis: Reproduce the One Piece query and inspect raw, sanitized pageInfo values for both requests. Confirm how totals and lastPage relate to the merged page size before changing pagination. Add a regression case for the observed response and clamp navigation to valid pages.
+- Current state: A live `One Piece` query returned `total: 5000` and `lastPage: 500` on the first non-adult page, while page 10 was empty and reported `hasNextPage: false`. AniList's pagination guide says `total` and `lastPage` are not accurate and advises relying on `hasNextPage`. Search and catalog pagination now show the current page and use `hasNextPage` to enable the next action; displayed counts describe only results on that page.
+- Technical analysis: Treat AniList `total` and `lastPage` as unreliable. Use `hasNextPage` for forward navigation and avoid presenting an estimated total count or page count as exact, including when search results merge adult and non-adult requests.
 
 ### DISC-20 — Search jumps to the top when changing page
 
 - Difficulty: Medium.
-- Current state: Pagination updates the search route's page parameter. The handler has no explicit scroll call; runtime behavior has not been reproduced.
-- Technical analysis: Reproduce with a long result list and determine whether router scroll restoration or component remounting causes the jump. Preserve query and filters, and restore the intended result-list position without interfering with back/forward navigation or accessibility focus.
+- Current state: Search page changes now set TanStack Router's `resetScroll` option to `false`, preserving the current scroll position while the page parameter changes. Query and filter changes keep their normal navigation behavior. Runtime visual validation has not been performed.
+- Technical analysis: TanStack navigation resets scroll to the top by default. Override that behavior only for search pagination; preserve route history, query, and filters so back and forward navigation continue to work.
 
 ### DISC-21 — Remove wasted space beside the Home schedule
 
 - Difficulty: Low to Medium.
-- Current state: Home uses a fixed-width schedule column at wide breakpoints and renders an empty-state message when no schedule entries are available.
-- Technical analysis: Inspect the attached screenshot and reproduce the affected viewport/data state before changing layout. Consider collapsing or reflowing the schedule column when empty while preserving responsive balance and a useful empty state.
+- Current state: The reviewed screenshot shows the fixed-width schedule column ending after five entries while later discovery rails remain confined to the left column. The Home layout now keeps Continue Watching and Watch Later beside the schedule on wide screens, then lets discovery rails span the full content width. On small screens, the schedule remains after those rails.
+- Technical analysis: Reflow the fixed-width schedule alongside only the initial Home content and allow later discovery sections to use the full grid width. Preserve a useful schedule empty state and keep the existing single-column mobile order.
 
 ## Playback and offline use
 
 ### DISC-22 — Remember player preferences such as volume
 
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. Vidstack volume uses the IndexedDB-backed local preference store, and Anivexa episode lists use a persistent client-side cache with expiry driven by the next airing time and hourly retries when a scheduled episode is still missing.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. Vidstack volume uses the IndexedDB-backed local preference store, and Anivexa episode lists use a persistent client-side cache with expiry driven by the next airing time and hourly retries when a scheduled episode is still missing.
 - Technical analysis: Store volume with `useLocalPreference` so it survives app restarts. Persist episode lists in the existing IndexedDB catalog cache and return cached data until its deadline. Use the AniList next-airing timestamp as the TTL; after that time, retry hourly while the expected episode is missing. Once it appears, expire at the following weekly slot, or in seven days when an ongoing series has no updated schedule. Keep completed series with a complete episode list for 30 days. A failed refresh serves the last cached list and retries in one hour. Do not persist signed source URLs or provider credentials; stream-link caching remains a separate decision.
 
 ### DISC-23 — Download episodes for offline playback
 
 - Difficulty: High.
-- Current state: Library, ratings, and progress support local/offline use; episode media download was not found.
-- Technical analysis: First determine which providers and stream types permit downloads. HLS/DASH downloads involve manifests, segments, headers, proxy transformations, storage limits, cancellation, integrity, cleanup, and offline playback selection. Preserve the existing media proxy and provider contracts; do not assume every stream can be downloaded.
+- Current state: The owner has deferred all download functionality for now and asked to pursue a different approach. No download implementation should proceed until that approach is defined. The prior permission and provider research remains reference material; no downloader has been implemented.
+- Technical analysis: If download functionality is reconsidered, enable it only for provider and stream combinations with explicit authorization, and distinguish provider-supplied download links from permission to create offline copies. HLS/DASH downloads involve manifests, segments, headers, proxy transformations, storage limits, cancellation, integrity, cleanup, and offline playback selection. Preserve the existing media proxy and provider contracts; do not infer permission from a playback URL or a `downloads` field.
 
 ### DISC-24 — Sync downloads with a mobile app
 
@@ -167,8 +167,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Request date (Brasília): 2026-11-23.
 - Reply metadata: The 00:38 Brasília follow-up is a native Discord reply to the 00:31 request, confirmed by the local MCP reader.
 - Difficulty: High.
-- Current state: No general suggestion/report intake UI or GitHub issue automation was found. The app already uses Supabase for account services, but no feedback intake contract or table was found.
-- Technical analysis: A shared feedback component is applicable to the desktop app, with distinct suggestion/report categories and classification tags. Store validated entries in a dedicated Supabase table, with defined consent, privacy, retention, rate limits, and anti-abuse controls. A trusted backend workflow should take reviewed entries from Supabase, reshape free-form user text into the project's standard issue format, and create the corresponding GitHub issues. Keep GitHub credentials on the backend; never ship a GitHub token in the Electron app. The UI and backend automation may need separate implementation scopes.
+- Current state: The desktop app has one authenticated feedback form for suggestions and bug reports, with functional-area classification, explicit consent, server-side validation, and a three-submission per account per 24-hour limit. Consent version `feedback-v2` explains that reviewed text may be formalized as a repository Issue. The `feedback_intake` migration is applied to the connected Supabase project, and `desktop-api` v10 is active. A manually dispatched GitHub Actions workflow is prepared locally to accept a reviewed title/body, verify the feedback UUID, add type/area labels, and avoid publishing the raw submission or account ID. The workflow is not on the remote default branch, so issue automation is not active. Packaged-client runtime validation also remains outstanding.
+- Technical analysis: Store only the account ID, feedback type, functional area, title, description, consent version, and timestamps. The table has RLS enabled and no client-role access; the authenticated desktop API invokes a restricted database function. Include submitted entries in the account data export and remove them when the account is deleted or after 180 days. Keep an explicit maintainer review before issue creation, use only the reviewed public-facing title/body and non-identifying category metadata, and keep the Supabase secret API key and GitHub token out of Electron packages.
 
 ## Discovery and catalog defects
 
@@ -176,8 +176,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23.
 - Difficulty: Medium.
-- Current state: Search exposes `MUSIC` in its format filters, while the AniList query is constrained to anime and the app has no music playback flow. The reported client error has not been independently reproduced.
-- Technical analysis: Reproduce the failure and trace whether it occurs in search results, anime details, or playback. Temporarily remove the unsupported `MUSIC` filter from the UI, then audit the other exposed format and source filters against the app's anime metadata and Anivexa playback contracts. Preserve AniList query behavior and do not claim the reported cause is confirmed until reproduced.
+- Current state: The `MUSIC` format is removed from both format pickers and ignored in legacy search URLs before filtering, display, and active-filter counts. Search remains constrained to AniList anime. Source options describe the work an anime was adapted from, not a streaming provider, and the exposed values match the current `MediaSource` enum. An attempted `version: 3` argument on `Page.media` was rejected by AniList and broke search and catalog requests; the unsupported argument has been removed. Episode and provider availability remains an Anivexa lookup.
+- Technical analysis: Keep the search query constrained to `ANIME`, make `MUSIC` unavailable as a selectable filter, and discard stale `MUSIC` format values from old URLs. Preserve `MUSIC` in the metadata type because AniList may still return that format. Keep exposed status, season, sort, and source values aligned with AniList's enums. Do not pass a `version` argument to `Page.media`, whose schema does not accept it, and describe source filters as adaptation metadata rather than playback availability.
 
 ## Discord integrations
 
@@ -185,15 +185,15 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23.
 - Difficulty: High.
-- Current state: No Discord presence integration was found. This is a desktop-app feature and could be optional.
-- Technical analysis: Define opt-in behavior and which activity details may be shared before selecting an integration mechanism. Cover Discord being closed or unavailable, app lifecycle, platform support, and privacy. Never expose provider URLs, account credentials, or other private data in presence.
+- Current state: Canceled by the owner on 2026-11-24 before implementation. No Rich Presence integration will be developed.
+- Technical analysis: No further SDK acquisition, portal submission, or code changes are planned for this request.
 
 ### DISC-28 — Announce releases and new episodes through a Discord bot
 
 - Request date (Brasília): 2026-11-23.
 - Difficulty: Very high; the bot itself is outside the desktop app's scope.
-- Current state: No Discord bot or announcement service was found. The Electron app already registers the `app:` protocol and can open anime deep links by ID.
-- Technical analysis: Bot hosting, Discord credentials, announcement sources, deduplication, and scheduling belong in a separate trusted service. The desktop app can support the request by opening validated anime deep links; define the bot's link format against the existing protocol and route contract. Do not embed bot credentials or implement the bot inside the renderer.
+- Current state: Canceled by the owner on 2026-11-24 because no external hosting is available for the bot or its required services. No Discord bot or announcement service will be developed.
+- Technical analysis: The bot requires externally hosted infrastructure for Discord credentials, announcement sources, deduplication, and scheduling. This request is canceled until that hosting is available; do not implement bot services in the desktop app.
 
 ## Provider health monitoring
 
@@ -201,8 +201,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 00:48.
 - Difficulty: High; primarily a backend service task.
-- Current state: The desktop app has local Anivexa runtime diagnostics, but no scheduled provider health pipeline or shared Supabase status table was found. This is related to, but distinct from, client-side failure reports in DISC-15.
-- Technical analysis: Define which frequently used providers to probe, the check cadence, success criteria, retry policy, and freshness/expiry of stored results. Run probes in a trusted scheduled service and write sanitized status records through a restricted backend contract; do not expose provider credentials or probe secrets to Electron. Guard against transient network errors and false outage reports.
+- Current state: Implemented on the local development branch. A GitHub Actions workflow is configured to run the pinned Anivexa API route handlers every six hours, probe one documented sample per provider, and upsert each provider's latest sanitized status into `public.anivexa_provider_health`. The migration is applied to the connected Supabase project. A manual run on 2026-11-24 exercised all 12 providers: nine were healthy, one was indeterminate because its sample did not match, and two were unavailable after technical failures. Its 12 sanitized rows were upserted into Supabase through the connected MCP session and confirmed with a read query. The table has no renderer access and stores no sample IDs, titles, URLs, response bodies, or raw errors. The scheduled workflow remains local and inactive on GitHub.
+- Technical analysis: Run probes in a trusted scheduled service against the pinned embedded Anivexa runtime; Anivexa is not remotely hosted. Keep the monitor independent of desktop clients and use the six-hour cadence and per-provider sample matrix confirmed by the owner. Distinguish successful episode results, technical failures, and sample catalog no-matches, then publish only the latest sanitized snapshot through a server-side Supabase key. See [Anivexa provider health monitoring](anivexa-provider-health-monitoring.md) for the matrix, status rules, and workflow configuration.
 
 ## Runtime diagnostics
 
@@ -210,8 +210,8 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 12:20.
 - Difficulty: Medium to High.
-- Current state: A Discord report shows repeated `Anivexa request cancelled` errors from the IPC handler and requests a way to open DevTools. The cancellation path has not been traced to determine whether these are expected aborts or leaked runtime errors.
-- Technical analysis: Reproduce and trace cancellation through the renderer, preload, IPC handler, and Anivexa runtime. Treat expected aborts separately from provider failures and avoid logging sensitive request data. Define a developer-only DevTools entry point that preserves the production security model; do not expose unrestricted DevTools access in release builds without a reviewed product decision.
+- Current state: The reported IPC error is caused by an expected renderer `AbortSignal` cancellation: the preload sends `anivexa:cancel`, `AnivexaRuntime.cancel()` rejects the pending request, and the rejected promise reaches Electron's `ipcMain.handle` logger. The renderer has already aborted that request; this stack trace does not establish a runtime crash or increased response latency. Expected cancellations now return an internal HTTP 499 sentinel at the IPC boundary, while other errors still reject. Changes are integrated locally into `dev` at `1596e97`. In a local development runtime, the Anivexa diagnostics panel showed the runtime as active and F12 opened a detached DevTools window for Vite. The production `BrowserWindow` now enables DevTools only when `MAIN_WINDOW_VITE_DEV_SERVER_URL` is present. A local Windows x64 package rebuild succeeded, and the owner confirmed that F12 remains disabled in the packaged executable while it opens DevTools in the development version. The packaged app rendered Home in an isolated temporary profile; the automated F12 re-check was stopped by owner input. A manually opened anime detail page fetched `/episodes/200294` successfully with HTTP 200, so it did not reproduce the renderer cancellation; the HTTP 499 cancellation path remains unverified.
+- Technical analysis: Preserve the renderer's abort as the source of cancellation and keep expected aborts separate from provider failures. Do not log sensitive request data. Restrict DevTools access to development builds and preserve the production security model.
 
 ## Application updates
 
@@ -219,8 +219,33 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 12:47.
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. The header places the update action beside an avatar-only profile link, the status indicator pulses while a package downloads or is ready, and the dialog can browse existing release notes for versions 1.0.0 through 1.0.2. The requested Discord image was retrieved and reviewed after the owner asked for it.
+- Current state: Shipped in Animonkey Desktop 1.0.3 on `main`. The header places the update action beside an avatar-only profile link, the status indicator pulses while a package downloads or is ready, and the dialog browses versioned release notes from the app's existing release data. The requested Discord image was retrieved and reviewed after the owner asked for it.
 - Technical analysis: Place the update action beside an avatar-only profile control. Use the supplied compact header reference, preserve the existing update state and install flow, and add a restrained pulse only while a new package is downloading or ready, respecting reduced-motion preferences. Let users browse the existing versioned release notes as update history without adding another update service or persistence layer.
+
+## Debug settings
+
+### DISC-32 — Redesign the settings debug panel
+
+- Request date (Brasília): 2026-11-23, 16:23.
+- Difficulty: Medium.
+- Current state: Implemented and integrated locally into `dev`. A local development runtime visual check confirmed Settings > Debug renders runtime status, severity counts and filters, the current-session Anivexa event list, and export/clear actions; the runtime status showed Active. Export and clear behavior were not exercised. The export includes app version and timestamp and may contain provider and anime IDs; it excludes credentials, signed URLs, and payloads.
+- Technical analysis: Give the debug area a clear Settings destination with runtime status, event counts, readable recent entries, severity filters, and actions to export and clear the current session diagnostics. Keep exports limited to sanitized diagnostic data, use a native save dialog, and disclose that request summaries can contain provider and anime identifiers. Do not imply that logs persist between sessions or include credentials, signed URLs, or request payloads.
+
+## Account configuration and Windows distribution
+
+### DISC-33 — Configure the account API in the Windows package
+
+- Request date (Brasília): 2026-11-23, 18:28.
+- Difficulty: Low to Medium.
+- Current state: A user reported that account registration in the distributed app fails because the account service is not configured. The main-process Vite config requires `VITE_DESKTOP_API_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; both Windows packaging workflows pass these values from GitHub Actions repository variables, and production builds fail when either value is missing or the API URL is not an HTTPS `/desktop-api` endpoint. The owner confirmed both repository variables are configured. A local Windows x64 Squirrel package build succeeded using the ignored local `.env`; inspection of `app.asar` confirmed both public values are embedded in JavaScript bundles and the `.env` file is excluded. This does not independently validate the GitHub variable contents. The already distributed installer is unchanged.
+- Technical analysis: Treat the Desktop API URL and Supabase publishable key as public build-time configuration, not secrets. Explicitly inject them into both Windows packaging workflows and never rely on a local ignored `.env`. Keep service-role keys and other private credentials out of Vite and the distributed app.
+
+### DISC-34 — Open screenshot search from a header widget
+
+- Request date (Brasília): 2026-11-23, 19:28.
+- Difficulty: Medium.
+- Current state: This standalone request asks for a screenshot-search widget near the update action with clipboard paste, drag-and-drop, and file selection. Those flows are already implemented by DISC-17 in commit `038ecc5`: the header widget provides all three inputs, previews and validates the image locally, and sends it to trace.moe only after the user chooses to search. No additional code change is needed for this request.
+- Technical analysis: Keep the widget in the application header rather than Discovery. Route clipboard, dropped, and selected files through the same size/type validation and user-initiated upload path, and disclose the external transfer before search.
 
 ## Per-item branch and integration rule
 

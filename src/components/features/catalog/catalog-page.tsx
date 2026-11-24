@@ -1,8 +1,10 @@
 import { ArrowLeft, ArrowRight, Flame, Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { AnimeCard } from '@/components/shared/anime-card';
 import { LoadingGrid } from '@/components/shared/loading-grid';
+import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { animeQueries } from '@/services/anime-queries';
 import type { AnimeResult } from '@/types/anime';
 
@@ -25,6 +27,7 @@ const collections = {
 type CollectionKey = keyof typeof collections;
 
 export function CatalogPage() {
+  const { includeAdult } = useAdultContentPreference();
   const { pathname, search } = useRouterState({
     select: (state) => state.location,
   });
@@ -34,18 +37,33 @@ export function CatalogPage() {
   const navigate = useNavigate();
   const requestedPage = Number(params.page ?? 1);
   const page =
-    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? requestedPage
+      : 1;
   const config = collections[collection as CollectionKey];
   const query = useQuery(
     animeQueries.list(
       [...config.sort],
       'status' in config ? config.status : undefined,
       page,
+      includeAdult,
     ),
   );
   const loading = query.isPending;
   const result = query.data;
   const error = query.error?.message ?? null;
+
+  useEffect(() => {
+    if (!result || page <= 1 || result.results.length > 0) return;
+    void navigate({
+      to: collection === 'trending' ? '/trending' : '/updates',
+      search: (previous) => {
+        const next = { ...previous };
+        delete next.page;
+        return next as Record<string, string>;
+      },
+    });
+  }, [collection, navigate, page, result]);
 
   return (
     <section>
@@ -64,7 +82,7 @@ export function CatalogPage() {
         </div>
         {result && (
           <span className="text-xs text-white/35">
-            {result.totalResults.toLocaleString('pt-BR')} títulos
+            {result.results.length} títulos nesta página
           </span>
         )}
       </div>
@@ -105,7 +123,7 @@ export function CatalogPage() {
               <ArrowLeft size={14} /> Anterior
             </button>
             <span className="text-xs tabular-nums text-white/45">
-              Página {page} de {result.totalPages}
+              Página {page}
             </span>
             <button
               type="button"

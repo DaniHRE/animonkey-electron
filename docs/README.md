@@ -4,6 +4,7 @@ This page is the index for current project guidance and historical records.
 
 ## Release records
 
+- [1.1.0 release candidate](releases/1.1.0-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0.3 release candidate](releases/1.0.3-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0 release closeout](releases/1.0-checklist.md) — published v1.0.2, completed 1.0 gates, evidence, and known limitations.
 - [Original 1.0 roadmap](archive/1.0-roadmap.md) — historical plan, superseded by the completed release workflow.
@@ -20,9 +21,22 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 ## Product feedback
 
 - [Discord feature and fix backlog](discord-feature-backlog.md) — requests from the project's private testers Discord, with current Electron coverage, relative difficulty, technical notes, and per-item branch guidance.
+- [Feedback-to-Issue workflow](feedback-issue-workflow.md) — maintainer review and GitHub Actions procedure for turning a Supabase feedback record into a categorized GitHub issue.
+
+## Notifications
+
+- [Remote notification delivery contract proposal](remote-notification-contract-proposal.md) — static Storage/CDN feed contract, quota estimate, client safeguards, and Supabase setup status for DISC-14.
+
+## Supabase
+
+- [Supabase deployment and project status](supabase-deployment.md) — connected-project audit, Supabase-backed features, deployment sequence, and current schema bootstrap limitations.
 
 ## Technical debt
 
 - [Technical debt index](technical-debt/README.md) — deferred issues with evidence and acceptance criteria.
+
+## Monitoring
+
+- [Anivexa provider health monitoring](anivexa-provider-health-monitoring.md) — scheduled provider probes, sanitized Supabase snapshots, status meanings, and workflow configuration.
 
 For repository structure, security rules, and local validation commands, see [AGENTS.md](../AGENTS.md). For branch and contribution practices, see [CONTRIBUTING.md](../CONTRIBUTING.md).
