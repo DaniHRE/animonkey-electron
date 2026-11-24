@@ -1,4 +1,71 @@
 {
+  "1.1.0": {
+    "eyebrow": "ATUALIZAÇÃO 1.1.0",
+    "title": "Mais recursos para descobrir e acompanhar seus animes.",
+    "summary": "Esta versão amplia a busca e a personalização, adiciona acompanhamento de animes e notificações, e traz novos controles de privacidade e diagnóstico.",
+    "highlights": [
+      {
+        "icon": "discover",
+        "title": "Busca com imagem e prévia",
+        "description": "Encontre animes por uma cena e confira resultados sem sair da página."
+      },
+      {
+        "icon": "library",
+        "title": "Acompanhe estreias",
+        "description": "Siga animes e veja notificações locais sobre novos episódios."
+      },
+      {
+        "icon": "sync",
+        "title": "Mais controle sobre seus dados",
+        "description": "Ajuste o histórico de reprodução e outras preferências de privacidade."
+      },
+      {
+        "icon": "play",
+        "title": "Melhorias para assistir",
+        "description": "Configure o tamanho das legendas e encontre continuações após o final de uma série."
+      }
+    ],
+    "githubRelease": {
+      "summary": "Animonkey 1.1.0 expands discovery, personalization, local notifications, privacy controls, playback guidance, and diagnostics.",
+      "sections": [
+        {
+          "title": "Discovery and catalog",
+          "details": [
+            "Search now offers screenshot-based scene lookup from a header widget and a compact result preview. Pagination follows AniList's `hasNextPage` field and preserves the current scroll position when moving between result pages.",
+            "Discovery defaults to the global adult-content preference, with a safe-for-work default for new profiles. The per-search adult-content selector has been removed."
+          ]
+        },
+        {
+          "title": "Library, notifications, and privacy",
+          "details": [
+            "Users can follow airing anime and receive local episode notifications. The notification center keeps read and dismissed state locally and can read a maintainer-controlled static Supabase Storage feed. Remote-feed failures are best effort and do not block local notifications or app startup.",
+            "Watch-history privacy controls let users review and clear locally stored history. Feedback intake supports suggestions and bug reports with explicit consent and server-side validation."
+          ]
+        },
+        {
+          "title": "Personalization and accessibility",
+          "details": [
+            "Settings now include a title-language preference, configurable caption text size, global keyboard shortcuts, and configurable sidebar route ordering.",
+            "Navigation controls avoid accidental text selection, and discovery rails use the available width more effectively on wide screens."
+          ]
+        },
+        {
+          "title": "Playback and diagnostics",
+          "details": [
+            "Anime finales surface continuation recommendations when catalog and provider episode evidence agree. Expected Anivexa request cancellations are handled without presenting them as provider failures.",
+            "The app includes an Anivexa diagnostics panel and an opt-in, authenticated report for selected provider lookup failures. Provider reports exclude anime IDs, provider URLs, and raw errors."
+          ]
+        },
+        {
+          "title": "Desktop reliability and release configuration",
+          "details": [
+            "Production builds disable DevTools shortcuts while development builds retain them.",
+            "The Windows workflows pass the required public Supabase configuration explicitly into packaged builds and fail production packaging when required values are missing. No private service-role credential is bundled."
+          ]
+        }
+      ]
+    }
+  },
   "1.0.3": {
     "eyebrow": "ATUALIZAÇÃO 1.0.3",
     "title": "Uma experiência desktop mais prática e ágil.",
