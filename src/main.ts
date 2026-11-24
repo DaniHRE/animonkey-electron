@@ -593,6 +593,7 @@ const createWindow = () => {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      devTools: Boolean(MAIN_WINDOW_VITE_DEV_SERVER_URL),
     },
   });
 
