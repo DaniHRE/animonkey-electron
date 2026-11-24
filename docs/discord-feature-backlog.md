@@ -240,6 +240,13 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Current state: A user reported that account registration in the distributed app fails because the account service is not configured. The main-process Vite config requires `VITE_DESKTOP_API_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`; local `.env` has both, but the Windows CI and stable release workflows did not pass them to `pnpm make`. The workflows now read both values from GitHub Actions repository variables, and production builds fail when either value is missing or the API URL is not an HTTPS `/desktop-api` endpoint. The repository variables must be configured, and these code changes require a future authorized Windows package build; an already distributed installer is unchanged.
 - Technical analysis: Treat the Desktop API URL and Supabase publishable key as public build-time configuration, not secrets. Explicitly inject them into both Windows packaging workflows and never rely on a local ignored `.env`. Keep service-role keys and other private credentials out of Vite and the distributed app.
 
+### DISC-34 — Open screenshot search from a header widget
+
+- Request date (Brasília): 2026-11-23, 19:28.
+- Difficulty: Medium.
+- Current state: This standalone request asks for a screenshot-search widget near the update action with clipboard paste, drag-and-drop, and file selection. Those flows are already implemented by DISC-17 in commit `038ecc5`: the header widget provides all three inputs, previews and validates the image locally, and sends it to trace.moe only after the user chooses to search. No additional code change is needed for this request.
+- Technical analysis: Keep the widget in the application header rather than Discovery. Route clipboard, dropped, and selected files through the same size/type validation and user-initiated upload path, and disclose the external transfer before search.
+
 ## Per-item branch and integration rule
 
 When an item is selected for development:
