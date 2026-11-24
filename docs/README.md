@@ -22,6 +22,7 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 
 - [Discord feature and fix backlog](discord-feature-backlog.md) — requests from the project's private testers Discord, with current Electron coverage, relative difficulty, technical notes, and per-item branch guidance.
 - [Feedback-to-Issue workflow](feedback-issue-workflow.md) — maintainer review and GitHub Actions procedure for turning a Supabase feedback record into a categorized GitHub issue.
+- [GitHub feedback issue requirements](github-feedback-issue-requirements.md) — product requirements transcribed from GitHub feedback issues #9 and #10.
 
 ## Notifications
 

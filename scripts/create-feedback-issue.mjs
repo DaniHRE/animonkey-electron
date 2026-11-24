@@ -13,6 +13,66 @@ const FEEDBACK_AREAS = new Set([
   'interface',
   'other',
 ]);
+const FEEDBACK_TYPE_LABELS = {
+  bug_report: {
+    name: 'Bug Report',
+    color: 'cf222e',
+    description: 'Reviewed bug report from Animonkey Desktop feedback.',
+  },
+  suggestion: {
+    name: 'Product Suggestion',
+    color: '1f883d',
+    description: 'Reviewed product suggestion from Animonkey Desktop feedback.',
+  },
+};
+const FEEDBACK_AREA_LABELS = {
+  discovery: {
+    name: 'Discovery & Search',
+    color: '1f6feb',
+    description: 'Feedback about finding anime, search, or discovery filters.',
+  },
+  catalog: {
+    name: 'Catalog & Metadata',
+    color: '8250df',
+    description: 'Feedback about anime catalog entries and metadata.',
+  },
+  player: {
+    name: 'Player & Episodes',
+    color: 'bf3989',
+    description: 'Feedback about episode playback, subtitles, or providers.',
+  },
+  library: {
+    name: 'Library & History',
+    color: '2da44e',
+    description: 'Feedback about the saved library, watch lists, and history.',
+  },
+  account: {
+    name: 'Account & Sync',
+    color: '9a6700',
+    description:
+      'Feedback about profiles, sign-in, or account synchronization.',
+  },
+  notifications: {
+    name: 'Notifications',
+    color: '0969da',
+    description: 'Feedback about system or provider notifications.',
+  },
+  interface: {
+    name: 'Interface & Navigation',
+    color: '57606a',
+    description: 'Feedback about application layout, controls, or navigation.',
+  },
+  other: {
+    name: 'General',
+    color: '6e7781',
+    description: 'Feedback that does not fit another product area.',
+  },
+};
+const AUTOMATION_LABEL = {
+  name: 'Automated',
+  color: '6f42c1',
+  description: 'Created by the feedback-to-GitHub automation.',
+};
 const GITHUB_API = 'https://api.github.com';
 
 function required(name) {
@@ -203,26 +263,9 @@ async function main() {
     return;
   }
 
-  const feedbackTypeLabel =
-    feedback.feedback_type === 'bug_report'
-      ? 'feedback:bug-report'
-      : 'feedback:suggestion';
-  const areaLabel = `area:${feedback.functional_area.replaceAll('_', '-')}`;
-  const labels = [
-    {
-      name: feedbackTypeLabel,
-      color: feedback.feedback_type === 'bug_report' ? 'cf222e' : '1f883d',
-      description:
-        feedback.feedback_type === 'bug_report'
-          ? 'Reviewed bug report derived from user feedback.'
-          : 'Reviewed product suggestion derived from user feedback.',
-    },
-    {
-      name: areaLabel,
-      color: 'ededed',
-      description: `Functional area: ${feedback.functional_area}.`,
-    },
-  ];
+  const feedbackTypeLabel = FEEDBACK_TYPE_LABELS[feedback.feedback_type];
+  const areaLabel = FEEDBACK_AREA_LABELS[feedback.functional_area];
+  const labels = [feedbackTypeLabel, areaLabel, AUTOMATION_LABEL];
 
   for (const label of labels) await ensureLabel(repository, label);
 
@@ -236,8 +279,9 @@ async function main() {
     '',
     '### Feedback context',
     `- Type: ${typeDescription}`,
-    `- Functional area: ${feedback.functional_area}`,
+    `- Functional area: ${areaLabel.name}`,
     `- Received: ${receivedDate}`,
+    '- Created by: Feedback automation',
     `- Feedback reference: \`${feedbackId}\``,
     marker,
   ].join('\n');
