@@ -39,7 +39,7 @@ export default defineConfig([
 
   // Language and global environment settings
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,mts}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: {
@@ -59,6 +59,15 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
+
+  {
+    files: ['tests/**/*.test.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
     },
   },
 
