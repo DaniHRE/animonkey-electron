@@ -29,9 +29,9 @@ Store one JSON object at `v1/feed.json` in a dedicated public Storage bucket nam
 
 Use the Supabase Storage CDN for reads. The main process derives the project origin from the existing validated `VITE_DESKTOP_API_URL` configuration and appends the fixed path `/storage/v1/object/public/desktop-notifications/v1/feed.json`. For example, `https://<project-ref>.supabase.co/functions/v1/desktop-api` maps to `https://<project-ref>.supabase.co/storage/v1/object/public/desktop-notifications/v1/feed.json`. Never accept a URL or bucket path from the renderer. This requires no new public build variable or Windows pipeline change. Do not bundle the Supabase service key or require an account bearer token for the public object.
 
-Set the object cache lifetime to 43,200 seconds. Supabase routes Storage requests through its CDN, and public objects can be shared across clients in the same region. A cache miss may still reach the Storage origin, so the budget below conservatively counts every client response as egress. The CDN may serve an updated object until its cache lifetime expires; the client cache can keep a previously fetched feed for up to 48 hours.
+Set the object cache lifetime to 3,600 seconds. Supabase routes Storage requests through its CDN, and public objects can be shared across clients in the same region. A cache miss may still reach the Storage origin, so the budget below conservatively counts every response byte as egress. The client cache is refreshed at most every six hours while the app is open and online; with the one-hour CDN cache, a connected client should receive a new notice within about six and a half hours.
 
-The read path does not call `desktop-api`, invoke an Edge Function, query application tables, subscribe to Realtime, or send account, device, or installation identifiers. A CDN miss still reaches the Supabase Storage origin. Each client checks the object only when the user opens the notification center and the previous attempt was at least 48 hours ago. Add random jitter of up to 12 hours to the next eligible check. Record the attempt before fetching and do not retry automatically within that window, including after a failure. This caps requests at 16 per client profile in a 31-day calendar month; profiles that do not open the center send fewer requests.
+The read path does not call `desktop-api`, invoke an Edge Function, query application tables, subscribe to Realtime, or send account, device, or installation identifiers. A CDN miss still reaches the Supabase Storage origin. Check the object at app startup when due, then at most once every six hours while the app is open and online; opening the notification center may also trigger a check when that interval has elapsed. Add up to 30 minutes of random jitter to eligible checks. Record each attempt before fetching. Do not retry a failed request before the six-hour interval; after HTTP 402 or 429, defer the next attempt for at least 24 hours. This caps traffic at 125 requests per client profile in a 31-day month, even if the app stays open continuously.
 
 ## JSON contract
 
@@ -80,31 +80,31 @@ Example object:
 
 ## Client behavior
 
-- Fetch only when the notification center opens and the local 48-hour attempt window plus random jitter has elapsed. Do not poll while the application is running or fetch on every open.
-- Cache the last valid feed locally for up to 48 hours. Show cached, unexpired messages offline; a network error must not hide local episode or update notifications.
+- Fetch at startup when due, then at most once every six hours while the app is open and online. Opening the notification center can trigger a fetch only when the same interval has elapsed.
+- Cache the last valid feed locally. Show cached, unexpired messages offline; a network error must not hide local episode or update notifications.
 - Persist `readAt` and `dismissedAt` locally by remote UUID. Do not send these states to Supabase or sync them across devices.
 - For a `spotlight`, compare its `animeId` with the local followed-anime list before display. Never upload the follow list or use it to target a server response.
 - Ignore expired messages. Open only the existing typed anime route for an `anime` action; all other messages have no action.
-- Do not promise real-time or urgent delivery. A newly published notice may take several days to reach an offline client that recently fetched the feed.
+- Do not promise real-time or urgent delivery. A connected app should receive a newly published notice within about six and a half hours; an offline app receives it after the next launch and eligible fetch.
 
 ## Load estimate for the connected project
 
-The connected Supabase organization is on the Free plan. Supabase currently includes 500,000 Edge Function invocations and 5 GB of cached egress in that plan ([invocation quota](https://supabase.com/docs/guides/platform/manage-your-usage/edge-function-invocations), [pricing](https://supabase.com/pricing)). The proposed Storage read path consumes no Edge Function invocations and issues no queries to application tables; its remaining load is Storage/CDN traffic and egress. A cache miss still reaches the Storage origin ([Storage CDN behavior](https://supabase.com/docs/guides/storage/cdn/fundamentals), [`cacheControl` upload option](https://supabase.com/docs/reference/javascript/file-buckets-upload)).
+The connected Supabase organization is on the Free plan. Its current quotas include 500,000 Edge Function invocations, 5 GB of cached egress, and 5 GB of uncached egress ([invocation quota](https://supabase.com/docs/guides/platform/manage-your-usage/edge-function-invocations), [egress quotas and overage behavior](https://supabase.com/docs/guides/platform/manage-your-usage/egress), [pricing](https://supabase.com/pricing)). Cached and uncached egress have separate quotas; a CDN hit counts as cached egress, while a cache miss counts as uncached egress ([Storage CDN behavior](https://supabase.com/docs/guides/storage/cdn/fundamentals)). The proposal consumes no Edge Function invocations or application-table queries.
 
-At the 4 KiB response cap and one request per client profile every 48 hours, the conservative estimate allows 16 requests per client profile in a 31-day month:
+At the 4 KiB response cap and six-hour refresh interval, the conservative estimate allows 125 reads per client profile in a 31-day month:
 
-| Active client profiles | Storage requests/month (maximum) | Feed egress/month (maximum) |
-| ---------------------: | -------------------------------: | --------------------------: |
-|                     20 |                              320 |   About 0.0013 GB (1.31 MB) |
-|                  1,000 |                           16,000 |               About 0.07 GB |
-|                 10,000 |                          160,000 |               About 0.66 GB |
-|                 20,000 |                          320,000 |               About 1.31 GB |
+| Active client profiles | Storage/CDN reads per month (maximum) |               Maximum transferred bytes per month |
+| ---------------------: | ------------------------------------: | ------------------------------------------------: |
+|                     20 |                                 2,500 | About 10.24 MB (0.2% of either 5 GB egress quota) |
+|                  1,000 |                               125,000 |                                    About 0.512 GB |
+|                 10,000 |                             1,250,000 |                                     About 5.12 GB |
+|                 20,000 |                             2,500,000 |                                    About 10.24 GB |
 
-These estimates count every response byte, including responses that the CDN may serve from cache. They exclude the project's existing Storage egress. At 20,000 active client profiles, the feed would use about one quarter of the Free plan's 5 GB cached-egress allowance before existing usage. The connected tooling does not expose the project's current monthly cached-egress usage, so an absolute no-overage guarantee is not available from the evidence collected. The CDN cache and delayed refresh reduce origin traffic and correlated checks, but do not provide a hard burst limit.
+Each transferred byte counts against the cached or uncached egress quota according to the CDN result, not both. These estimates exclude all existing project traffic. The owner's rough estimate is about 20 users, modeled as 20 active client profiles; multiple installations per user count separately. At that size, the feed adds at most 2,500 reads and about 10.24 MB per month. This is about 0.2% of either Free-plan egress quota and is a small incremental load. If usage grows toward thousands of active profiles, the six-hour cadence can consume a meaningful share of the quota; review the organization's usage dashboard before increasing distribution.
 
-The owner's rough estimate is about 20 users, modeled as 20 active client profiles; multiple installations per user would count separately. If all 20 profiles fetched at the maximum cadence, this feed would add at most 320 Storage/CDN reads and about 1.31 MB per month, roughly 0.03% of the Free plan's cached-egress allowance. This incremental volume is negligible at that audience size, although the project's existing egress remains outside this estimate.
+Supabase documents that Free-plan quota overruns generate a notification and grace period; continued overuse can result in service restrictions ([egress usage policy](https://supabase.com/docs/guides/platform/manage-your-usage/egress), [billing FAQ](https://supabase.com/docs/guides/platform/billing-faq)). This is not described as an immediate project pause on the first overage. The client-side interval is not a project-wide egress cap, and the connected tools do not expose current monthly egress. The total project can still be restricted by traffic from account, auth, database, Storage, or other services if the organization's quota is exceeded.
 
-For comparison, the earlier six-hour `desktop-api` polling idea could add up to 120 Edge Function invocations per client profile per month, or 120,000 at 1,000 active profiles. The connected function logs showed 2,688 `desktop-api` events in the preceding 24 hours; this is a log-based estimate, not the billing usage report. A public Storage object avoids adding those function calls and application-table queries. At 10,000 active profiles, the revised feed estimate is at most 160,000 Storage/CDN requests and about 0.66 GB per month, with no added Edge Function invocations.
+For comparison, the earlier six-hour `desktop-api` polling idea could add up to 120 Edge Function invocations per client profile per month. The static object avoids adding those function calls and application-table queries; its remaining cost is bounded Storage/CDN traffic based on the active client count.
 
 ## Operational and privacy rules
 
@@ -112,14 +112,14 @@ For comparison, the earlier six-hour `desktop-api` polling idea could add up to 
 - Keep the Anivexa health table private. Provider notices are manually curated and must not expose individual probe payloads or turn a single failed sample into a general outage notice.
 - Keep moderation notices global. Account-specific moderation requires a separate authenticated contract.
 - Keep read/dismiss state on the device and preserve the existing 30-day, 100-item local notification retention behavior.
-- If the Storage request fails or the feed is invalid, keep local notifications available and do not retry before the 48-hour window plus jitter has elapsed.
+- Treat the remote feed as best effort. A Storage error, quota response, or invalid feed must never block app startup, navigation, playback, local library data, account screens, or local notifications. Keep the last valid cache and enforce the retry delays above.
 
 ## Decisions requested before implementation
 
 1. Approve the feed as public broadcast content stored in Supabase Storage, with maintainers uploading the JSON object manually.
-2. Accept the 48-hour refresh window, up to 12 hours of jitter, and the absence of real-time delivery.
+2. Accept the six-hour refresh window, up to 30 minutes of jitter, and best-effort delivery without real-time guarantees.
 3. Accept the 4 KiB payload and 8-message cap.
-4. Treat approximately 20 monthly active users as a provisional planning estimate, not a hard cap. At that audience size, the feed is estimated at up to 320 reads and 1.31 MB/month before existing Storage egress; confirm the actual cached-egress headroom before enabling it.
+4. Treat approximately 20 monthly active users as a provisional planning estimate, not a hard cap. At that audience size, the feed is estimated at up to 2,500 reads and 10.24 MB/month before existing egress; confirm both cached and uncached egress headroom in the Supabase dashboard before enabling it.
 5. Keep provider-health notices manual until a separate rule for automating them from DISC-29 snapshots is agreed.
 
 After agreement, implementation can add the public Storage bucket and validated JSON contract, a fixed main-process fetch, local notification-state integration, and a focused DISC-14 runtime check. No database migration or Edge Function endpoint is needed for feed reads.

@@ -24,7 +24,7 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 
 ## Notifications
 
-- [Remote notification delivery contract proposal](remote-notification-contract-proposal.md) — proposed static Storage/CDN feed with a 48-hour client cache and bounded egress for DISC-14; awaiting owner review.
+- [Remote notification delivery contract proposal](remote-notification-contract-proposal.md) — proposed static Storage/CDN feed with a six-hour refresh, best-effort failure handling, and bounded egress for DISC-14; awaiting owner review.
 
 ## Technical debt
 
