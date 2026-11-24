@@ -4,6 +4,7 @@ This page is the index for current project guidance and historical records.
 
 ## Release records
 
+- [1.1.0 release candidate](releases/1.1.0-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0.3 release candidate](releases/1.0.3-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0 release closeout](releases/1.0-checklist.md) — published v1.0.2, completed 1.0 gates, evidence, and known limitations.
 - [Original 1.0 roadmap](archive/1.0-roadmap.md) — historical plan, superseded by the completed release workflow.
@@ -24,7 +25,11 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 
 ## Notifications
 
-- [Remote notification delivery contract proposal](remote-notification-contract-proposal.md) — static Storage/CDN feed contract, quota estimate, client safeguards, and remaining Supabase setup for DISC-14.
+- [Remote notification delivery contract proposal](remote-notification-contract-proposal.md) — static Storage/CDN feed contract, quota estimate, client safeguards, and Supabase setup status for DISC-14.
+
+## Supabase
+
+- [Supabase deployment and project status](supabase-deployment.md) — connected-project audit, Supabase-backed features, deployment sequence, and current schema bootstrap limitations.
 
 ## Technical debt
 

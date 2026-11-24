@@ -2,7 +2,7 @@
 
 ## Status
 
-**The client implementation is complete locally.** It reads one static JSON object from Supabase Storage and its CDN. The feature creates no database schema or Edge Function endpoint and makes no application-table queries. The public bucket and feed object have not been provisioned, and no messages have been published.
+**The client implementation is complete on `dev`.** It reads one static JSON object from Supabase Storage and its CDN. The feature creates no database schema or Edge Function endpoint and makes no application-table queries. The `desktop-notifications` bucket is provisioned as public-read, JSON-only, and limited to 4 KiB per object. The empty initial object is published at `v1/feed.json`; its public GET returned HTTP 200 with `application/json` and `Cache-Control: public, max-age=3600`. No remote messages have been published.
 
 ## Goal and boundaries
 
@@ -116,8 +116,8 @@ For comparison, the earlier six-hour `desktop-api` polling idea could add up to 
 
 ## Remaining operational setup
 
-The client treats a missing or unavailable feed as a non-fatal condition. To publish remote notices later, provision the `desktop-notifications` public-read bucket, configure the object cache lifetime to 3,600 seconds, and upload a validated `v1/feed.json`. Keep write access restricted to maintainers. Review current cached and uncached egress headroom in the Supabase dashboard before publishing; the estimates in this proposal cover only the incremental feed traffic, not total project usage.
+The client treats a missing or unavailable feed as a non-fatal condition. The `desktop-notifications` bucket is configured for public reads, JSON-only objects, and a 4 KiB object limit. The empty `v1/feed.json` is published with a 3,600-second cache lifetime and verified over public HTTP. Keep write access restricted to maintainers. Review current cached and uncached egress headroom in the Supabase dashboard before publishing messages; the estimates in this proposal cover only the incremental feed traffic, not total project usage.
 
-Keep provider-health notices manual until a separate rule for automating them from DISC-29 snapshots is agreed. No bucket, object, or remote message was created as part of the local client implementation.
+Keep provider-health notices manual until a separate rule for automating them from DISC-29 snapshots is agreed. The empty feed contains no messages; no provider-health data or user reports were uploaded.
 
-After agreement, implementation can add the public Storage bucket and validated JSON contract, a fixed main-process fetch, local notification-state integration, and a focused DISC-14 runtime check. No database migration or Edge Function endpoint is needed for feed reads.
+The fixed main-process fetch, local notification-state integration, public Storage bucket, and validated JSON contract are implemented. A focused DISC-14 runtime check remains useful before relying on the feed in a packaged release. No database migration or Edge Function endpoint is needed for feed reads.
