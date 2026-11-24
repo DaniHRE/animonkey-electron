@@ -26,6 +26,7 @@ import { useAiringNotificationPreferences } from '@/hooks/use-airing-notificatio
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
 import { useAnimeRating } from '@/hooks/use-anime-rating';
 import { useTitleLanguage } from '@/hooks/use-title-language';
+import { notifyActionFeedback } from '@/lib/action-feedback';
 
 type DetailTab = 'episodes' | 'characters' | 'relations';
 const animeRoute = getRouteApi('/anime/$id');
@@ -272,14 +273,40 @@ export function AnimePage() {
                     type="button"
                     disabled={!followedAnimeLoaded}
                     onClick={() => {
-                      const result = toggleFollow(anime);
-                      setFeedback(
-                        result === 'limit'
-                          ? 'Você pode acompanhar até 50 animes neste dispositivo.'
-                          : result === 'added'
-                            ? 'Anime adicionado a Acompanhar.'
-                            : 'Anime removido de Acompanhar.',
-                      );
+                      void toggleFollow(anime)
+                        .then((result) => {
+                          const message =
+                            result === 'limit'
+                              ? 'Você pode acompanhar até 50 animes neste dispositivo.'
+                              : result === 'added'
+                                ? 'Anime adicionado a Acompanhar.'
+                                : 'Anime removido de Acompanhar.';
+                          setFeedback(message);
+                          notifyActionFeedback({
+                            tone: result === 'limit' ? 'warning' : 'success',
+                            title:
+                              result === 'limit'
+                                ? 'Limite de acompanhamentos atingido'
+                                : result === 'added'
+                                  ? 'Anime adicionado a Acompanhar'
+                                  : 'Anime removido de Acompanhar',
+                            message,
+                            animeId: anime.id,
+                            posterUrl: anime.image,
+                          });
+                        })
+                        .catch(() => {
+                          const message =
+                            'Não foi possível atualizar os animes acompanhados. Tente novamente.';
+                          setFeedback(message);
+                          notifyActionFeedback({
+                            tone: 'error',
+                            title: 'Não foi possível acompanhar este anime',
+                            message,
+                            animeId: anime.id,
+                            posterUrl: anime.image,
+                          });
+                        });
                     }}
                     aria-pressed={isFollowing(anime.id)}
                     aria-label={
@@ -305,9 +332,16 @@ export function AnimePage() {
                     onClick={() => {
                       setRatingError(null);
                       if (!userRating.isAuthenticated) {
-                        setFeedback(
-                          'Entre para avaliar. Faça login nas configurações para salvar sua nota.',
-                        );
+                        const message =
+                          'Entre para avaliar. Faça login nas configurações para salvar sua nota.';
+                        setFeedback(message);
+                        notifyActionFeedback({
+                          tone: 'warning',
+                          title: 'Entre para avaliar',
+                          message,
+                          animeId: anime.id,
+                          posterUrl: anime.image,
+                        });
                         return;
                       }
                       setRatingOpen(true);
@@ -324,24 +358,56 @@ export function AnimePage() {
                     onClick={async () => {
                       try {
                         const url = `app:run://anime/${encodeURIComponent(anime.id)}`;
-                        if (navigator.share)
+                        if (navigator.share) {
                           await navigator.share({ title, text: url });
-                        else {
+                          notifyActionFeedback({
+                            tone: 'success',
+                            title: 'Anime compartilhado',
+                            message: `${title} foi compartilhado.`,
+                            animeId: anime.id,
+                            posterUrl: anime.image,
+                          });
+                        } else {
                           await navigator.clipboard.writeText(url);
                           setCopied(true);
                           setFeedback(
                             'Link copiado para a área de transferência.',
                           );
+                          notifyActionFeedback({
+                            tone: 'success',
+                            title: 'Link copiado',
+                            message: `O link de ${title} está na área de transferência.`,
+                            animeId: anime.id,
+                            posterUrl: anime.image,
+                          });
                         }
                       } catch (cause) {
                         if (
                           cause instanceof DOMException &&
                           cause.name === 'AbortError'
-                        )
+                        ) {
+                          const message = `${title} não foi compartilhado.`;
+                          setFeedback('Compartilhamento cancelado.');
+                          notifyActionFeedback({
+                            tone: 'info',
+                            title: 'Compartilhamento cancelado',
+                            message,
+                            animeId: anime.id,
+                            posterUrl: anime.image,
+                          });
                           return;
+                        }
                         setFeedback(
                           'Não foi possível compartilhar. Verifique a permissão da área de transferência.',
                         );
+                        notifyActionFeedback({
+                          tone: 'error',
+                          title: 'Não foi possível compartilhar',
+                          message:
+                            'O link não foi compartilhado. Verifique a permissão da área de transferência e tente novamente.',
+                          animeId: anime.id,
+                          posterUrl: anime.image,
+                        });
                       }
                     }}
                     className="inline-flex h-10 items-center gap-2 rounded-md border border-white/15 bg-white/[0.06] px-4 text-xs font-semibold text-white/80 transition hover:bg-white/[0.12]"

@@ -13,6 +13,7 @@ import type { EpisodeProgressRecord } from '@/services/cache/local-db';
 import { resolveAnimeTitle } from '@/lib/anime';
 import { useTitleLanguage } from '@/hooks/use-title-language';
 import { useContinueWatchingVisibilityPreference } from '@/hooks/use-watch-history-preferences';
+import { notifyActionFeedback } from '@/lib/action-feedback';
 
 interface ContinueItem {
   progress: EpisodeProgressRecord;
@@ -90,10 +91,33 @@ export function ContinueWatchingPage() {
   }, [queryClient, showContinueWatching, visibilityPreferenceLoaded]);
 
   const dismiss = async (animeId: string) => {
-    await removeAnimeFromWatching(animeId);
-    setItems((current) =>
-      current.filter((item) => item.progress.animeId !== animeId),
-    );
+    const anime = items.find(
+      (item) => item.progress.animeId === animeId,
+    )?.anime;
+    const title = anime
+      ? resolveAnimeTitle(anime.title, titleLanguage)
+      : 'Anime';
+    try {
+      await removeAnimeFromWatching(animeId);
+      setItems((current) =>
+        current.filter((item) => item.progress.animeId !== animeId),
+      );
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Anime removido do histórico',
+        message: `${title} saiu de Continuar Assistindo.`,
+        animeId,
+        posterUrl: anime?.image,
+      });
+    } catch {
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível remover do histórico',
+        message: `${title} continua em Continuar Assistindo. Tente novamente.`,
+        animeId,
+        posterUrl: anime?.image,
+      });
+    }
   };
 
   if (visibilityPreferenceLoaded && !showContinueWatching)

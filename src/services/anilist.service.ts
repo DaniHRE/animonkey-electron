@@ -688,6 +688,7 @@ export const AniListCatalog = {
             {
               id: anime.id,
               title: anime.title,
+              image: anime.image,
               nextAiringEpisode:
                 typeof airing?.airingAt === 'number' &&
                 Number.isSafeInteger(airing.airingAt) &&

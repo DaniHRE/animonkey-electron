@@ -17,7 +17,7 @@ export function useAiringNotificationPreferences() {
   );
   const {
     value: followedValue,
-    update: updateFollowedValue,
+    updateAndWait: updateFollowedValue,
     loaded: followedAnimeLoaded,
   } = useLocalPreference<unknown>(
     AIRING_NOTIFICATION_PREFERENCE_KEYS.followedAnime,
@@ -28,17 +28,17 @@ export function useAiringNotificationPreferences() {
     : EMPTY_FOLLOWED_ANIME;
 
   const setFollowedAnime = useCallback(
-    (next: FollowedAnimeRecord[]) => {
-      if (isFollowedAnimeList(next)) updateFollowedValue(next);
+    async (next: FollowedAnimeRecord[]) => {
+      if (isFollowedAnimeList(next)) await updateFollowedValue(next);
     },
     [updateFollowedValue],
   );
 
   const toggleFollow = useCallback(
-    (anime: AnimeInfo): 'added' | 'removed' | 'limit' => {
+    async (anime: AnimeInfo): Promise<'added' | 'removed' | 'limit'> => {
       const existing = followedAnime.some((item) => item.animeId === anime.id);
       if (existing) {
-        setFollowedAnime(
+        await setFollowedAnime(
           followedAnime.filter((item) => item.animeId !== anime.id),
         );
         return 'removed';
@@ -53,7 +53,7 @@ export function useAiringNotificationPreferences() {
         episode > 0 && airingAt !== undefined && airingAt > nowSeconds
           ? episode - 1
           : episode;
-      setFollowedAnime([
+      await setFollowedAnime([
         ...followedAnime,
         { animeId: anime.id, lastNotifiedEpisode },
       ]);
@@ -68,6 +68,7 @@ export function useAiringNotificationPreferences() {
     setNotificationsEnabled: enabledPreference.update,
     followedAnime,
     followedAnimeLoaded,
+    setNotificationsEnabledAndWait: enabledPreference.updateAndWait,
     setFollowedAnime,
     isFollowing: (animeId: string) =>
       followedAnime.some((item) => item.animeId === animeId),

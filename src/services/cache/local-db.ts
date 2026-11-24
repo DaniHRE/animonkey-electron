@@ -45,6 +45,12 @@ const APP_NOTIFICATION_STORE = 'app-notifications';
 const CATALOG_CACHE_STALE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const GUEST_SCOPE_ID = 'guest';
 
+function isPersistentActionNotification(
+  notification: AppNotification,
+): boolean {
+  return notification.kind === 'action-feedback';
+}
+
 interface CacheRecord {
   cacheKey: string;
   expiresAt: number;
@@ -416,23 +422,44 @@ export async function getAppNotifications(): Promise<AppNotification[]> {
         const cutoff = Date.now() - APP_NOTIFICATION_RETENTION_MS;
         const now = Date.now();
         const records = request.result as unknown[];
-        const retained = records.filter(
+        const validRecords = records.filter(
           (value): value is AppNotification =>
             isAppNotification(value) &&
-            value.createdAt >= cutoff &&
-            (value.kind !== 'remote' ||
-              (value.createdAt <= now && value.expiresAt > now)),
+            (isPersistentActionNotification(value) ||
+              (value.createdAt >= cutoff &&
+                (value.kind !== 'remote' ||
+                  (value.createdAt <= now && value.expiresAt > now)))),
         );
-        retained.sort((first, second) => {
-          const firstPriority = first.kind === 'remote' ? first.priority : 0;
-          const secondPriority = second.kind === 'remote' ? second.priority : 0;
-          return (
-            secondPriority - firstPriority || second.createdAt - first.createdAt
-          );
-        });
-        const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+        const persistentActions = validRecords.filter(
+          isPersistentActionNotification,
+        );
+        const retainedOther = validRecords
+          .filter(
+            (notification) => !isPersistentActionNotification(notification),
+          )
+          .sort((first, second) => {
+            const firstPriority = first.kind === 'remote' ? first.priority : 0;
+            const secondPriority =
+              second.kind === 'remote' ? second.priority : 0;
+            return (
+              secondPriority - firstPriority ||
+              second.createdAt - first.createdAt
+            );
+          })
+          .slice(0, APP_NOTIFICATION_LIMIT);
+        const retained = [...persistentActions, ...retainedOther].sort(
+          (first, second) => {
+            const firstPriority = first.kind === 'remote' ? first.priority : 0;
+            const secondPriority =
+              second.kind === 'remote' ? second.priority : 0;
+            return (
+              secondPriority - firstPriority ||
+              second.createdAt - first.createdAt
+            );
+          },
+        );
         const retainedIds = new Set(
-          limited.map((notification) => notification.id),
+          retained.map((notification) => notification.id),
         );
         for (const candidate of records) {
           if (
@@ -445,7 +472,7 @@ export async function getAppNotifications(): Promise<AppNotification[]> {
               store.delete(id);
           }
         }
-        visibleNotifications = limited.filter(
+        visibleNotifications = retained.filter(
           (notification) => notification.dismissedAt === null,
         );
       };
@@ -522,31 +549,39 @@ export async function replaceRemoteAppNotifications(
           .filter((notification) => notification.kind === 'remote')
           .map((notification) => [notification.id, notification] as const),
       );
-      const retained: AppNotification[] = records
+      const validRecords = records.filter(isAppNotification);
+      const persistentActions = validRecords.filter(
+        isPersistentActionNotification,
+      );
+      const retainedOther: AppNotification[] = validRecords
         .filter(isAppNotification)
         .filter(
           (notification) =>
+            !isPersistentActionNotification(notification) &&
             notification.kind !== 'remote' &&
             notification.createdAt >= now - APP_NOTIFICATION_RETENTION_MS,
         );
       for (const notification of incoming) {
         const prior = existing.get(notification.id);
-        retained.push({
+        retainedOther.push({
           ...notification,
           readAt: prior?.readAt ?? null,
           dismissedAt: prior?.dismissedAt ?? null,
         });
       }
-      retained.sort((first, second) => {
+      retainedOther.sort((first, second) => {
         const firstPriority = first.kind === 'remote' ? first.priority : 0;
         const secondPriority = second.kind === 'remote' ? second.priority : 0;
         return (
           secondPriority - firstPriority || second.createdAt - first.createdAt
         );
       });
-      const limited = retained.slice(0, APP_NOTIFICATION_LIMIT);
+      const retained = [
+        ...persistentActions,
+        ...retainedOther.slice(0, APP_NOTIFICATION_LIMIT),
+      ];
       store.clear();
-      for (const notification of limited) store.put(notification);
+      for (const notification of retained) store.put(notification);
     };
     transaction.oncomplete = () => {
       window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
@@ -585,14 +620,35 @@ export async function addAppNotification(
       const cutoff = notification.createdAt - APP_NOTIFICATION_RETENTION_MS;
       const validRecords = records.filter(isAppNotification);
       const existing = validRecords.find(
-        (record) => record.id === notification.id && record.createdAt >= cutoff,
+        (record) =>
+          record.id === notification.id &&
+          (isPersistentActionNotification(record) ||
+            record.createdAt >= cutoff),
+      );
+      const persistentActions = validRecords.filter(
+        isPersistentActionNotification,
       );
       const candidates = validRecords.filter(
         (record) => record.createdAt >= cutoff,
       );
-      if (!existing) candidates.push(notification);
-      candidates.sort((first, second) => second.createdAt - first.createdAt);
-      const retained = candidates.slice(0, APP_NOTIFICATION_LIMIT);
+      const candidatesOther = candidates.filter(
+        (record) => !isPersistentActionNotification(record),
+      );
+      if (!existing && !isPersistentActionNotification(notification))
+        candidatesOther.push(notification);
+      candidatesOther.sort(
+        (first, second) => second.createdAt - first.createdAt,
+      );
+      const retained = [
+        ...persistentActions,
+        ...candidatesOther.slice(0, APP_NOTIFICATION_LIMIT),
+      ];
+      if (
+        !existing &&
+        isPersistentActionNotification(notification) &&
+        notification.createdAt >= cutoff
+      )
+        retained.push(notification);
       const retainedIds = new Set(retained.map((record) => record.id));
 
       for (const candidate of records) {
@@ -617,6 +673,23 @@ export async function addAppNotification(
     transaction.oncomplete = () => {
       if (changed)
         window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
+      resolve();
+    };
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+}
+
+export async function deleteAppNotification(id: string): Promise<void> {
+  const database = await openDatabase();
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(
+      APP_NOTIFICATION_STORE,
+      'readwrite',
+    );
+    transaction.objectStore(APP_NOTIFICATION_STORE).delete(id);
+    transaction.oncomplete = () => {
+      window.dispatchEvent(new Event(APP_NOTIFICATIONS_CHANGED_EVENT));
       resolve();
     };
     transaction.onerror = () => reject(transaction.error);
