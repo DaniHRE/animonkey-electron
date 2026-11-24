@@ -228,7 +228,7 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 - Request date (Brasília): 2026-11-23, 16:23.
 - Difficulty: Medium.
-- Current state: Implemented and integrated locally into `dev`. Settings now has a Debug section with runtime status, severity counts and filters, and a readable list of current-session Anivexa events. Users can export the session records to JSON through a native save dialog or clear them. The export includes app version and timestamp and may contain provider and anime IDs; it excludes credentials, signed URLs, and payloads. Visual runtime validation has not been performed.
+- Current state: Implemented and integrated locally into `dev`. A local development runtime visual check confirmed Settings > Debug renders runtime status, severity counts and filters, the current-session Anivexa event list, and export/clear actions; the runtime status showed Active. Export and clear behavior were not exercised. The export includes app version and timestamp and may contain provider and anime IDs; it excludes credentials, signed URLs, and payloads.
 - Technical analysis: Give the debug area a clear Settings destination with runtime status, event counts, readable recent entries, severity filters, and actions to export and clear the current session diagnostics. Keep exports limited to sanitized diagnostic data, use a native save dialog, and disclose that request summaries can contain provider and anime identifiers. Do not imply that logs persist between sessions or include credentials, signed URLs, or request payloads.
 
 ## Account configuration and Windows distribution
