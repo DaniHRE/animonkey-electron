@@ -2,9 +2,9 @@
 
 ## Scope and source
 
-This backlog catalogs the 38 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21 or 2026-11-23 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
+This backlog catalogs the 40 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21, 2026-11-23, or 2026-11-24 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
-The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved through the local read-only Discord configuration after the owner requested it; the DISC-32 debug-panel reference image was also retrieved and reviewed for the selected request. Other attachment content remains unreviewed.
+The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image, DISC-32 debug-panel reference image, and DISC-35 search reference image were retrieved through the local read-only Discord configuration and reviewed for their selected requests. Other attachment content remains unreviewed.
 
 This is an inventory, not an approved implementation plan. Estimates are relative: Low means a localized UI or behavior change; Medium means multiple renderer components or persisted preferences; High means substantial integration, data policy, or media/storage work; Very high means cross-product or platform scope. Defect reports are not treated as confirmed causes until reproduced.
 
@@ -246,6 +246,13 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 - Difficulty: Medium.
 - Current state: This standalone request asks for a screenshot-search widget near the update action with clipboard paste, drag-and-drop, and file selection. Those flows are already implemented by DISC-17 in commit `038ecc5`: the header widget provides all three inputs, previews and validates the image locally, and sends it to trace.moe only after the user chooses to search. No additional code change is needed for this request.
 - Technical analysis: Keep the widget in the application header rather than Discovery. Route clipboard, dropped, and selected files through the same size/type validation and user-initiated upload path, and disclose the external transfer before search.
+
+### DISC-35 — Refine header search feedback and suggestions
+
+- Request date (Brasília): 2026-11-24, 16:25.
+- Difficulty: Low to Medium.
+- Current state: Selected by the owner for implementation on `feat/discord-disc-35-search-refinement`, based on local `dev` at `367c444`. The Discord reference image was reviewed. Work refines the overly strong focus ring, adds restrained press feedback and animated suggestion entry, and improves the visual hierarchy of result rows while preserving existing search and keyboard behavior.
+- Technical analysis: Keep the current AniList query, debounce, result limit, adult-content preference, and accessible combobox contract. Reduce the bright focus outline without removing a visible keyboard indicator, respect reduced-motion preferences, animate the preview and suggestion rows, and clarify the selected row with a restrained accent and stronger title/type hierarchy.
 
 ## Per-item branch and integration rule
 
