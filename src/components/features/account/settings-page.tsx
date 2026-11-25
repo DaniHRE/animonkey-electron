@@ -58,6 +58,7 @@ import {
   exportLocalBackup,
   importLocalBackup,
 } from '@/services/cache/local-db';
+import { notifyActionFeedback } from '@/lib/action-feedback';
 import { SettingsDebugPanel } from './settings-debug-panel';
 import { FeedbackSettingsSection } from './feedback-settings-section';
 
@@ -90,6 +91,31 @@ const sidebarOrderSections = [
   { id: 'more', title: 'Mais opções' },
 ] as const;
 
+async function runSettingsAction(
+  successTitle: string,
+  successMessage: string,
+  errorTitle: string,
+  errorMessage: string,
+  operation: () => Promise<void>,
+): Promise<boolean> {
+  try {
+    await operation();
+    notifyActionFeedback({
+      tone: 'success',
+      title: successTitle,
+      message: successMessage,
+    });
+    return true;
+  } catch {
+    notifyActionFeedback({
+      tone: 'error',
+      title: errorTitle,
+      message: errorMessage,
+    });
+    return false;
+  }
+}
+
 export function SettingsPage() {
   const {
     session,
@@ -109,7 +135,7 @@ export function SettingsPage() {
   const airingNotifications = useAiringNotificationPreferences();
   const {
     value: providerFailureReportingEnabled,
-    update: setProviderFailureReportingEnabled,
+    updateAndWait: setProviderFailureReportingEnabledAndWait,
     loaded: providerFailureReportingLoaded,
   } = useLocalPreference(PROVIDER_FAILURE_REPORTING_PREFERENCE_KEY, false);
   const [notificationsSupported, setNotificationsSupported] = useState<
@@ -117,12 +143,12 @@ export function SettingsPage() {
   >(null);
   const {
     includeAdult,
-    setIncludeAdult,
+    setIncludeAdultAndWait,
     loaded: adultPreferenceLoaded,
   } = useAdultContentPreference();
   const {
     value: storedShortcuts,
-    update: updateStoredShortcuts,
+    updateAndWait: updateStoredShortcutsAndWait,
     loaded: shortcutsLoaded,
   } = useLocalPreference<unknown>(
     SHORTCUT_PREFERENCE_KEY,
@@ -130,7 +156,7 @@ export function SettingsPage() {
   );
   const {
     value: storedSidebarRouteOrder,
-    update: updateStoredSidebarRouteOrder,
+    updateAndWait: updateStoredSidebarRouteOrderAndWait,
     loaded: sidebarRouteOrderLoaded,
   } = useLocalPreference<unknown>(
     SIDEBAR_ORDER_PREFERENCE_KEY,
@@ -138,7 +164,7 @@ export function SettingsPage() {
   );
   const {
     value: storedSubtitleSize,
-    update: updateStoredSubtitleSize,
+    updateAndWait: updateStoredSubtitleSizeAndWait,
     loaded: subtitlePreferenceLoaded,
   } = useLocalPreference<unknown>(
     SUBTITLE_SIZE_PREFERENCE_KEY,
@@ -189,15 +215,20 @@ export function SettingsPage() {
     privacy?.userId === session?.user.id ? (privacy?.value ?? null) : null;
   const sessionUserId = session?.user.id ?? null;
 
-  const captureShortcut = (
+  const captureShortcut = async (
     event: KeyboardEvent<HTMLButtonElement>,
     commandId: ShortcutCommandId,
-  ) => {
+  ): Promise<void> => {
     if (capturingShortcut !== commandId) return;
 
     if (event.key === 'Tab') {
       setCapturingShortcut(null);
       setShortcutFeedback('Gravação do atalho cancelada.');
+      notifyActionFeedback({
+        tone: 'info',
+        title: 'Gravação cancelada',
+        message: 'O atalho anterior foi mantido.',
+      });
       return;
     }
 
@@ -205,6 +236,11 @@ export function SettingsPage() {
       event.preventDefault();
       setCapturingShortcut(null);
       setShortcutFeedback('Gravação do atalho cancelada.');
+      notifyActionFeedback({
+        tone: 'info',
+        title: 'Gravação cancelada',
+        message: 'O atalho anterior foi mantido.',
+      });
       return;
     }
 
@@ -214,6 +250,11 @@ export function SettingsPage() {
       setShortcutFeedback(
         'Atalho inválido ou reservado. Use Ctrl/⌘ com uma tecla compatível.',
       );
+      notifyActionFeedback({
+        tone: 'warning',
+        title: 'Atalho não aceito',
+        message: 'Use Ctrl/⌘ com uma tecla compatível e não reservada.',
+      });
       return;
     }
 
@@ -229,18 +270,38 @@ export function SettingsPage() {
       setShortcutFeedback(
         `Esse atalho já está atribuído a ${conflictingCommand?.label ?? 'outra ação'}.`,
       );
+      notifyActionFeedback({
+        tone: 'warning',
+        title: 'Atalho já está em uso',
+        message: `Esse atalho já pertence a ${conflictingCommand?.label ?? 'outra ação'}.`,
+      });
       return;
     }
 
-    updateStoredShortcuts({
-      ...shortcutPreferences,
-      [commandId]: binding,
-    });
-    setCapturingShortcut(null);
-    setShortcutFeedback('Atalho atualizado.');
+    try {
+      await updateStoredShortcutsAndWait({
+        ...shortcutPreferences,
+        [commandId]: binding,
+      });
+      setCapturingShortcut(null);
+      setShortcutFeedback('Atalho atualizado.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Atalho atualizado',
+        message: 'O novo atalho foi salvo neste dispositivo.',
+      });
+    } catch {
+      setCapturingShortcut(null);
+      setShortcutFeedback('Não foi possível salvar o atalho.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível salvar o atalho',
+        message: 'O atalho anterior foi mantido. Tente novamente.',
+      });
+    }
   };
 
-  const restoreShortcut = (commandId: ShortcutCommandId) => {
+  const restoreShortcut = async (commandId: ShortcutCommandId) => {
     const defaultBinding = DEFAULT_SHORTCUT_PREFERENCES[commandId];
     const collision = findShortcutCollision(
       defaultBinding,
@@ -254,23 +315,49 @@ export function SettingsPage() {
       setShortcutFeedback(
         `Libere o atalho usado por ${conflictingCommand?.label ?? 'outra ação'} antes de restaurar este padrão.`,
       );
+      notifyActionFeedback({
+        tone: 'warning',
+        title: 'Atalho padrão indisponível',
+        message: `Libere o atalho usado por ${conflictingCommand?.label ?? 'outra ação'} antes de restaurá-lo.`,
+      });
       return;
     }
 
-    updateStoredShortcuts({
-      ...shortcutPreferences,
-      [commandId]: defaultBinding,
-    });
-    setShortcutFeedback('Atalho padrão restaurado.');
+    const saved = await runSettingsAction(
+      'Atalho padrão restaurado',
+      'A combinação original foi salva neste dispositivo.',
+      'Não foi possível restaurar o atalho',
+      'O atalho atual foi mantido. Tente novamente.',
+      () =>
+        updateStoredShortcutsAndWait({
+          ...shortcutPreferences,
+          [commandId]: defaultBinding,
+        }),
+    );
+    setShortcutFeedback(
+      saved ? 'Atalho padrão restaurado.' : 'Não foi possível salvar o atalho.',
+    );
   };
 
-  const disableShortcut = (commandId: ShortcutCommandId) => {
-    updateStoredShortcuts({ ...shortcutPreferences, [commandId]: null });
+  const disableShortcut = async (commandId: ShortcutCommandId) => {
+    const saved = await runSettingsAction(
+      'Atalho desativado',
+      'A alteração foi salva neste dispositivo.',
+      'Não foi possível desativar o atalho',
+      'O atalho atual foi mantido. Tente novamente.',
+      () =>
+        updateStoredShortcutsAndWait({
+          ...shortcutPreferences,
+          [commandId]: null,
+        }),
+    );
     setCapturingShortcut(null);
-    setShortcutFeedback('Atalho desativado.');
+    setShortcutFeedback(
+      saved ? 'Atalho desativado.' : 'Não foi possível salvar o atalho.',
+    );
   };
 
-  const moveSidebarRouteItem = (
+  const moveSidebarRouteItem = async (
     group: 'primary' | 'more',
     routeId: SidebarRouteId,
     direction: -1 | 1,
@@ -282,12 +369,22 @@ export function SettingsPage() {
     );
     if (!nextOrder) return;
 
-    updateStoredSidebarRouteOrder({
-      ...sidebarRouteOrder,
-      [group]: nextOrder,
-    });
+    const directionLabel = direction === -1 ? 'cima' : 'baixo';
+    const saved = await runSettingsAction(
+      'Navegação reorganizada',
+      `${sidebarRouteLabels[routeId]} foi movido para ${directionLabel}.`,
+      'Não foi possível reorganizar a navegação',
+      'A ordem anterior foi mantida. Tente novamente.',
+      () =>
+        updateStoredSidebarRouteOrderAndWait({
+          ...sidebarRouteOrder,
+          [group]: nextOrder,
+        }),
+    );
     setSidebarOrderFeedback(
-      `${sidebarRouteLabels[routeId]} movido para ${direction === -1 ? 'cima' : 'baixo'}.`,
+      saved
+        ? `${sidebarRouteLabels[routeId]} movido para ${directionLabel}.`
+        : 'Não foi possível salvar a ordem de navegação.',
     );
   };
 
@@ -351,17 +448,35 @@ export function SettingsPage() {
       if (accountMode === 'register') {
         await register({ email, password, name: name.trim() || undefined });
         setAccountMessage('Conta criada e sessão iniciada.');
+        notifyActionFeedback({
+          tone: 'success',
+          title: 'Conta criada',
+          message: 'Sua conta foi criada e a sessão foi iniciada.',
+        });
       } else {
         await login({ email, password });
         setAccountMessage('Sessão iniciada.');
+        notifyActionFeedback({
+          tone: 'success',
+          title: 'Sessão iniciada',
+          message: 'Você entrou na sua conta.',
+        });
       }
       setPassword('');
     } catch (cause) {
-      setAccountError(
+      const message =
         cause instanceof Error
           ? cause.message
-          : 'Não foi possível acessar a conta.',
-      );
+          : 'Não foi possível acessar a conta.';
+      setAccountError(message);
+      notifyActionFeedback({
+        tone: 'error',
+        title:
+          accountMode === 'register'
+            ? 'Não foi possível criar a conta'
+            : 'Não foi possível entrar',
+        message,
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -370,9 +485,37 @@ export function SettingsPage() {
   const syncAccount = async () => {
     setAccountBusy(true);
     setAccountMessage(null);
-    await syncNow();
-    setAccountBusy(false);
-    setAccountMessage('Solicitação concluída. Confira o estado acima.');
+    try {
+      const succeeded = await syncNow();
+      if (succeeded) {
+        setAccountMessage('Sincronização concluída.');
+        notifyActionFeedback({
+          tone: 'success',
+          title: 'Sincronização concluída',
+          message: 'Os dados da conta estão atualizados.',
+        });
+      } else {
+        const message =
+          'A sincronização não terminou. Os dados locais foram preservados. Confira a conexão e tente novamente.';
+        setAccountError(message);
+        notifyActionFeedback({
+          tone: 'error',
+          title: 'Sincronização não concluída',
+          message,
+        });
+      }
+    } catch {
+      const message =
+        'A sincronização não terminou. Os dados locais foram preservados. Confira a conexão e tente novamente.';
+      setAccountError(message);
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Sincronização não concluída',
+        message,
+      });
+    } finally {
+      setAccountBusy(false);
+    }
   };
 
   const importGuest = async () => {
@@ -386,8 +529,22 @@ export function SettingsPage() {
           ? `${count} registros da biblioteca local foram mesclados nesta conta.`
           : 'Não há registros locais novos para mesclar.',
       );
+      notifyActionFeedback({
+        tone: count > 0 ? 'success' : 'info',
+        title: count > 0 ? 'Biblioteca mesclada' : 'Biblioteca já atualizada',
+        message:
+          count > 0
+            ? `${count} registros locais foram mesclados nesta conta.`
+            : 'Não havia registros novos para mesclar.',
+      });
     } catch {
       setAccountError('Não foi possível mesclar a biblioteca local.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível mesclar a biblioteca',
+        message:
+          'Os dados locais foram mantidos. Verifique a conexão e tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -399,8 +556,18 @@ export function SettingsPage() {
     try {
       await logout();
       setAccountMessage('Sessão encerrada neste dispositivo.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Sessão encerrada',
+        message: 'Você saiu da conta neste dispositivo.',
+      });
     } catch {
       setAccountError('Não foi possível encerrar a sessão.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível sair',
+        message: 'Sua sessão continua ativa. Tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -419,8 +586,18 @@ export function SettingsPage() {
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setMessage('Backup local exportado.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Backup exportado',
+        message: 'O arquivo de backup local foi baixado.',
+      });
     } catch {
       setError('Não foi possível exportar os dados deste dispositivo.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível exportar o backup',
+        message: 'Os dados locais não foram exportados. Tente novamente.',
+      });
     }
   };
 
@@ -441,10 +618,20 @@ export function SettingsPage() {
       anchor.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setAccountMessage('Exportação dos dados da conta concluída.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Dados da conta exportados',
+        message: 'O arquivo com os dados da conta foi baixado.',
+      });
     } catch {
       setAccountError(
         'Não foi possível exportar os dados da conta. Verifique a conexão e tente novamente.',
       );
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível exportar os dados da conta',
+        message: 'Verifique a conexão e tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -463,8 +650,18 @@ export function SettingsPage() {
       );
       setProfileDraft(null);
       setAccountMessage('Nome do perfil atualizado.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Perfil atualizado',
+        message: 'Seu nome foi salvo na conta.',
+      });
     } catch {
       setAccountError('Não foi possível atualizar o perfil.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível atualizar o perfil',
+        message: 'Seu nome não foi alterado. Tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -480,11 +677,23 @@ export function SettingsPage() {
         file.type,
       )
     ) {
-      setAccountError('Use uma imagem JPG, PNG, WEBP ou GIF.');
+      const message = 'Use uma imagem JPG, PNG, WEBP ou GIF.';
+      setAccountError(message);
+      notifyActionFeedback({
+        tone: 'warning',
+        title: 'Formato de imagem não aceito',
+        message,
+      });
       return;
     }
     if (file.size === 0 || file.size > 2 * 1024 * 1024) {
-      setAccountError('A imagem precisa ter até 2 MB.');
+      const message = 'A imagem precisa ter até 2 MB.';
+      setAccountError(message);
+      notifyActionFeedback({
+        tone: 'warning',
+        title: 'Imagem fora do limite',
+        message,
+      });
       return;
     }
     setAccountBusy(true);
@@ -496,10 +705,20 @@ export function SettingsPage() {
       }
       await window.animonkey.account.uploadAvatar(file.type, btoa(binary));
       setAccountMessage('Foto do perfil atualizada.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Foto do perfil atualizada',
+        message: 'Sua nova foto foi salva na conta.',
+      });
     } catch {
       setAccountError(
         'Não foi possível enviar a imagem. Verifique o arquivo e a conexão.',
       );
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível enviar a foto',
+        message: 'Verifique o arquivo e a conexão e tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -511,8 +730,18 @@ export function SettingsPage() {
     try {
       await window.animonkey.account.removeAvatar();
       setAccountMessage('Foto do perfil removida.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Foto do perfil removida',
+        message: 'Sua foto foi removida da conta.',
+      });
     } catch {
       setAccountError('Não foi possível remover a foto do perfil.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível remover a foto',
+        message: 'A foto do perfil foi mantida. Tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -530,8 +759,20 @@ export function SettingsPage() {
           ? 'Sua atividade está visível no feed.'
           : 'Sua atividade está privada.',
       );
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Privacidade atualizada',
+        message: showActivity
+          ? 'Sua atividade agora aparece no feed.'
+          : 'Sua atividade está privada.',
+      });
     } catch {
       setAccountError('Não foi possível salvar a preferência de privacidade.');
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível salvar a privacidade',
+        message: 'A preferência anterior foi mantida. Tente novamente.',
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -543,6 +784,11 @@ export function SettingsPage() {
     setAccountMessage(null);
     if (newPassword !== confirmPassword) {
       setAccountError('A confirmação da nova senha não coincide.');
+      notifyActionFeedback({
+        tone: 'warning',
+        title: 'Confirme sua nova senha',
+        message: 'Os campos de nova senha precisam ser iguais.',
+      });
       return;
     }
     setAccountBusy(true);
@@ -555,12 +801,22 @@ export function SettingsPage() {
       setNewPassword('');
       setConfirmPassword('');
       setAccountMessage('Senha atualizada.');
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Senha atualizada',
+        message: 'Sua nova senha já está ativa.',
+      });
     } catch (cause) {
-      setAccountError(
+      const message =
         cause instanceof Error
           ? cause.message
-          : 'Não foi possível atualizar a senha.',
-      );
+          : 'Não foi possível atualizar a senha.';
+      setAccountError(message);
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível atualizar a senha',
+        message,
+      });
     } finally {
       setAccountBusy(false);
     }
@@ -576,12 +832,22 @@ export function SettingsPage() {
       const count = await importLocalBackup(await file.text());
       window.dispatchEvent(new Event('animonkey:local-data-imported'));
       setMessage(`${count} registros foram mesclados com os dados locais.`);
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Backup importado',
+        message: `${count} registros foram mesclados com os dados locais.`,
+      });
     } catch (cause) {
-      setError(
+      const message =
         cause instanceof Error
           ? cause.message
-          : 'Não foi possível importar o backup.',
-      );
+          : 'Não foi possível importar o backup.';
+      setError(message);
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível importar o backup',
+        message,
+      });
     }
   };
 
@@ -990,9 +1256,18 @@ export function SettingsPage() {
                   type="checkbox"
                   checked={recordWatchProgress.enabled}
                   disabled={!recordWatchProgress.loaded}
-                  onChange={(event) =>
-                    recordWatchProgress.setEnabled(event.currentTarget.checked)
-                  }
+                  onChange={(event) => {
+                    const enabled = event.currentTarget.checked;
+                    void runSettingsAction(
+                      'Preferência de histórico atualizada',
+                      enabled
+                        ? 'O progresso dos episódios será salvo neste dispositivo.'
+                        : 'Novos episódios não serão adicionados ao histórico local.',
+                      'Não foi possível salvar a preferência',
+                      'A configuração anterior foi mantida. Tente novamente.',
+                      () => recordWatchProgress.setEnabledAndWait(enabled),
+                    );
+                  }}
                   className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                 />
                 <span className="min-w-0">
@@ -1018,11 +1293,19 @@ export function SettingsPage() {
                   type="checkbox"
                   checked={continueWatchingVisibility.enabled}
                   disabled={!continueWatchingVisibility.loaded}
-                  onChange={(event) =>
-                    continueWatchingVisibility.setEnabled(
-                      event.currentTarget.checked,
-                    )
-                  }
+                  onChange={(event) => {
+                    const enabled = event.currentTarget.checked;
+                    void runSettingsAction(
+                      'Preferência de exibição atualizada',
+                      enabled
+                        ? 'Continuar Assistindo aparece no início e na navegação.'
+                        : 'Continuar Assistindo ficará oculto, sem apagar o histórico.',
+                      'Não foi possível salvar a preferência',
+                      'A configuração anterior foi mantida. Tente novamente.',
+                      () =>
+                        continueWatchingVisibility.setEnabledAndWait(enabled),
+                    );
+                  }}
                   className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                 />
                 <span className="min-w-0">
@@ -1049,9 +1332,18 @@ export function SettingsPage() {
                   disabled={
                     !syncWatchProgress.loaded || syncState === 'syncing'
                   }
-                  onChange={(event) =>
-                    syncWatchProgress.setEnabled(event.currentTarget.checked)
-                  }
+                  onChange={(event) => {
+                    const enabled = event.currentTarget.checked;
+                    void runSettingsAction(
+                      'Preferência de sincronização atualizada',
+                      enabled
+                        ? 'O progresso poderá sincronizar com sua conta.'
+                        : 'O progresso dos episódios não será sincronizado.',
+                      'Não foi possível salvar a preferência',
+                      'A configuração anterior foi mantida. Tente novamente.',
+                      () => syncWatchProgress.setEnabledAndWait(enabled),
+                    );
+                  }}
                   className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                 />
                 <span className="min-w-0">
@@ -1106,11 +1398,18 @@ export function SettingsPage() {
                     !providerFailureReportingLoaded ||
                     (!session && !providerFailureReportingEnabled)
                   }
-                  onChange={(event) =>
-                    setProviderFailureReportingEnabled(
-                      event.currentTarget.checked,
-                    )
-                  }
+                  onChange={(event) => {
+                    const enabled = event.currentTarget.checked;
+                    void runSettingsAction(
+                      'Preferência de diagnóstico atualizada',
+                      enabled
+                        ? 'O app poderá oferecer o envio de relatórios de falha de busca.'
+                        : 'O app não oferecerá novos relatórios de falha de busca.',
+                      'Não foi possível salvar a preferência',
+                      'A configuração anterior foi mantida. Tente novamente.',
+                      () => setProviderFailureReportingEnabledAndWait(enabled),
+                    );
+                  }}
                   className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                 />
                 <div className="min-w-0">
@@ -1178,11 +1477,21 @@ export function SettingsPage() {
                     !airingNotifications.notificationsLoaded ||
                     notificationsSupported !== true
                   }
-                  onChange={(event) =>
-                    airingNotifications.setNotificationsEnabled(
-                      event.currentTarget.checked,
-                    )
-                  }
+                  onChange={(event) => {
+                    const enabled = event.currentTarget.checked;
+                    void runSettingsAction(
+                      'Preferência de notificações atualizada',
+                      enabled
+                        ? 'Os avisos de novos episódios estão ativados.'
+                        : 'Os avisos de novos episódios estão desativados.',
+                      'Não foi possível salvar a preferência',
+                      'A configuração anterior foi mantida. Tente novamente.',
+                      () =>
+                        airingNotifications.setNotificationsEnabledAndWait(
+                          enabled,
+                        ),
+                    );
+                  }}
                   className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                 />
                 <span className="min-w-0">
@@ -1269,7 +1578,17 @@ export function SettingsPage() {
                       name="title-language"
                       value={language}
                       checked={titleLanguage === language}
-                      onChange={() => setTitleLanguage(language)}
+                      onChange={() =>
+                        void runSettingsAction(
+                          'Idioma dos títulos atualizado',
+                          language === 'en'
+                            ? 'Os títulos em inglês serão priorizados.'
+                            : 'Os títulos em japonês romanizado serão priorizados.',
+                          'Não foi possível salvar o idioma',
+                          'O idioma anterior foi mantido. Tente novamente.',
+                          () => setTitleLanguage(language),
+                        )
+                      }
                       className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                     />
                     <span className="min-w-0">
@@ -1293,7 +1612,18 @@ export function SettingsPage() {
                   type="checkbox"
                   checked={includeAdult}
                   disabled={!adultPreferenceLoaded}
-                  onChange={(event) => setIncludeAdult(event.target.checked)}
+                  onChange={(event) => {
+                    const enabled = event.currentTarget.checked;
+                    void runSettingsAction(
+                      'Filtro de conteúdo adulto atualizado',
+                      enabled
+                        ? 'A descoberta poderá exibir conteúdo adulto.'
+                        : 'A descoberta continuará filtrando conteúdo adulto.',
+                      'Não foi possível salvar a preferência',
+                      'A configuração anterior foi mantida. Tente novamente.',
+                      () => setIncludeAdultAndWait(enabled),
+                    );
+                  }}
                   className="mt-0.5 size-4 shrink-0 accent-[#49d77a]"
                 />
                 <span className="min-w-0">
@@ -1539,8 +1869,15 @@ export function SettingsPage() {
               disabled={!subtitlePreferenceLoaded}
               onChange={(event) => {
                 const nextSize = event.currentTarget.value;
-                if (isSubtitleSize(nextSize))
-                  updateStoredSubtitleSize(nextSize);
+                if (isSubtitleSize(nextSize)) {
+                  void runSettingsAction(
+                    'Tamanho das legendas atualizado',
+                    'A preferência foi salva neste dispositivo.',
+                    'Não foi possível salvar o tamanho das legendas',
+                    'O tamanho anterior foi mantido. Tente novamente.',
+                    () => updateStoredSubtitleSizeAndWait(nextSize),
+                  );
+                }
               }}
               className="mt-4 min-h-11 w-full max-w-xs rounded-lg border border-white/10 bg-[#111113] px-3 text-sm text-white outline-none transition-colors focus-visible:border-[#49d77a] focus-visible:ring-2 focus-visible:ring-[#49d77a]/35 disabled:cursor-wait disabled:opacity-60"
             >

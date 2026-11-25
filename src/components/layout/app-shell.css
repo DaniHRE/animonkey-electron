@@ -283,8 +283,7 @@
   justify-self: start;
 }
 
-.app-header__brand:focus-visible,
-.app-header__search input:focus-visible {
+.app-header__brand:focus-visible {
   outline: 2px solid #49d77a;
   outline-offset: 3px;
 }
@@ -565,7 +564,20 @@
   outline: none;
   transition:
     border-color 200ms ease,
-    background-color 200ms ease;
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.app-header__search-icon {
+  transform: translateY(-50%);
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.app-header__search:focus-within .app-header__search-icon {
+  color: #8ce9a7;
+  transform: translateY(-50%) scale(1.06);
 }
 
 .app-header__search-input::placeholder {
@@ -576,6 +588,11 @@
 .app-header__search-input:focus-visible {
   border-color: rgb(255 255 255 / 40%);
   background: rgb(0 0 0 / 60%);
+}
+
+.app-header__search-input:focus-visible {
+  border-color: rgb(73 215 122 / 66%);
+  box-shadow: 0 0 0 3px rgb(73 215 122 / 12%);
 }
 
 .app-hero-bleed {
@@ -644,8 +661,13 @@
   .app-header__show-sidebar,
   .app-header__history-button,
   .app-window-titlebar__navigation-button,
+  .app-header__search-icon,
   .app-header__search-input {
     animation: none;
     transition: none;
+  }
+
+  .app-header__search:focus-within .app-header__search-icon {
+    transform: translateY(-50%);
   }
 }

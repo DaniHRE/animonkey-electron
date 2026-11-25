@@ -191,6 +191,7 @@ export interface AnimeInfo extends AnimeResult {
 export interface AnimeAiringInfo {
   id: string;
   title: AnimeTitle;
+  image?: string;
   nextAiringEpisode?: { airingAt: number; episode: number };
 }
 

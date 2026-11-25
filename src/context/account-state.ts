@@ -15,7 +15,7 @@ export interface AccountContextValue {
   login(input: AccountCredentials): Promise<void>;
   register(input: AccountRegistration): Promise<void>;
   logout(): Promise<void>;
-  syncNow(): Promise<void>;
+  syncNow(): Promise<boolean>;
   importGuestLibrary(): Promise<number>;
   updateProfile(name: string): Promise<void>;
   uploadAvatar(contentType: string, base64: string): Promise<void>;

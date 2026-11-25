@@ -5,6 +5,7 @@ import type {
   FeedbackFunctionalArea,
   FeedbackSubmissionType,
 } from '@/types/account';
+import { notifyActionFeedback } from '@/lib/action-feedback';
 
 const feedbackAreas: Array<{
   value: FeedbackFunctionalArea;
@@ -61,12 +62,22 @@ export function FeedbackSettingsSection({
       setMessage(
         'Feedback enviado. Obrigado por ajudar a melhorar o Animonkey.',
       );
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Feedback enviado',
+        message: 'Obrigado por ajudar a melhorar o Animonkey.',
+      });
     } catch (cause) {
-      setError(
+      const errorMessage =
         cause instanceof Error
           ? cause.message
-          : 'Não foi possível enviar o feedback.',
-      );
+          : 'Não foi possível enviar o feedback.';
+      setError(errorMessage);
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível enviar o feedback',
+        message: errorMessage,
+      });
     } finally {
       setSubmitting(false);
     }

@@ -9,8 +9,11 @@ export const APP_NOTIFICATIONS_CHANGED_EVENT =
 export const APP_NOTIFICATION_CENTER_OPEN_EVENT =
   'animonkey:open-app-notification-center';
 export const APP_UPDATE_CENTER_OPEN_EVENT = 'animonkey:open-app-update-center';
+export const APP_ACTION_FEEDBACK_EVENT = 'animonkey:action-feedback';
 export const APP_NOTIFICATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const APP_NOTIFICATION_LIMIT = 100;
+
+export type ActionFeedbackTone = 'success' | 'error' | 'warning' | 'info';
 
 interface StoredAppNotificationBase {
   id: string;
@@ -25,11 +28,19 @@ export interface EpisodeAppNotification extends StoredAppNotificationBase {
   kind: 'episode-ready';
   animeId?: string;
   episode?: number;
+  posterUrl?: string;
 }
 
 export interface UpdateAppNotification extends StoredAppNotificationBase {
   kind: 'update-ready' | 'update-installed';
   version?: string;
+}
+
+export interface ActionAppNotification extends StoredAppNotificationBase {
+  kind: 'action-feedback';
+  tone: ActionFeedbackTone;
+  animeId?: string;
+  posterUrl?: string;
 }
 
 export interface RemoteAppNotification extends StoredAppNotificationBase {
@@ -44,7 +55,10 @@ export interface RemoteAppNotification extends StoredAppNotificationBase {
 }
 
 export type AppNotification =
-  EpisodeAppNotification | UpdateAppNotification | RemoteAppNotification;
+  | EpisodeAppNotification
+  | UpdateAppNotification
+  | ActionAppNotification
+  | RemoteAppNotification;
 
 type WithoutStoredTimestamps<T> = T extends AppNotification
   ? Omit<T, 'createdAt' | 'readAt' | 'dismissedAt'>
@@ -73,6 +87,25 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+export function isAniListCoverUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === 'https:' &&
+      url.hostname === 's4.anilist.co' &&
+      url.port.length === 0 &&
+      url.username.length === 0 &&
+      url.password.length === 0 &&
+      url.pathname.startsWith('/file/anilistcdn/media/anime/cover/') &&
+      url.search.length === 0 &&
+      url.hash.length === 0
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function isAppNotification(value: unknown): value is AppNotification {
   if (
     !isRecord(value) ||
@@ -91,14 +124,57 @@ export function isAppNotification(value: unknown): value is AppNotification {
   )
     return false;
 
-  if (value.kind === 'episode-ready') {
+  if (value.kind === 'action-feedback') {
+    const actionKeys = new Set([
+      'id',
+      'kind',
+      'title',
+      'message',
+      'createdAt',
+      'readAt',
+      'dismissedAt',
+      'tone',
+      'animeId',
+      'posterUrl',
+    ]);
+    const hasAnimeId =
+      typeof value.animeId === 'string' && /^[1-9]\d{0,9}$/.test(value.animeId);
     return (
-      Object.keys(value).length === 9 &&
+      Object.keys(value).length >= 8 &&
+      Object.keys(value).length <= 10 &&
+      Object.keys(value).every((key) => actionKeys.has(key)) &&
+      /^action-feedback:[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        value.id,
+      ) &&
+      ['success', 'error', 'warning', 'info'].includes(String(value.tone)) &&
+      (value.animeId === undefined || hasAnimeId) &&
+      (value.posterUrl === undefined ||
+        (hasAnimeId && isAniListCoverUrl(value.posterUrl)))
+    );
+  }
+
+  if (value.kind === 'episode-ready') {
+    const episodeKeys = new Set([
+      'id',
+      'kind',
+      'title',
+      'message',
+      'createdAt',
+      'readAt',
+      'dismissedAt',
+      'animeId',
+      'episode',
+      'posterUrl',
+    ]);
+    return (
+      (Object.keys(value).length === 9 || Object.keys(value).length === 10) &&
+      Object.keys(value).every((key) => episodeKeys.has(key)) &&
       /^[1-9]\d{0,9}$/.test(String(value.animeId)) &&
       Number.isSafeInteger(Number(value.animeId)) &&
       typeof value.episode === 'number' &&
       Number.isSafeInteger(value.episode) &&
       value.episode > 0 &&
+      (value.posterUrl === undefined || isAniListCoverUrl(value.posterUrl)) &&
       value.id === `episode-ready:${value.animeId}:${value.episode}`
     );
   }
