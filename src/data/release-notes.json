@@ -2,7 +2,7 @@
   "1.2.0": {
     "eyebrow": "ATUALIZAÇÃO 1.2.0",
     "title": "Feedbacks claros em cada etapa.",
-    "summary": "Receba confirmações imediatas para as ações do aplicativo e encontre todo o histórico em uma central de notificações reorganizada.",
+    "summary": "Receba confirmações imediatas para as ações do aplicativo, encontre todo o histórico em uma central reorganizada e veja sugestões de busca mais claras.",
     "highlights": [
       {
         "icon": "library",
@@ -23,15 +23,27 @@
         "icon": "play",
         "title": "Animações acessíveis",
         "description": "Avisos e painéis têm transições suaves que respeitam sua preferência por menos movimento."
+      },
+      {
+        "icon": "discover",
+        "title": "Busca mais clara",
+        "description": "Veja sugestões com foco discreto, animações suaves e resultados mais fáceis de comparar."
       }
     ],
     "githubRelease": {
-      "summary": "Animonkey 1.2.0 adds clear feedback to meaningful user actions and reorganizes local notifications into four independent categories.",
+      "summary": "Animonkey 1.2.0 adds clear feedback to meaningful user actions, refines header search suggestions, and reorganizes local notifications into four independent categories.",
       "sections": [
+        {
+          "title": "Header search",
+          "details": [
+            "The header search now has a softer focus indicator, restrained press feedback, animated suggestion entry, and clearer selected result rows.",
+            "The AniList query, five-result cap, debounce, adult-content preference, and keyboard combobox behavior remain unchanged. Reduced-motion preferences are respected."
+          ]
+        },
         {
           "title": "Action feedback",
           "details": [
-            "Accessible success, warning, and error toasts report meaningful outcomes across Watch Later, followed anime, ratings, sharing, account forms, backups, and saved preferences.",
+            "Accessible success, warning, and error toasts report meaningful outcomes across Watch Later, followed anime, ratings, sharing, account forms, backups, and saved preferences. Toasts stack at the bottom-right and pause dismissal while hovered or focused.",
             "Action results are retained in the local notification history until users explicitly delete them. Failed preference writes restore the previous value and report the failure."
           ]
         },
