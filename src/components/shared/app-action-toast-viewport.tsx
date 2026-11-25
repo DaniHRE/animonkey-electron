@@ -85,9 +85,9 @@ const ActionToast = forwardRef<
     <motion.li
       ref={ref}
       layout="position"
-      initial={{ opacity: 0, y: -10, scale: 0.98 }}
+      initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.98 }}
+      exit={{ opacity: 0, y: 8, scale: 0.98 }}
       transition={{ type: 'spring', visualDuration: 0.28, bounce: 0.12 }}
       className="app-action-toast"
       data-tone={toast.tone}
@@ -167,7 +167,7 @@ export function AppActionToastViewport() {
     <div className="app-action-toast-viewport" aria-label="Feedback das ações">
       <motion.ol layout className="app-action-toast-viewport__list">
         <AnimatePresence initial={false} mode="popLayout">
-          {toasts.visible.map((toast) => (
+          {[...toasts.visible].reverse().map((toast) => (
             <ActionToast key={toast.id} toast={toast} onDismiss={dismiss} />
           ))}
         </AnimatePresence>
