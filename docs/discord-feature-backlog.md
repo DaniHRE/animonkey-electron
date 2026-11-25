@@ -4,7 +4,7 @@
 
 This backlog catalogs the 40 messages returned by the local Discord channel reader with the configured cutoff of 2026-11-21 03:00 UTC (2026-11-21 00:00 in Brasília). The requests come from the project's private testers Discord and are dated 2026-11-21, 2026-11-23, or 2026-11-24 in Brasília. Follow-up messages that expand one request are grouped into a single item; Discord message IDs are intentionally omitted. No earlier Discord messages were used.
 
-The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image was retrieved through the local read-only Discord configuration after the owner requested it; the DISC-32 debug-panel reference image was also retrieved and reviewed for the selected request. Other attachment content remains unreviewed.
+The reader returns attachment filenames, not attachment contents. The selected DISC-31 header image, DISC-32 debug-panel reference image, and DISC-35 search reference image were retrieved through the local read-only Discord configuration and reviewed for their selected requests. Other attachment content remains unreviewed.
 
 This is an inventory, not an approved implementation plan. Estimates are relative: Low means a localized UI or behavior change; Medium means multiple renderer components or persisted preferences; High means substantial integration, data policy, or media/storage work; Very high means cross-product or platform scope. Defect reports are not treated as confirmed causes until reproduced.
 
@@ -249,12 +249,12 @@ This is an inventory, not an approved implementation plan. Estimates are relativ
 
 ## Recent interface requests
 
-### DISC-35 — Refine the header search interaction
+### DISC-35 — Refine header search feedback and suggestions
 
 - Request date (Brasília): 2026-11-24, 16:25.
 - Difficulty: Medium.
-- Current state: Catalogued; not selected for implementation in this branch. The attached image filename was returned by Discord, but its contents have not been reviewed.
-- Technical analysis: Reduce the visual weight of the search field's focus ring while keeping a clear visible focus state. Add restrained pressed feedback and animate search suggestions as they appear, preserving keyboard selection, loading and empty states, and reduced-motion preferences. Refine the compact result rows without changing the AniList search contract.
+- Current state: Selected by the owner and implemented in the local 1.2.0 release candidate. The Discord reference image was reviewed. The header search now uses a softer focus indicator, restrained press feedback, animated suggestions, and clearer result rows while preserving existing search and keyboard behavior.
+- Technical analysis: Keep the current AniList query, debounce, result limit, adult-content preference, and accessible combobox contract. Reduce the bright focus outline without removing a visible keyboard indicator, respect reduced-motion preferences, animate the preview and suggestion rows, and clarify the selected row with a restrained accent and stronger title/type hierarchy.
 
 ### DISC-36 — Toast feedback and persistent action history
 
