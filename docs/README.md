@@ -4,6 +4,7 @@ This page is the index for current project guidance and historical records.
 
 ## Release records
 
+- [1.2.0 release candidate](releases/1.2.0-candidate.md) — notification feedback, refined header search, validation record, and promotion gates.
 - [1.1.0 release candidate](releases/1.1.0-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0.3 release candidate](releases/1.0.3-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0 release closeout](releases/1.0-checklist.md) — published v1.0.2, completed 1.0 gates, evidence, and known limitations.
@@ -22,6 +23,7 @@ Start from the latest `dev`, create a focused branch, and open a pull request ag
 
 - [Discord feature and fix backlog](discord-feature-backlog.md) — requests from the project's private testers Discord, with current Electron coverage, relative difficulty, technical notes, and per-item branch guidance.
 - [Feedback-to-Issue workflow](feedback-issue-workflow.md) — maintainer review and GitHub Actions procedure for turning a Supabase feedback record into a categorized GitHub issue.
+- [GitHub feedback issue requirements](github-feedback-issue-requirements.md) — product requirements transcribed from GitHub feedback issues #9 and #10.
 
 ## Notifications
 

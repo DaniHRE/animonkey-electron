@@ -7,6 +7,7 @@ import {
 } from '@/services/cache/local-db';
 import type { AnimeResult, WatchLaterItem } from '@/types/anime';
 import { WatchLaterContext } from '@/context/watch-later-state';
+import { notifyActionFeedback } from '@/lib/action-feedback';
 
 export function WatchLaterProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WatchLaterItem[]>([]);
@@ -56,36 +57,78 @@ export function WatchLaterProvider({ children }: { children: ReactNode }) {
 
   const toggle = useCallback(
     async (anime: AnimeResult): Promise<boolean> => {
-      if (ids.has(anime.id)) {
-        await deleteWatchLater(anime.id);
-        setItems((current) =>
-          current.filter((item) => item.animeId !== anime.id),
-        );
-        return false;
+      const title = anime.title.english ?? anime.title.romaji ?? 'Anime';
+      try {
+        if (ids.has(anime.id)) {
+          await deleteWatchLater(anime.id);
+          setItems((current) =>
+            current.filter((item) => item.animeId !== anime.id),
+          );
+          notifyActionFeedback({
+            tone: 'success',
+            title: 'Removido de Assistir Depois',
+            message: `${title} saiu da sua lista.`,
+            animeId: anime.id,
+            posterUrl: anime.image,
+          });
+          return false;
+        }
+        const item: WatchLaterItem = {
+          animeId: anime.id,
+          title: anime.title,
+          image: anime.image,
+          type: anime.type,
+          totalEpisodes: anime.totalEpisodes,
+          genres: anime.genres,
+          releaseDate: anime.releaseDate,
+          addedAt: Date.now(),
+        };
+        await putWatchLater(item);
+        setItems((current) => [
+          item,
+          ...current.filter((entry) => entry.animeId !== anime.id),
+        ]);
+        notifyActionFeedback({
+          tone: 'success',
+          title: 'Adicionado a Assistir Depois',
+          message: `${title} foi salvo na sua lista.`,
+          animeId: anime.id,
+          posterUrl: anime.image,
+        });
+        return true;
+      } catch {
+        notifyActionFeedback({
+          tone: 'error',
+          title: 'Não foi possível atualizar a lista',
+          message: `A lista de ${title} não foi alterada. Tente novamente.`,
+          animeId: anime.id,
+          posterUrl: anime.image,
+        });
+        throw new Error('Não foi possível atualizar a lista Assistir Depois.');
       }
-      const item: WatchLaterItem = {
-        animeId: anime.id,
-        title: anime.title,
-        image: anime.image,
-        type: anime.type,
-        totalEpisodes: anime.totalEpisodes,
-        genres: anime.genres,
-        releaseDate: anime.releaseDate,
-        addedAt: Date.now(),
-      };
-      await putWatchLater(item);
-      setItems((current) => [
-        item,
-        ...current.filter((entry) => entry.animeId !== anime.id),
-      ]);
-      return true;
     },
     [ids],
   );
 
   const remove = useCallback(async (animeId: string): Promise<void> => {
-    await deleteWatchLater(animeId);
-    setItems((current) => current.filter((item) => item.animeId !== animeId));
+    try {
+      await deleteWatchLater(animeId);
+      setItems((current) => current.filter((item) => item.animeId !== animeId));
+      notifyActionFeedback({
+        tone: 'success',
+        title: 'Anime removido',
+        message: 'O anime saiu de Assistir Depois.',
+        animeId,
+      });
+    } catch {
+      notifyActionFeedback({
+        tone: 'error',
+        title: 'Não foi possível remover o anime',
+        message: 'Sua lista não foi alterada. Tente novamente.',
+        animeId,
+      });
+      throw new Error('Não foi possível remover o anime da lista.');
+    }
   }, []);
 
   const value = useMemo(

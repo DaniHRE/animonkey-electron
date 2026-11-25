@@ -9,6 +9,7 @@ export function useRecordWatchProgressPreference() {
   return {
     enabled: preference.value !== false,
     setEnabled: preference.update,
+    setEnabledAndWait: preference.updateAndWait,
     loaded: preference.loaded,
   };
 }
@@ -21,6 +22,7 @@ export function useContinueWatchingVisibilityPreference() {
   return {
     enabled: preference.value !== false,
     setEnabled: preference.update,
+    setEnabledAndWait: preference.updateAndWait,
     loaded: preference.loaded,
   };
 }
@@ -33,6 +35,7 @@ export function useSyncWatchProgressPreference() {
   return {
     enabled: preference.value !== false,
     setEnabled: preference.update,
+    setEnabledAndWait: preference.updateAndWait,
     loaded: preference.loaded,
   };
 }

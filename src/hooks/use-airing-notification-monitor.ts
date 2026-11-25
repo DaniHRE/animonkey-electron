@@ -85,6 +85,7 @@ export function useAiringNotificationMonitor(): void {
             message: `Episódio ${episode} já foi lançado.`,
             animeId: item.id,
             episode,
+            ...(item.image ? { posterUrl: item.image } : {}),
           }).catch(() => undefined);
           const index = nextFollowed.findIndex(
             (current) => current.animeId === followed.animeId,
@@ -96,7 +97,7 @@ export function useAiringNotificationMonitor(): void {
           };
           changed = true;
         }
-        if (changed && active) setFollowedAnime(nextFollowed);
+        if (changed && active) await setFollowedAnime(nextFollowed);
       } catch {
         // Keep the previous episode marker so a later check can retry.
       } finally {

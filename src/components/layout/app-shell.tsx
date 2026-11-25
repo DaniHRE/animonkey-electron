@@ -25,7 +25,7 @@ import {
   useRouter,
   useRouterState,
 } from '@tanstack/react-router';
-import { motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useQuery } from '@tanstack/react-query';
 import { useAccount } from '@/context/account-state';
 import { useAdultContentPreference } from '@/hooks/use-adult-content-preference';
@@ -285,6 +285,60 @@ export function AppShell() {
   );
   const navItems = [...pinnedNavItems, ...orderedPrimaryNavItems];
   const shouldReduceMotion = useReducedMotion() ?? false;
+  const searchPreviewPanelVariants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 0 },
+        visible: {
+          opacity: 1,
+          transition: { duration: 0.12, ease: 'easeOut' as const },
+        },
+        exit: { opacity: 0, transition: { duration: 0.08 } },
+      }
+    : {
+        hidden: { opacity: 0, y: -7, scale: 0.985 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: {
+            type: 'spring' as const,
+            stiffness: 460,
+            damping: 36,
+          },
+        },
+        exit: {
+          opacity: 0,
+          y: -4,
+          scale: 0.99,
+          transition: { duration: 0.12, ease: 'easeOut' as const },
+        },
+      };
+  const searchPreviewListVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : 0.035,
+        delayChildren: shouldReduceMotion ? 0 : 0.025,
+      },
+    },
+  };
+  const searchPreviewOptionVariants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { duration: 0.08 } },
+      }
+    : {
+        hidden: { opacity: 0, y: 4 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: {
+            type: 'spring' as const,
+            stiffness: 500,
+            damping: 38,
+          },
+        },
+      };
   const shellRef = useRef<HTMLDivElement | null>(null);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const showSidebarRef = useRef<HTMLButtonElement | null>(null);
@@ -697,10 +751,17 @@ export function AppShell() {
               >
                 <Search
                   size={20}
-                  className="pointer-events-none absolute top-1/2 left-4 z-10 -translate-y-1/2 text-gray-400"
+                  className="app-header__search-icon pointer-events-none absolute top-1/2 left-4 z-10 text-gray-400"
                 />
-                <input
+                <motion.input
                   value={search}
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 520,
+                    damping: 34,
+                    mass: 0.55,
+                  }}
                   onChange={(event) => {
                     setSearch(event.target.value);
                     setActiveSearchPreviewIndex(-1);
@@ -733,104 +794,115 @@ export function AppShell() {
                   }
                   className="app-header__search-input"
                 />
-                {isSearchPreviewVisible && (
-                  <div
-                    id="header-search-preview"
-                    aria-busy={isSearchPreviewLoading}
-                    className="absolute top-full right-0 left-0 z-50 mt-2 max-h-[min(60vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#101113] py-2 shadow-[0_18px_48px_rgba(0,0,0,0.55)]"
-                  >
-                    {search.trim().length < 2 ? (
-                      <p
-                        role="status"
-                        className="px-4 py-3 text-sm text-white/45"
-                      >
-                        Digite pelo menos 2 caracteres para ver sugestões.
-                      </p>
-                    ) : isSearchPreviewLoading ? (
-                      <p
-                        role="status"
-                        className="px-4 py-3 text-sm text-white/45"
-                      >
-                        Buscando animes…
-                      </p>
-                    ) : searchPreviewQuery.error ? (
-                      <p
-                        role="status"
-                        className="px-4 py-3 text-sm text-white/45"
-                      >
-                        Não foi possível carregar as sugestões.
-                      </p>
-                    ) : searchPreviewResults.length > 0 ? (
-                      <>
-                        <div
-                          role="listbox"
-                          aria-label="Sugestões de anime"
-                          className="space-y-1 px-2"
+                <AnimatePresence initial={false}>
+                  {isSearchPreviewVisible && (
+                    <motion.div
+                      id="header-search-preview"
+                      aria-busy={isSearchPreviewLoading}
+                      variants={searchPreviewPanelVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      style={{ transformOrigin: 'top center' }}
+                      className="absolute top-full right-0 left-0 z-50 mt-2 max-h-[min(60vh,28rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#101113] py-2 shadow-[0_18px_48px_rgba(0,0,0,0.55)]"
+                    >
+                      {search.trim().length < 2 ? (
+                        <p
+                          role="status"
+                          className="px-4 py-3 text-sm text-white/45"
                         >
-                          {searchPreviewResults.map((anime, index) => (
-                            <button
-                              key={anime.id}
-                              id={`header-search-option-${index}`}
-                              type="button"
-                              role="option"
-                              aria-selected={activeSearchPreviewIndex === index}
-                              tabIndex={-1}
-                              onMouseDown={(event) => event.preventDefault()}
-                              onMouseEnter={() =>
-                                setActiveSearchPreviewIndex(index)
-                              }
-                              onClick={() => openAnimePreviewResult(anime.id)}
-                              className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${activeSearchPreviewIndex === index ? 'bg-white/[0.08]' : 'hover:bg-white/[0.05]'}`}
-                            >
-                              {anime.image ? (
-                                <img
-                                  src={anime.image}
-                                  alt=""
-                                  loading="lazy"
-                                  className="size-11 shrink-0 rounded-md object-cover"
-                                />
-                              ) : (
-                                <span className="grid size-11 shrink-0 place-items-center rounded-md bg-white/[0.05] text-white/30">
-                                  <Search size={16} aria-hidden="true" />
-                                </span>
-                              )}
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-semibold text-white/85">
-                                  {resolveAnimeTitle(
-                                    anime.title,
-                                    titleLanguage,
-                                  )}
-                                </span>
-                                <span className="mt-1 block text-xs text-white/40">
-                                  {anime.type ?? 'Anime'}
-                                </span>
-                              </span>
-                              {anime.isAdult && (
-                                <span className="shrink-0 rounded bg-red-400/10 px-1.5 py-1 text-[10px] font-bold text-red-200/75">
-                                  18+
-                                </span>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          type="submit"
-                          onMouseDown={(event) => event.preventDefault()}
-                          className="mt-2 w-full border-t border-white/[0.07] px-4 pt-3 text-left text-xs font-semibold text-[#77e898] hover:text-white"
+                          Digite pelo menos 2 caracteres para ver sugestões.
+                        </p>
+                      ) : isSearchPreviewLoading ? (
+                        <p
+                          role="status"
+                          className="px-4 py-3 text-sm text-white/45"
                         >
-                          Ver todos os resultados
-                        </button>
-                      </>
-                    ) : (
-                      <p
-                        role="status"
-                        className="px-4 py-3 text-sm text-white/45"
-                      >
-                        Nenhum anime encontrado.
-                      </p>
-                    )}
-                  </div>
-                )}
+                          Buscando animes…
+                        </p>
+                      ) : searchPreviewQuery.error ? (
+                        <p
+                          role="status"
+                          className="px-4 py-3 text-sm text-white/45"
+                        >
+                          Não foi possível carregar as sugestões.
+                        </p>
+                      ) : searchPreviewResults.length > 0 ? (
+                        <>
+                          <motion.div
+                            role="listbox"
+                            aria-label="Sugestões de anime"
+                            variants={searchPreviewListVariants}
+                            className="space-y-1 px-2"
+                          >
+                            {searchPreviewResults.map((anime, index) => (
+                              <motion.button
+                                key={anime.id}
+                                id={`header-search-option-${index}`}
+                                type="button"
+                                role="option"
+                                aria-selected={
+                                  activeSearchPreviewIndex === index
+                                }
+                                tabIndex={-1}
+                                variants={searchPreviewOptionVariants}
+                                onMouseDown={(event) => event.preventDefault()}
+                                onMouseEnter={() =>
+                                  setActiveSearchPreviewIndex(index)
+                                }
+                                onClick={() => openAnimePreviewResult(anime.id)}
+                                className={`flex w-full items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition-[background-color,border-color,box-shadow] duration-150 ${activeSearchPreviewIndex === index ? 'border-white/[0.08] bg-[#49d77a]/[0.07] shadow-[inset_2px_0_0_rgba(73,215,122,0.78)]' : 'border-transparent hover:border-white/[0.07] hover:bg-white/[0.035]'}`}
+                              >
+                                {anime.image ? (
+                                  <img
+                                    src={anime.image}
+                                    alt=""
+                                    loading="lazy"
+                                    className="size-11 shrink-0 rounded-lg border border-white/10 object-cover"
+                                  />
+                                ) : (
+                                  <span className="grid size-11 shrink-0 place-items-center rounded-md bg-white/[0.05] text-white/30">
+                                    <Search size={16} aria-hidden="true" />
+                                  </span>
+                                )}
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[15px] font-semibold leading-5 text-white/90">
+                                    {resolveAnimeTitle(
+                                      anime.title,
+                                      titleLanguage,
+                                    )}
+                                  </span>
+                                  <span className="mt-0.5 block text-xs font-medium text-white/50">
+                                    {anime.type ?? 'Anime'}
+                                  </span>
+                                </span>
+                                {anime.isAdult && (
+                                  <span className="shrink-0 rounded bg-red-400/10 px-1.5 py-1 text-[10px] font-bold text-red-200/75">
+                                    18+
+                                  </span>
+                                )}
+                              </motion.button>
+                            ))}
+                          </motion.div>
+                          <button
+                            type="submit"
+                            onMouseDown={(event) => event.preventDefault()}
+                            className="mt-2 w-full border-t border-white/[0.07] px-4 pt-3 text-left text-xs font-semibold text-[#77e898] hover:text-white"
+                          >
+                            Ver todos os resultados
+                          </button>
+                        </>
+                      ) : (
+                        <p
+                          role="status"
+                          className="px-4 py-3 text-sm text-white/45"
+                        >
+                          Nenhum anime encontrado.
+                        </p>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </form>
             )}
           </div>

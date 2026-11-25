@@ -9,14 +9,14 @@ import { useLocalPreference } from '@/hooks/use-local-preference';
 const TITLE_LANGUAGE_PREFERENCE_KEY = 'ui.title-language';
 
 export function TitleLanguageProvider({ children }: { children: ReactNode }) {
-  const { value: storedLanguage, update } = useLocalPreference<unknown>(
+  const { value: storedLanguage, updateAndWait } = useLocalPreference<unknown>(
     TITLE_LANGUAGE_PREFERENCE_KEY,
     'jp',
   );
   const titleLanguage: TitleLanguage = storedLanguage === 'en' ? 'en' : 'jp';
   const setTitleLanguage = useCallback(
-    (language: TitleLanguage) => update(language),
-    [update],
+    (language: TitleLanguage) => updateAndWait(language),
+    [updateAndWait],
   );
   const contextValue = useMemo(
     () => ({

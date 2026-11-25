@@ -20,11 +20,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [syncState, setSyncState] = useState<AccountSyncState>('idle');
   const [syncError, setSyncError] = useState<string | null>(null);
   const sessionRef = useRef<AccountSession | null>(null);
-  const syncInFlight = useRef<Promise<void> | null>(null);
+  const syncInFlight = useRef<Promise<boolean> | null>(null);
 
-  const syncNow = useCallback(async (): Promise<void> => {
+  const syncNow = useCallback(async (): Promise<boolean> => {
     const activeSession = sessionRef.current;
-    if (!activeSession) return;
+    if (!activeSession) return false;
     if (syncInFlight.current) return await syncInFlight.current;
 
     const userId = activeSession.user.id;
@@ -32,10 +32,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     setSyncError(null);
     const task = reconcileAccountData()
       .then(() => {
-        if (sessionRef.current?.user.id === userId) setSyncState('synced');
+        if (sessionRef.current?.user.id !== userId) return false;
+        setSyncState('synced');
+        return true;
       })
       .catch((error: unknown) => {
-        if (sessionRef.current?.user.id !== userId) return;
+        if (sessionRef.current?.user.id !== userId) return false;
         if (
           error instanceof Error &&
           (error.message === 'Entre na sua conta para sincronizar.' ||
@@ -51,7 +53,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             setSyncError('A sessão expirou. Entre novamente para sincronizar.');
             window.dispatchEvent(new Event('animonkey:account-sync-applied'));
           });
-          return;
+          return false;
         }
         setSyncState('offline');
         setSyncError(
@@ -59,12 +61,13 @@ export function AccountProvider({ children }: { children: ReactNode }) {
             ? error.message
             : 'A sincronização falhou. Os dados locais foram preservados.',
         );
+        return false;
       })
       .finally(() => {
         syncInFlight.current = null;
       });
     syncInFlight.current = task;
-    await task;
+    return await task;
   }, []);
 
   const waitForSync = useCallback(async () => {
