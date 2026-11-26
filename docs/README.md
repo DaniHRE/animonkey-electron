@@ -4,6 +4,7 @@ This page is the index for current project guidance and historical records.
 
 ## Release records
 
+- [1.3.0 release candidate](releases/1.3.0-candidate.md) — avatar refresh, Anivexa runtime update, validation record, and promotion gates.
 - [1.2.0 release candidate](releases/1.2.0-candidate.md) — notification feedback, refined header search, validation record, and promotion gates.
 - [1.1.0 release candidate](releases/1.1.0-candidate.md) — Windows x64 release validation and promotion record.
 - [1.0.3 release candidate](releases/1.0.3-candidate.md) — Windows x64 release validation and promotion record.

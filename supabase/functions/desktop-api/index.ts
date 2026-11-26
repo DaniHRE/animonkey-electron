@@ -22,6 +22,9 @@ const PROVIDER_FAILURE_IDS = new Set([
   'kaa',
   'animenosub',
   'mkissa',
+  'anipm',
+  'anihq',
+  'pahenime',
 ]);
 const PROVIDER_FAILURE_STATUSES = new Set([502, 503, 504]);
 

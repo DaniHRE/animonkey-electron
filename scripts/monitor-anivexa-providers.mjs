@@ -7,14 +7,14 @@ import process from 'node:process';
 const REPOSITORY_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const ANIVEXA_ROOT = join(REPOSITORY_ROOT, 'vendor', 'anivexa-api');
 const SAMPLE_MATRIX = Object.freeze({
-  mkissa: [16498],
+  anihq: [16498],
   reanime: [16498],
   anikoto: [16498],
   animegg: [16498],
   animenosub: [199547],
   anizone: [199547],
   aniwaves: [16498],
-  senshi: [16498],
+  pahenime: [101922],
   kaa: [21],
   animedunya: [16498],
   animeonsen: [16498],

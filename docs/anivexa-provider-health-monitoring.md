@@ -15,14 +15,14 @@ supports a manual dispatch. It probes two providers concurrently and uses a
 
 | Provider     | Sample AniList ID |
 | ------------ | ----------------: |
-| `mkissa`     |             16498 |
+| `anihq`      |             16498 |
 | `reanime`    |             16498 |
 | `anikoto`    |             16498 |
 | `animegg`    |             16498 |
 | `animenosub` |            199547 |
 | `anizone`    |            199547 |
 | `aniwaves`   |             16498 |
-| `senshi`     |             16498 |
+| `pahenime`   |            101922 |
 | `kaa`        |                21 |
 | `animedunya` |             16498 |
 | `animeonsen` |             16498 |

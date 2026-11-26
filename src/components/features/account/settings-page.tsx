@@ -127,6 +127,8 @@ export function SettingsPage() {
     syncNow,
     importGuestLibrary,
     updateProfile,
+    uploadAvatar: uploadAccountAvatar,
+    removeAvatar: removeAccountAvatar,
   } = useAccount();
   const { titleLanguage, setTitleLanguage } = useTitleLanguage();
   const recordWatchProgress = useRecordWatchProgressPreference();
@@ -703,7 +705,7 @@ export function SettingsPage() {
       for (let index = 0; index < bytes.length; index += 0x8000) {
         binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
       }
-      await window.animonkey.account.uploadAvatar(file.type, btoa(binary));
+      await uploadAccountAvatar(file.type, btoa(binary));
       setAccountMessage('Foto do perfil atualizada.');
       notifyActionFeedback({
         tone: 'success',
@@ -728,7 +730,7 @@ export function SettingsPage() {
     setAccountBusy(true);
     setAccountError(null);
     try {
-      await window.animonkey.account.removeAvatar();
+      await removeAccountAvatar();
       setAccountMessage('Foto do perfil removida.');
       notifyActionFeedback({
         tone: 'success',

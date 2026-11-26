@@ -25,32 +25,34 @@ The connected project's migration history also uses different version numbers fr
 
 As a result, this checkout cannot currently bootstrap a blank Supabase project by itself, and its migration ledger does not line up with the connected project. Do not run `supabase db push` against the connected project from this checkout until the authoritative baseline SQL is restored and the migration history is reconciled.
 
-This is a deployment/reproducibility gap, not evidence that the connected project's current features are down. The project is active and the desktop API is active at version 10.
+The Anivexa runtime update adds `anihq`, `pahenime`, and `anipm` to optional provider-failure reporting, and replaces `mkissa` and `senshi` in the provider-health monitor. On 2026-11-26, migration `20261126214547_update_anivexa_provider_allowlists.sql` was applied to the connected `animonkey` project as a targeted migration and recorded in its migration history. The two retired providers' latest health snapshots were removed, and the provider constraints were verified against the current runtime inventory. The `desktop-api` function was deployed as active version 11 with its existing gateway JWT setting preserved. The older baseline and migration-version mismatches listed above remain; do not run `supabase db push` until they are reconciled.
+
+This is a deployment/reproducibility gap, not evidence that the connected project's current features are down. The project is active and the desktop API is active at version 11.
 
 The steps below document the required deployment order. A fully reproducible clean install still requires those baseline migrations and matching migration versions to be checked into the repository.
 
 ## Current connected project
 
-Audited on 2026-11-24:
+Audited on 2026-11-26:
 
 - Project name: `animonkey`
 - Region: `sa-east-1` (São Paulo)
 - Project status: active and healthy
 - Organization plan: Free
 - Database engine: PostgreSQL 17
-- Edge Functions: `desktop-api` is active at version 10, with JWT verification disabled at the gateway because the function validates its own desktop bearer sessions.
+- Edge Functions: `desktop-api` is active at version 11, with JWT verification disabled at the gateway because the function validates its own desktop bearer sessions.
 
-The connected database records 11 migrations. This repository contains 8 migration files. The three missing baseline migrations and four version mismatches are listed above.
+The connected database records 12 migrations. This repository contains 9 migration files. The three missing baseline migrations and four historical version mismatches are listed above.
 
 ### Changes in the 1.1.0 Supabase scope
 
-This audit and documentation pass was read-only; it made no database or Storage changes. The following release-scope changes are already present in the connected project:
+The following Supabase-backed features are present in the connected project:
 
 - Provider failure reporting: a private, RLS-enabled table, a restricted submission RPC, and the 30-day cleanup job. No reports are stored currently.
 - Feedback intake: a private, RLS-enabled table, a consent/rate-limited submission RPC, and the 180-day cleanup job. No submissions are stored currently.
 - Anivexa health: a private, RLS-enabled table with one current row per provider. The scheduled workflow updates these sanitized snapshots.
 - Remote notifications: a public-read, 4 KiB JSON bucket and an empty feed object at `v1/feed.json`. The bucket and object were provisioned; the feature has not published any messages.
-- Desktop API: active version 10, which includes the account API and the current feedback and provider-reporting endpoints.
+- Desktop API: active version 11, which includes the account API and the current feedback and provider-reporting endpoints.
 
 The older account, sync, ratings, activity-feed, and avatar components are also present, but were not introduced by the notification-feed setup.
 
@@ -71,7 +73,7 @@ AniList catalog requests, the embedded Anivexa playback runtime, offline library
 
 ### Database, scheduled jobs, and Storage state
 
-- The provider health table currently has 12 rows, one per monitored provider. It stores the latest snapshot rather than a history of every probe.
+- The provider health table currently has 10 rows. The two snapshots for retired `mkissa` and `senshi` providers were removed by the 1.3.0 allowlist migration. The updated monitor will create snapshots for `anihq` and `pahenime` when it runs from the promoted default branch.
 - The feedback and provider failure report tables currently have no submissions.
 - Both cleanup jobs are active: provider failure reports are retained for 30 days, and feedback records for 180 days.
 - The existing public `avatars` bucket is limited to image MIME types.
@@ -125,6 +127,7 @@ The CLI tracks applied files in Supabase's migration history. When using SQL Edi
 6. `20261123231936_provider_failure_reporting.sql`
 7. `20261123232000_feedback_intake.sql`
 8. `20261124020000_anivexa_provider_health.sql`
+9. `20261126214547_update_anivexa_provider_allowlists.sql`
 
 Manual SQL execution does not automatically add those files to the CLI migration ledger. After verifying that a migration's SQL has actually been applied, `supabase migration repair <version> --status applied --remote` can update its history record; it does not run the SQL. Do not use that command to add the four local version numbers to the connected project while its ledger records different versions. Reconcile the SQL and history first, then use `db push` later.
 
