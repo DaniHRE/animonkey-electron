@@ -18,6 +18,7 @@ function languagePriority(server: EpisodeServer): number {
 
 function providerLabel(provider: string): string {
   const labels: Record<string, string> = {
+    anihq: 'AniHQ',
     reiname: 'Reanime',
     anikoto: 'AniKoto',
     animegg: 'AnimeGG',
@@ -32,6 +33,8 @@ function providerLabel(provider: string): string {
     animedunya: 'Animedunia',
     kaa: 'KAA',
     animenosub: 'AnimeNoSub',
+    pahenime: 'Pahenime',
+    anipm: 'Ani.pm',
     mkissa: 'MKissa',
   };
   const knownLabel = labels[provider.toLowerCase()];

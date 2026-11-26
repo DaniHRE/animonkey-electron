@@ -25,6 +25,8 @@ The connected project's migration history also uses different version numbers fr
 
 As a result, this checkout cannot currently bootstrap a blank Supabase project by itself, and its migration ledger does not line up with the connected project. Do not run `supabase db push` against the connected project from this checkout until the authoritative baseline SQL is restored and the migration history is reconciled.
 
+The Anivexa runtime update in this development branch adds `anihq`, `pahenime`, and `anipm` to optional provider-failure reporting, and replaces `mkissa` and `senshi` in the provider-health monitor. The local migration `20261126194708_update_anivexa_provider_allowlists.sql` updates the database allowlists and removes the two retired providers' latest health snapshots. It has not been applied to the connected project, and `desktop-api` version 10 has not been updated there. Apply the migration and deploy the updated function in a non-production project before distributing a build with this runtime.
+
 This is a deployment/reproducibility gap, not evidence that the connected project's current features are down. The project is active and the desktop API is active at version 10.
 
 The steps below document the required deployment order. A fully reproducible clean install still requires those baseline migrations and matching migration versions to be checked into the repository.
@@ -125,6 +127,7 @@ The CLI tracks applied files in Supabase's migration history. When using SQL Edi
 6. `20261123231936_provider_failure_reporting.sql`
 7. `20261123232000_feedback_intake.sql`
 8. `20261124020000_anivexa_provider_health.sql`
+9. `20261126194708_update_anivexa_provider_allowlists.sql`
 
 Manual SQL execution does not automatically add those files to the CLI migration ledger. After verifying that a migration's SQL has actually been applied, `supabase migration repair <version> --status applied --remote` can update its history record; it does not run the SQL. Do not use that command to add the four local version numbers to the connected project while its ledger records different versions. Reconcile the SQL and history first, then use `db push` later.
 

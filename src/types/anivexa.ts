@@ -1,22 +1,31 @@
 export const ANIVEXA_PROVIDER_IDS = [
+  'anihq',
   'reanime',
   'anikoto',
   'animegg',
+  'animenosub',
+  'anizone',
+  'aniwaves',
+  'pahenime',
+  'kaa',
+  'animedunya',
+  'animeonsen',
+  'anipm',
+] as const;
+
+// Keep historical provider slugs valid for persisted notifications and old feed entries.
+const LEGACY_ANIVEXA_PROVIDER_IDS = [
   'anineko',
   'anibdapp',
   '2dhive',
   'anibd',
-  'aniwaves',
   'senshi',
-  'anizone',
-  'animeonsen',
-  'animedunya',
-  'kaa',
-  'animenosub',
   'mkissa',
 ] as const;
 
-export type AnivexaProviderId = (typeof ANIVEXA_PROVIDER_IDS)[number];
+export type AnivexaProviderId =
+  | (typeof ANIVEXA_PROVIDER_IDS)[number]
+  | (typeof LEGACY_ANIVEXA_PROVIDER_IDS)[number];
 
 export const PROVIDER_FAILURE_HTTP_STATUSES = [502, 503, 504] as const;
 
@@ -32,7 +41,10 @@ export interface ProviderFailureReportInput {
 export function isAnivexaProviderId(
   value: unknown,
 ): value is AnivexaProviderId {
-  return ANIVEXA_PROVIDER_IDS.some((provider) => provider === value);
+  return (
+    ANIVEXA_PROVIDER_IDS.some((provider) => provider === value) ||
+    LEGACY_ANIVEXA_PROVIDER_IDS.some((provider) => provider === value)
+  );
 }
 
 export function isProviderFailureHttpStatus(
