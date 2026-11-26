@@ -39,8 +39,7 @@
         {
           "title": "Provider integrations",
           "details": [
-            "The desktop provider inventory, monitor samples, and provider-failure allowlist now reflect the current runtime while retaining support for historical provider slugs in persisted notifications.",
-            "The Supabase allowlist migration and updated `desktop-api` function are included in the repository. The connected project's migration history is not reconciled, so those backend changes remain pending deployment and must be coordinated before the hosted monitor and provider-failure reporting use the new inventory."
+            "The desktop provider inventory, monitor samples, and provider-failure allowlist now reflect the current runtime while retaining support for historical provider slugs in persisted notifications."
           ]
         }
       ]
